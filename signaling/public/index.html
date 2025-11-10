@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VideoConferencia</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        /* Additional inline styles if needed */
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="header">
+                <div class="logo-container">
+                    <svg class="logo-icon" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M23 7l-7 5 7 5V7z"/>
+                        <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+                    </svg>
+                </div>
+                <h1>VideoConferencia</h1>
+                <p class="subtitle">Reuniones profesionales en alta definición</p>
+            </div>
+
+            <div class="form-container">
+                <div id="errorMessage" class="error-message"></div>
+                
+                <div class="form-content">
+                    <div class="form-group">
+                        <label for="userName">Nombre completo</label>
+                        <input type="text" id="userName" placeholder="Ingresa tu nombre" autocomplete="name">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="roomCode">Código de sala (opcional)</label>
+                        <input type="text" id="roomCode" placeholder="abc-defg-hij" autocomplete="off">
+                    </div>
+
+                    <div class="button-group">
+                        <button class="btn-primary" id="create">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 3v18m9-9H3"/>
+                            </svg>
+                            <span>Crear nueva reunión</span>
+                        </button>
+
+                        <div class="divider">
+                            <span>o</span>
+                        </div>
+
+                        <button class="btn-secondary" id="join">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
+                            </svg>
+                            <span>Unirse con código</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="features">
+                <div class="feature-card feature-blue">
+                    <div class="feature-icon">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                        </svg>
+                    </div>
+                    <h3>Cifrado seguro</h3>
+                    <p>Conexiones protegidas</p>
+                </div>
+
+                <div class="feature-card feature-green">
+                    <div class="feature-icon">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                            <circle cx="9" cy="7" r="4"/>
+                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                        </svg>
+                    </div>
+                    <h3>Multi-usuario</h3>
+                    <p>Hasta 50 participantes</p>
+                </div>
+
+                <div class="feature-card feature-amber">
+                    <div class="feature-icon">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M23 7l-7 5 7 5V7z"/>
+                            <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+                        </svg>
+                    </div>
+                    <h3>Video HD</h3>
+                    <p>Calidad profesional</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+  <script>
+    function generateRoomCode() {
+      const chars = 'abcdefghijklmnopqrstuvwxyz';
+      const part1 = Array.from({length: 3}, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+      const part2 = Array.from({length: 4}, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+      const part3 = Array.from({length: 3}, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+      return `${part1}-${part2}-${part3}`;
+    }
+
+    function showError(message) {
+      const errorDiv = document.getElementById('errorMessage');
+      errorDiv.textContent = message;
+      errorDiv.classList.add('show');
+      setTimeout(() => {
+        errorDiv.classList.remove('show');
+      }, 5000);
+    }
+
+    function setButtonLoading(button, isLoading) {
+      if (isLoading) {
+        button.classList.add('loading');
+        button.disabled = true;
+      } else {
+        button.classList.remove('loading');
+        button.disabled = false;
+      }
+    }
+
+    document.getElementById('create').addEventListener('click', () => {
+      const name = document.getElementById('userName').value.trim();
+      const button = document.getElementById('create');
+      
+      if (!name) {
+        showError('❌ Por favor ingresa tu nombre completo');
+        document.getElementById('userName').focus();
+        return;
+      }
+      
+      const room = generateRoomCode();
+      const url = `/room.html?room=${room}&name=${encodeURIComponent(name)}&moderator=1`;
+      console.log('[INDEX] Creando sala. Código:', room, 'URL:', url);
+      
+      setButtonLoading(button, true);
+      setTimeout(() => {
+        window.location.href = url;
+      }, 300);
+    });
+
+    document.getElementById('join').addEventListener('click', () => {
+      const name = document.getElementById('userName').value.trim();
+      const room = document.getElementById('roomCode').value.trim();
+      const button = document.getElementById('join');
+      
+      if (!name) {
+        showError('❌ Por favor ingresa tu nombre completo');
+        document.getElementById('userName').focus();
+        return;
+      }
+      
+      if (!room) {
+        showError('❌ Por favor ingresa el código de la sala');
+        document.getElementById('roomCode').focus();
+        return;
+      }
+      
+      setButtonLoading(button, true);
+      setTimeout(() => {
+        window.location.href = `/room.html?room=${room}&name=${encodeURIComponent(name)}`;
+      }, 300);
+    });
+
+    // Enter key support
+    document.getElementById('userName').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        if (document.getElementById('roomCode').value.trim()) {
+          document.getElementById('join').click();
+        } else {
+          document.getElementById('create').click();
+        }
+      }
+    });
+
+    document.getElementById('roomCode').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        document.getElementById('join').click();
+      }
+    });
+
+    // Auto-focus on name input
+    window.addEventListener('load', () => {
+      document.getElementById('userName').focus();
+    });
+  </script>
+
+  <!-- Bypass ngrok warning - CORREGIDO -->
+  <script>
+  (function() {
+    const originalFetch = window.fetch;
+    window.fetch = function (resource, options = {}) {
+        if (!options.headers) {
+            options.headers = {};
+        }
+        options.headers['ngrok-skip-browser-warning'] = 'true';
+        return originalFetch(resource, options);
+    };
+
+    const originalXHROpen = XMLHttpRequest.prototype.open;
+    const originalXHRSend = XMLHttpRequest.prototype.send;
+
+    XMLHttpRequest.prototype.open = function(method, url, async, user, password) {
+        this._method = method;
+        this._url = url;
+        return originalXHROpen.call(this, method, url, async, user, password);
+    };
+
+    XMLHttpRequest.prototype.send = function(body) {
+        try {
+            this.setRequestHeader('ngrok-skip-browser-warning', 'true');
+        } catch (e) {
+            // Ignorar si no se puede establecer el header
+        }
+        return originalXHRSend.call(this, body);
+    };
+  })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+{
+  "name": "jitsi-meet-setup",
+  "version": "1.0.0",
+  "description": "Jitsi Meet with ngrok tunneling",
+  "main": "start-ngrok.js",
+  "scripts": {
+    "start": "node start-ngrok.js"
+  },
+  "dependencies": {
+    "ngrok": "^5.0.0-beta.2"
+  }
+}
