@@ -2337,17 +2337,31 @@ function displayPollForParticipant(poll) {
     pollPanel.classList.remove('minimized');
     debugLog('Panel de votación visible para el usuario.');
 
+    // Asegurar que el poll tenga endTime válido. Si el servidor no lo envió, calcularlo desde duration.
     const currentTime = Date.now();
-    const endTime = poll.endTime;
-    const remainingTimeSeconds = Math.max(0, Math.floor((endTime - currentTime) / 1000));
+    let endTime = Number(poll.endTime);
+    if (!endTime || isNaN(endTime) || endTime <= 0) {
+        const duration = parseInt(poll.duration) || (poll.duration === 0 ? 0 : null);
+        if (duration && duration > 0) {
+            endTime = Date.now() + (duration * 1000);
+            // Propagar endTime al objeto poll y al currentPoll global si existe
+            poll.endTime = endTime;
+            if (currentPoll && currentPoll.id === poll.id) currentPoll.endTime = endTime;
+            debugLog('⚠️ endTime no estaba definido. Calculado localmente desde duration:', duration, 'endTime:', endTime);
+        }
+    }
+
+    const remainingTimeSeconds = endTime ? Math.max(0, Math.ceil((endTime - currentTime) / 1000)) : 0;
 
     if (remainingTimeSeconds === 0 && !isModerator) {
+        // Si no hay tiempo restante, ocultar votación para participantes
         showError('La votación ha terminado.', 3000);
         submitVoteButton.disabled = true;
         document.querySelectorAll('.poll-option-item input[type="radio"]').forEach(radio => radio.disabled = true);
     } else {
         submitVoteButton.disabled = false;
         document.querySelectorAll('.poll-option-item input[type="radio"]').forEach(radio => radio.disabled = false);
+        // Iniciar temporizador con la cantidad exacta de segundos
         startPollTimer(remainingTimeSeconds);
     }
 
@@ -2364,11 +2378,13 @@ function startPollTimer(durationSeconds) {
     const submitVoteButton = document.getElementById('submitVoteBtn');
     if (!timerDisplay || !submitVoteButton) return;
 
+    // ✅ Verificar que currentPoll existe antes de acceder a sus propiedades
     if (currentPoll?.timerInterval) {
         clearInterval(currentPoll.timerInterval);
     }
 
     let seconds = durationSeconds;
+    let intervalId = null; // ✅ Guardar referencia local al intervalo
 
     const updateTimer = () => {
         const minutes = Math.floor(seconds / 60);
@@ -2376,7 +2392,11 @@ function startPollTimer(durationSeconds) {
         timerDisplay.textContent = `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
 
         if (seconds <= 0) {
-            clearInterval(currentPoll.timerInterval);
+            // ✅ Usar la referencia local en lugar de currentPoll
+            if (intervalId) {
+                clearInterval(intervalId);
+                intervalId = null;
+            }
             timerDisplay.textContent = "¡Tiempo terminado!";
             submitVoteButton.disabled = true;
             document.querySelectorAll('.poll-option-item input[type="radio"]').forEach(radio => radio.disabled = true);
@@ -2396,7 +2416,12 @@ function startPollTimer(durationSeconds) {
     };
 
     updateTimer();
-    currentPoll.timerInterval = setInterval(updateTimer, 1000);
+    intervalId = setInterval(updateTimer, 1000);
+    
+    // ✅ Guardar referencia también en currentPoll si existe
+    if (currentPoll) {
+        currentPoll.timerInterval = intervalId;
+    }
 }
 
 function hidePollForParticipant() {
@@ -2636,11 +2661,13 @@ function startResultsTimer(durationSeconds) {
     const timerDisplay = document.getElementById('pollResultsTimer');
     if (!timerDisplay) return;
 
+    // ✅ Verificar que currentPoll existe antes de acceder a sus propiedades
     if (currentPoll?.resultsTimerInterval) {
         clearInterval(currentPoll.resultsTimerInterval);
     }
 
     let seconds = durationSeconds;
+    let intervalId = null; // ✅ Guardar referencia local al intervalo
 
     const updateTimer = () => {
         const minutes = Math.floor(seconds / 60);
@@ -2648,7 +2675,11 @@ function startResultsTimer(durationSeconds) {
         timerDisplay.textContent = `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
 
         if (seconds <= 0) {
-            clearInterval(currentPoll.resultsTimerInterval);
+            // ✅ Usar la referencia local en lugar de currentPoll
+            if (intervalId) {
+                clearInterval(intervalId);
+                intervalId = null;
+            }
             timerDisplay.textContent = "¡Votación terminada!";
             if (isModerator) {
                 document.getElementById('endPollBtn').style.display = 'none';
@@ -2659,7 +2690,12 @@ function startResultsTimer(durationSeconds) {
     };
 
     updateTimer();
-    currentPoll.resultsTimerInterval = setInterval(updateTimer, 1000);
+    intervalId = setInterval(updateTimer, 1000);
+    
+    // ✅ Guardar referencia también en currentPoll si existe
+    if (currentPoll) {
+        currentPoll.resultsTimerInterval = intervalId;
+    }
 }
 
 function togglePollResultsPanel() {
