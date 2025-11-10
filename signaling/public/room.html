@@ -434,10 +434,11 @@
         /* ============================================ */
 
         #main {
- display: flex;
+            display: flex;
             flex: 1;
             overflow: hidden;
-            height: 100vh; /* ✅ Asegurar que ocupe toda la altura de la ventana */
+            height: calc(100vh - 96px); /* ✅ Restar altura del header (padding 20px*2 + contenido ~56px) */
+            position: relative;
         }
 
         #videos {
@@ -510,36 +511,35 @@
 
         #videoGrid {
             display: grid;
-            gap: 12px;
+            gap: 8px;
             width: 100%;
             height: 100%;
-            padding: 12px;
+            padding: 8px;
             overflow: hidden;
-            box-sizing: border-box; /* ✅ Asegurar que el padding no cause desbordamiento */
+            box-sizing: border-box;
             /* Las columnas y filas se definen dinámicamente por viewControl.js */
         }
 
         .video-container {
             position: relative;
             background: linear-gradient(145deg, var(--bg-card) 0%, var(--surface) 100%);
-            border-radius: 24px;
+            border-radius: 16px;
             overflow: hidden;
             box-shadow: var(--shadow-md);
-            aspect-ratio: 16/9;
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             border: 1px solid var(--glass-border);
             backdrop-filter: blur(20px);
             width: 100%;
             height: 100%;
-            max-width: 100%; /* ✅ Evitar desbordamiento horizontal */
-            max-height: 100%; /* ✅ Evitar desbordamiento vertical */
-            box-sizing: border-box; /* ✅ Incluir border en el tamaño total */
-            /* min-height y max-height se definen dinámicamente por viewControl.js */
+            max-width: 100%;
+            max-height: 100%;
+            box-sizing: border-box;
+            /* aspect-ratio removido para permitir flexibilidad total en layouts */
         }
 
         .video-container:hover {
-            transform: translateY(-8px) scale(1.02);
-            box-shadow: var(--shadow-xl);
+            transform: translateY(-4px) scale(1.01);
+            box-shadow: var(--shadow-lg);
             border-color: var(--primary);
         }
 
@@ -3674,10 +3674,6 @@ body:not(.light-theme) .page-btn {
 }
 
 /* Vista Spotlight */
-#videoGrid.view-spotlight {
-    /* El JS aplica los estilos inline dinámicamente */
-}
-
 #videoGrid.view-spotlight .video-container.spotlight-main {
     aspect-ratio: 16/9;
 }
@@ -3687,10 +3683,6 @@ body:not(.light-theme) .page-btn {
 }
 
 /* Vista Sidebar */
-#videoGrid.view-sidebar {
-    /* El JS aplica los estilos inline dinámicamente */
-}
-
 #videoGrid.view-sidebar .video-container.main-video {
     aspect-ratio: 16/9;
 }
@@ -3702,7 +3694,7 @@ body:not(.light-theme) .page-btn {
 /* Vista Grid Many (Compacto) */
 #videoGrid.view-grid-many {
     display: grid;
-    gap: 12px;
+    gap: 8px;
 }
 
 #videoGrid.view-grid-many .video-container {
@@ -3710,10 +3702,6 @@ body:not(.light-theme) .page-btn {
 }
 
 /* Vista Active Speaker */
-#videoGrid.view-active-speaker {
-    /* El JS aplica los estilos inline dinámicamente */
-}
-
 #videoGrid.view-active-speaker .video-container {
     aspect-ratio: 16/9;
 }

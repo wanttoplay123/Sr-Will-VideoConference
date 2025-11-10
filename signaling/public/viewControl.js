@@ -292,25 +292,31 @@ function cleanupAllLayouts(videoGrid, allVideos) {
         container.remove();
     });
     
-    // Reset clases del grid (mantener video-grid y id)
+    // Reset del grid - mantener solo ID
     const gridId = videoGrid.id;
     videoGrid.className = '';
-    videoGrid.id = gridId; // Restaurar ID
+    videoGrid.id = gridId;
     videoGrid.removeAttribute('style');
     
-    // Limpiar estilos inline de videos pero MANTENERLOS VISIBLES
+    // Limpiar todos los estilos inline de los videos
     allVideos.forEach(video => {
         video.classList.remove('spotlight-main', 'main-video', 'active-speaker');
-        video.style.display = ''; // Asegurar que estén visibles
+        video.style.display = '';
         video.style.width = '';
         video.style.height = '';
         video.style.minHeight = '';
         video.style.maxHeight = '';
+        video.style.maxWidth = '';
         video.style.objectFit = '';
         video.style.aspectRatio = '';
         video.style.flex = '';
         video.style.margin = '';
         video.style.gridRow = '';
+        video.style.gridColumn = '';
+        video.style.gridArea = '';
+        video.style.gridRowStart = '';
+        video.style.gridColumnStart = '';
+        video.style.boxSizing = '';
     });
 }
 
@@ -362,36 +368,43 @@ function applyGridAutoLayout(videoGrid, allVideos) {
     const count = allVideos.length;
     
     videoGrid.style.display = 'grid';
-    videoGrid.style.gap = '12px';
+    videoGrid.style.gap = '8px';
     videoGrid.style.width = '100%';
     videoGrid.style.height = '100%';
-    videoGrid.style.padding = '12px';
+    videoGrid.style.padding = '8px';
     videoGrid.style.overflow = 'hidden';
+    videoGrid.style.boxSizing = 'border-box';
     
     // Calcular columnas adaptativas según cantidad
     let cols;
     if (count === 1) cols = 1;
-    else if (count === 2) cols = 2; // 2 videos: 2 columnas (lado a lado)
-    else if (count === 3) cols = 3; // 3 videos: 3 columnas (lado a lado)
-    else if (count === 4) cols = 2; // 4 videos: 2x2
-    else if (count <= 6) cols = 3; // 5-6 videos: 3 columnas
-    else if (count <= 9) cols = 3; // 7-9 videos: 3 columnas
-    else if (count <= 16) cols = 4; // 10-16 videos: 4 columnas
-    else cols = 5; // 17+ videos: 5 columnas
+    else if (count === 2) cols = 2;
+    else if (count === 3) cols = 3;
+    else if (count === 4) cols = 2;
+    else if (count <= 6) cols = 3;
+    else if (count <= 9) cols = 3;
+    else if (count <= 16) cols = 4;
+    else cols = 5;
     
     videoGrid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
     
-    // Calcular filas
+    // Calcular filas necesarias
     const rows = Math.ceil(count / cols);
     videoGrid.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
     
-    // TODOS los videos visibles y del mismo tamaño
+    // Aplicar estilos uniformes a TODOS los videos
     allVideos.forEach(video => {
-        video.style.display = 'block'; // SIEMPRE VISIBLE
+        video.style.display = 'block';
         video.style.width = '100%';
         video.style.height = '100%';
         video.style.objectFit = 'cover';
-        video.style.aspectRatio = '16/9';
+        video.style.gridColumn = '';
+        video.style.gridRow = '';
+        video.style.gridArea = '';
+        video.style.gridRowStart = '';
+        video.style.minHeight = '';
+        video.style.maxHeight = '';
+        video.style.aspectRatio = '';
     });
     
     viewLog(`✅ Grid Auto: ${count} videos en ${cols}x${rows}`);
@@ -405,131 +418,82 @@ function applyGridFixedLayout(videoGrid, allVideos, maxVideos) {
     videoGrid.style.display = 'grid';
     videoGrid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
     videoGrid.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
-    videoGrid.style.gap = '12px';
+    videoGrid.style.gap = '8px';
     videoGrid.style.width = '100%';
     videoGrid.style.height = '100%';
-    videoGrid.style.padding = '12px';
+    videoGrid.style.padding = '8px';
     videoGrid.style.overflow = 'hidden';
-    videoGrid.style.boxSizing = 'border-box'; // ✅ Asegurar que padding no cause desbordamiento
+    videoGrid.style.boxSizing = 'border-box';
     
-    // ✅ Limitar la cantidad de videos mostrados según el tipo de grid
+    // Limitar la cantidad de videos mostrados
     const videosToShow = allVideos.slice(0, maxVideos);
     const videosToHide = allVideos.slice(maxVideos);
     
-    // Mostrar solo los primeros N videos (4 para 2x2, 9 para 3x3)
+    // Mostrar solo los primeros N videos con estilos uniformes
     videosToShow.forEach(video => {
-        video.style.display = 'block'; // VISIBLE
+        video.style.display = 'block';
         video.style.width = '100%';
         video.style.height = '100%';
-        video.style.maxWidth = '100%'; // ✅ Evitar desbordamiento
-        video.style.maxHeight = '100%'; // ✅ Evitar desbordamiento
+        video.style.maxWidth = '100%';
+        video.style.maxHeight = '100%';
         video.style.objectFit = 'cover';
-        video.style.aspectRatio = ''; // ✅ Remover aspect-ratio fijo para que se ajuste al grid
         video.style.boxSizing = 'border-box';
+        video.style.gridColumn = '';
+        video.style.gridRow = '';
+        video.style.gridArea = '';
+        video.style.gridRowStart = '';
+        video.style.minHeight = '';
+        video.style.aspectRatio = '';
     });
     
     // Ocultar el resto de videos
     videosToHide.forEach(video => {
-        video.style.display = 'none'; // OCULTO
+        video.style.display = 'none';
     });
     
-    viewLog(`✅ Grid ${cols}x${rows}: mostrando ${videosToShow.length} de ${count} videos (límite: ${maxVideos})`);
+    viewLog(`✅ Grid ${cols}x${rows}: mostrando ${videosToShow.length} de ${count} videos`);
 }
 
 function applyGridManyLayout(videoGrid, allVideos) {
     const count = allVideos.length;
     
     videoGrid.style.display = 'grid';
-    videoGrid.style.gap = '8px';
+    videoGrid.style.gap = '6px';
     videoGrid.style.width = '100%';
     videoGrid.style.height = '100%';
-    videoGrid.style.padding = '8px';
+    videoGrid.style.padding = '6px';
     videoGrid.style.overflow = 'hidden';
+    videoGrid.style.boxSizing = 'border-box';
     
-    // ✅ Sistema dinámico: Grid 5x5 adaptable según cantidad de participantes
-    let cols, rowSpan;
+    // Grid compacto: 5 columnas adaptable
+    let cols = 5;
+    let rows = Math.ceil(count / cols);
     
-    if (count <= 10) {
-        // Hasta 10 personas: 5 columnas, cada video ocupa 2 filas
-        cols = 5;
-        rowSpan = 2;
-        videoGrid.style.gridTemplateColumns = 'repeat(5, 1fr)';
-        videoGrid.style.gridTemplateRows = 'repeat(5, 1fr)';
-        
-        allVideos.forEach((video, index) => {
-            video.style.display = 'block';
-            video.style.width = '100%';
-            video.style.height = '100%';
-            video.style.objectFit = 'cover';
-            video.style.aspectRatio = '';
-            video.style.gridRow = 'span 2';
-            
-            // Posicionar en 2 filas de 5 columnas
-            if (index < 5) {
-                video.style.gridRowStart = '1'; // Primera fila (filas 1-2)
-            } else {
-                video.style.gridRowStart = '3'; // Segunda fila (filas 3-4)
-            }
-        });
-        
-        viewLog(`✅ Grid Compacto: ${count} videos en 2 filas x 5 columnas (span 2 filas cada uno)`);
-        
-    } else if (count <= 15) {
-        // 11-15 personas: 5 columnas, 3 filas, cada video ocupa 1 fila
-        cols = 5;
-        videoGrid.style.gridTemplateColumns = 'repeat(5, 1fr)';
-        videoGrid.style.gridTemplateRows = 'repeat(3, 1fr)';
-        
-        allVideos.forEach(video => {
-            video.style.display = 'block';
-            video.style.width = '100%';
-            video.style.height = '100%';
-            video.style.objectFit = 'cover';
-            video.style.aspectRatio = '16/9';
-            video.style.gridRow = '';
-            video.style.gridRowStart = '';
-        });
-        
-        viewLog(`✅ Grid Compacto: ${count} videos en 3 filas x 5 columnas`);
-        
-    } else if (count <= 25) {
-        // 16-25 personas: 5 columnas, hasta 5 filas
-        cols = 5;
-        const rows = Math.ceil(count / cols);
-        videoGrid.style.gridTemplateColumns = 'repeat(5, 1fr)';
-        videoGrid.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
-        
-        allVideos.forEach(video => {
-            video.style.display = 'block';
-            video.style.width = '100%';
-            video.style.height = '100%';
-            video.style.objectFit = 'cover';
-            video.style.aspectRatio = '16/9';
-            video.style.gridRow = '';
-            video.style.gridRowStart = '';
-        });
-        
-        viewLog(`✅ Grid Compacto: ${count} videos en ${rows} filas x 5 columnas`);
-        
-    } else {
-        // Más de 25 personas: 6 columnas adaptables
+    // Si son muchos videos, usar 6 columnas
+    if (count > 25) {
         cols = 6;
-        const rows = Math.ceil(count / cols);
-        videoGrid.style.gridTemplateColumns = 'repeat(6, 1fr)';
-        videoGrid.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
-        
-        allVideos.forEach(video => {
-            video.style.display = 'block';
-            video.style.width = '100%';
-            video.style.height = '100%';
-            video.style.objectFit = 'cover';
-            video.style.aspectRatio = '16/9';
-            video.style.gridRow = '';
-            video.style.gridRowStart = '';
-        });
-        
-        viewLog(`✅ Grid Compacto: ${count} videos en ${rows} filas x 6 columnas`);
+        rows = Math.ceil(count / cols);
     }
+    
+    videoGrid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+    videoGrid.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+    
+    // Aplicar estilos uniformes a TODOS los videos
+    allVideos.forEach(video => {
+        video.style.display = 'block';
+        video.style.width = '100%';
+        video.style.height = '100%';
+        video.style.objectFit = 'cover';
+        video.style.gridColumn = '';
+        video.style.gridRow = '';
+        video.style.gridArea = '';
+        video.style.gridRowStart = '';
+        video.style.minHeight = '';
+        video.style.maxHeight = '';
+        video.style.aspectRatio = '';
+    });
+    
+    viewLog(`✅ Grid Compacto: ${count} videos en ${rows} filas x ${cols} columnas`);
 }
 
 function applySpotlightLayout(videoGrid, allVideos) {
@@ -541,10 +505,19 @@ function applySpotlightLayout(videoGrid, allVideos) {
     if (allVideos.length === 1) {
         videoGrid.style.display = 'grid';
         videoGrid.style.gridTemplateColumns = '1fr';
-        videoGrid.style.gap = '12px';
+        videoGrid.style.gridTemplateRows = '1fr';
+        videoGrid.style.gap = '8px';
+        videoGrid.style.padding = '8px';
+        videoGrid.style.overflow = 'hidden';
+        videoGrid.style.boxSizing = 'border-box';
+        
         allVideos[0].style.display = 'block';
         allVideos[0].style.width = '100%';
         allVideos[0].style.height = '100%';
+        allVideos[0].style.objectFit = 'cover';
+        allVideos[0].style.gridColumn = '';
+        allVideos[0].style.gridRow = '';
+        allVideos[0].style.gridArea = '';
         return;
     }
     
@@ -554,57 +527,65 @@ function applySpotlightLayout(videoGrid, allVideos) {
                        allVideos.find(v => v.classList.contains('pinned')) ||
                        allVideos[0];
         
-        // ✅ Configuración tipo Google Meet: Grid 5x5
+        // Grid 5x5: 3 columnas principales + 2 columnas de miniaturas
         videoGrid.style.display = 'grid';
         videoGrid.style.gridTemplateColumns = 'repeat(5, 1fr)';
         videoGrid.style.gridTemplateRows = 'repeat(5, 1fr)';
         videoGrid.style.gap = '8px';
         videoGrid.style.width = '100%';
         videoGrid.style.height = '100%';
-        videoGrid.style.padding = '10px';
+        videoGrid.style.padding = '8px';
         videoGrid.style.overflow = 'hidden';
+        videoGrid.style.boxSizing = 'border-box';
         
-        // Ordenar videos: principal primero
         const otherVideos = allVideos.filter(v => v !== mainVideo);
         
-        // ✅ Video principal: ocupa 3 columnas x 5 filas (lado izquierdo)
+        // Video principal: columnas 1-3, filas 1-5
         mainVideo.classList.add('spotlight-main');
         mainVideo.style.display = 'block';
-        mainVideo.style.gridColumn = 'span 3';
-        mainVideo.style.gridRow = 'span 5';
+        mainVideo.style.gridColumn = '1 / 4';
+        mainVideo.style.gridRow = '1 / 6';
         mainVideo.style.width = '100%';
         mainVideo.style.height = '100%';
         mainVideo.style.objectFit = 'cover';
+        mainVideo.style.gridArea = '';
+        mainVideo.style.gridRowStart = '';
+        mainVideo.style.minHeight = '';
+        mainVideo.style.maxHeight = '';
+        mainVideo.style.aspectRatio = '';
         
-        // ✅ Miniaturas: máximo 4 videos en formato 2x2 en el lado derecho
+        // Miniaturas: máximo 4 videos en 2x2 (columnas 4-5)
         const thumbnails = otherVideos.slice(0, 4);
         const positions = [
-            { column: 4, row: 1, span: 2 }, // div2: columna 4, fila 1, ocupa 2 filas
-            { column: 5, row: 1, span: 2 }, // div3: columna 5, fila 1, ocupa 2 filas
-            { column: 4, row: 3, span: 2 }, // div4: columna 4, fila 3, ocupa 2 filas
-            { column: 5, row: 3, span: 2 }  // div5: columna 5, fila 3, ocupa 2 filas
+            { column: '4 / 5', row: '1 / 3' },  // Superior izquierda
+            { column: '5 / 6', row: '1 / 3' },  // Superior derecha
+            { column: '4 / 5', row: '3 / 5' },  // Inferior izquierda
+            { column: '5 / 6', row: '3 / 5' }   // Inferior derecha
         ];
         
         thumbnails.forEach((video, index) => {
             const pos = positions[index];
             video.style.display = 'block';
-            video.style.gridColumnStart = pos.column.toString();
-            video.style.gridRowStart = pos.row.toString();
-            video.style.gridRow = `span ${pos.span}`;
+            video.style.gridColumn = pos.column;
+            video.style.gridRow = pos.row;
             video.style.width = '100%';
             video.style.height = '100%';
             video.style.objectFit = 'cover';
+            video.style.gridArea = '';
+            video.style.gridRowStart = '';
+            video.style.minHeight = '';
+            video.style.maxHeight = '';
+            video.style.aspectRatio = '';
         });
         
-        // Ocultar videos adicionales si hay más de 4 miniaturas
+        // Ocultar videos adicionales
         otherVideos.slice(4).forEach(video => {
             video.style.display = 'none';
         });
         
-        viewLog(`✅ Spotlight OK: 1 principal + ${thumbnails.length} thumbnails en grid 2x2`);
+        viewLog(`✅ Spotlight: 1 principal + ${thumbnails.length} thumbnails`);
     } catch (e) {
         console.error('❌ Error en applySpotlightLayout:', e);
-        // Fallback a grid normal
         applyGridAutoLayout(videoGrid, allVideos);
     }
 }
@@ -618,10 +599,19 @@ function applySidebarLayout(videoGrid, allVideos) {
     if (allVideos.length === 1) {
         videoGrid.style.display = 'grid';
         videoGrid.style.gridTemplateColumns = '1fr';
+        videoGrid.style.gridTemplateRows = '1fr';
         videoGrid.style.gap = '8px';
+        videoGrid.style.padding = '8px';
+        videoGrid.style.overflow = 'hidden';
+        videoGrid.style.boxSizing = 'border-box';
+        
         allVideos[0].style.display = 'block';
         allVideos[0].style.width = '100%';
         allVideos[0].style.height = '100%';
+        allVideos[0].style.objectFit = 'cover';
+        allVideos[0].style.gridColumn = '';
+        allVideos[0].style.gridRow = '';
+        allVideos[0].style.gridArea = '';
         return;
     }
     
@@ -631,67 +621,61 @@ function applySidebarLayout(videoGrid, allVideos) {
                        allVideos.find(v => v.classList.contains('pinned')) ||
                        allVideos[0];
         
-        // ✅ Grid 7x5: 4 columnas para principal + 3 columnas para sidebar (15 miniaturas)
+        // Grid 7x5: 4 columnas principales + 3 columnas sidebar
         videoGrid.style.display = 'grid';
         videoGrid.style.gridTemplateColumns = 'repeat(7, 1fr)';
         videoGrid.style.gridTemplateRows = 'repeat(5, 1fr)';
-        videoGrid.style.gap = '8px';
+        videoGrid.style.gap = '6px';
         videoGrid.style.width = '100%';
         videoGrid.style.height = '100%';
-        videoGrid.style.padding = '8px';
+        videoGrid.style.padding = '6px';
         videoGrid.style.overflow = 'hidden';
+        videoGrid.style.boxSizing = 'border-box';
         
         const otherVideos = allVideos.filter(v => v !== mainVideo);
         
-        // ✅ Video principal: grid-area: 1 / 1 / 6 / 5 (ocupa columnas 1-4, filas 1-5)
+        // Video principal: columnas 1-4, filas 1-5
         mainVideo.classList.add('main-video');
         mainVideo.style.display = 'block';
-        mainVideo.style.gridArea = '1 / 1 / 6 / 5';
+        mainVideo.style.gridColumn = '1 / 5';
+        mainVideo.style.gridRow = '1 / 6';
         mainVideo.style.width = '100%';
         mainVideo.style.height = '100%';
         mainVideo.style.objectFit = 'cover';
+        mainVideo.style.gridArea = '';
+        mainVideo.style.gridRowStart = '';
+        mainVideo.style.minHeight = '';
+        mainVideo.style.maxHeight = '';
+        mainVideo.style.aspectRatio = '';
         
-        // ✅ Miniaturas en sidebar: máximo 15 videos en columnas 5-7
+        // Miniaturas en sidebar: máximo 15 (3 columnas x 5 filas)
         const thumbnails = otherVideos.slice(0, 15);
         
-        // Definir posiciones para las 15 miniaturas (3 columnas x 5 filas)
-        const positions = [
-            '1 / 5 / 2 / 6',  // div2: fila 1, columna 5
-            '1 / 6 / 2 / 7',  // div3: fila 1, columna 6
-            '1 / 7 / 2 / 8',  // div4: fila 1, columna 7
-            '2 / 5 / 3 / 6',  // div5: fila 2, columna 5
-            '2 / 6 / 3 / 7',  // div6: fila 2, columna 6
-            '2 / 7 / 3 / 8',  // div7: fila 2, columna 7
-            '3 / 5 / 4 / 6',  // div8: fila 3, columna 5
-            '3 / 6 / 4 / 7',  // div9: fila 3, columna 6
-            '3 / 7 / 4 / 8',  // div10: fila 3, columna 7
-            '4 / 5 / 5 / 6',  // div11: fila 4, columna 5
-            '4 / 6 / 5 / 7',  // div12: fila 4, columna 6
-            '4 / 7 / 5 / 8',  // div13: fila 4, columna 7
-            '5 / 5 / 6 / 6',  // div14: fila 5, columna 5
-            '5 / 6 / 6 / 7',  // div15: fila 5, columna 6
-            '5 / 7 / 6 / 8'   // div16: fila 5, columna 7
-        ];
-        
         thumbnails.forEach((video, index) => {
+            const col = (index % 3) + 5; // Columnas 5, 6, 7
+            const row = Math.floor(index / 3) + 1; // Filas 1-5
+            
             video.style.display = 'block';
-            video.style.gridArea = positions[index];
+            video.style.gridColumn = `${col} / ${col + 1}`;
+            video.style.gridRow = `${row} / ${row + 1}`;
             video.style.width = '100%';
             video.style.height = '100%';
             video.style.objectFit = 'cover';
-            video.style.gridColumn = '';
-            video.style.gridRow = '';
+            video.style.gridArea = '';
+            video.style.gridRowStart = '';
+            video.style.minHeight = '';
+            video.style.maxHeight = '';
+            video.style.aspectRatio = '';
         });
         
-        // Ocultar videos adicionales si hay más de 15 miniaturas
+        // Ocultar videos adicionales
         otherVideos.slice(15).forEach(video => {
             video.style.display = 'none';
         });
         
-        viewLog(`✅ Sidebar OK: 1 principal + ${thumbnails.length} miniaturas en grid 7x5`);
+        viewLog(`✅ Sidebar: 1 principal + ${thumbnails.length} miniaturas`);
     } catch (e) {
         console.error('❌ Error en applySidebarLayout:', e);
-        // Fallback a grid normal
         applyGridAutoLayout(videoGrid, allVideos);
     }
 }
@@ -702,12 +686,19 @@ function applyActiveSpeakerLayout(videoGrid, allVideos) {
     videoGrid.style.alignItems = 'center';
     videoGrid.style.width = '100%';
     videoGrid.style.height = '100%';
-    videoGrid.style.padding = '20px';
+    videoGrid.style.padding = '16px';
     videoGrid.style.overflow = 'hidden';
+    videoGrid.style.boxSizing = 'border-box';
+    videoGrid.style.gridTemplateColumns = '';
+    videoGrid.style.gridTemplateRows = '';
     
     // Ocultar todos MENOS el hablante activo
     allVideos.forEach(video => {
         video.style.display = 'none';
+        video.style.gridColumn = '';
+        video.style.gridRow = '';
+        video.style.gridArea = '';
+        video.style.gridRowStart = '';
     });
     
     // Mostrar solo el hablante activo
@@ -716,13 +707,15 @@ function applyActiveSpeakerLayout(videoGrid, allVideos) {
                          allVideos[0];
     
     if (speakingVideo) {
-        speakingVideo.style.display = 'block'; // VISIBLE
+        speakingVideo.style.display = 'block';
         speakingVideo.style.width = '100%';
         speakingVideo.style.height = '100%';
-        speakingVideo.style.maxWidth = '1200px';
+        speakingVideo.style.maxWidth = '100%';
         speakingVideo.style.maxHeight = '100%';
         speakingVideo.style.objectFit = 'contain';
         speakingVideo.style.margin = '0 auto';
+        speakingVideo.style.minHeight = '';
+        speakingVideo.style.aspectRatio = '';
     }
     
     viewLog(`✅ Active Speaker: ${speakingVideo ? '1 video visible' : 'ninguno'}`);
