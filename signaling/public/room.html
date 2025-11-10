@@ -434,25 +434,20 @@
         /* ============================================ */
 
         #main {
-            display: flex;
+ display: flex;
             flex: 1;
             overflow: hidden;
+            height: 100vh; /* ✅ Asegurar que ocupe toda la altura de la ventana */
         }
 
         #videos {
             flex: 1;
             display: flex;
             flex-direction: column;
-            gap: 24px;
-            padding: 32px 8px 32px 32px; /* ✅ padding derecho reducido a 8px para que las cámaras ocupen más espacio */
-            overflow-y: auto;
-            scrollbar-width: thin;
-            scrollbar-color: var(--glass-border) transparent;
-        }
-
-        /* Evitar scroll en el contenedor principal */
-        #videos {
-            overflow: hidden !important;
+            gap: 0; /* ✅ Sin gap para aprovechar todo el espacio */
+            padding: 0; /* ✅ Sin padding para que las cámaras usen todo el espacio */
+            overflow: hidden;
+            height: 100%; /* ✅ Asegurar que use toda la altura disponible */
         }
         
         #videos::-webkit-scrollbar {
@@ -515,11 +510,12 @@
 
         #videoGrid {
             display: grid;
-            gap: 20px;
-            flex: 1;
+            gap: 12px;
             width: 100%;
             height: 100%;
-            overflow: hidden; /* SIN SCROLL - Los videos se ajustan automáticamente */
+            padding: 12px;
+            overflow: hidden;
+            box-sizing: border-box; /* ✅ Asegurar que el padding no cause desbordamiento */
             /* Las columnas y filas se definen dinámicamente por viewControl.js */
         }
 
@@ -535,6 +531,9 @@
             backdrop-filter: blur(20px);
             width: 100%;
             height: 100%;
+            max-width: 100%; /* ✅ Evitar desbordamiento horizontal */
+            max-height: 100%; /* ✅ Evitar desbordamiento vertical */
+            box-sizing: border-box; /* ✅ Incluir border en el tamaño total */
             /* min-height y max-height se definen dinámicamente por viewControl.js */
         }
 

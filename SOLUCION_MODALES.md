@@ -174,6 +174,18 @@ Todos los cambios incluyen logs mejorados para facilitar el debugging:
 
 ---
 
+## 🧩 Correcciones adicionales al sistema de votación (Polls)
+
+Se detectó que algunos participantes veían la votación como "finalizada" inmediatamente al crearla. Se aplicaron las siguientes correcciones:
+
+- ✅ El servidor (`server.js`) calcula y envía `endTime` cuando se inicia una votación. Si por alguna razón el cliente no recibe `endTime`, el cliente ahora calcula un `endTime` local usando la `duration` recibida y lo propaga internamente.
+- ✅ En el cliente (`script.js`) se añadieron validaciones defensivas para `currentPoll`, `timerInterval` y `resultsTimerInterval` para evitar errores de tipo al acceder a propiedades undefined.
+- ✅ El temporizador de la votación (`startPollTimer`) ahora mantiene una referencia local al intervalo y también la guarda en `currentPoll.timerInterval` sólo si `currentPoll` existe, evitando intentos de limpiar intervalos inexistentes.
+- ✅ Se usa Math.ceil al calcular segundos restantes para prevenir que pequeñas diferencias de sincronización marquen la votación como finalizada inmediatamente.
+
+Estos cambios corrigen el caso en el que la UI de un participante mostraba "Tiempo terminado" inmediatamente después de que el moderador iniciara la votación.
+
+
 **Fecha**: 2025-01-05  
 **Versión**: 1.0  
 **Estado**: ✅ Implementado y Probado
