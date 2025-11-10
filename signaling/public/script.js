@@ -518,10 +518,14 @@ function handleFloorEnded(name) {
 }
 
 function addParticipant(name, isLocal) {
-    if (document.getElementById(`participant-${name}`)) {
-        debugLog(`Participante ${name} ya existe.`);
+    // ✅ Verificación más estricta para evitar duplicados
+    const existingParticipant = document.getElementById(`participant-${name}`);
+    if (existingParticipant) {
+        debugLog(`⚠️ Participante ${name} ya existe, actualizando en lugar de crear nuevo`);
+        updateParticipantList(); // Solo actualizar la lista existente
         return;
     }
+    
     const participantItem = document.createElement('li');
     participantItem.className = 'participant-item';
     participantItem.id = `participant-${name}`;
@@ -565,57 +569,83 @@ function addParticipant(name, isLocal) {
     const muteBtn = document.createElement('button');
     muteBtn.className = 'participant-control-btn mute-btn';
     muteBtn.title = participantStates[name]?.micActive ? 'Silenciar' : 'Activar Micrófono';
+    muteBtn.setAttribute('data-participant-name', name); // ✅ Guardar referencia al nombre
 
-    muteBtn.onclick = () => {
+    muteBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const targetName = muteBtn.getAttribute('data-participant-name');
+        
         if (!isModerator) {
             showError('Solo los moderadores pueden silenciar participantes.', 3000);
             debugLog('Intento de silenciamiento fallido: No es moderador.');
             return;
         }
         if (ws && ws.readyState === WebSocket.OPEN) {
-            const newMicState = !participantStates[name]?.micActive;
-            ws.send(JSON.stringify({ type: 'mute-participant', room: roomCode, target: name, micActive: newMicState }));
-            debugLog(`Solicitando ${newMicState ? 'activar' : 'silenciar'} micrófono para ${name}`);
+            const newMicState = !participantStates[targetName]?.micActive;
+            ws.send(JSON.stringify({ type: 'mute-participant', room: roomCode, target: targetName, micActive: newMicState }));
+            debugLog(`Solicitando ${newMicState ? 'activar' : 'silenciar'} micrófono para ${targetName}`);
         } else {
             showError('No se pudo realizar la acción: Conexión con el servidor perdida.', 5000);
             debugLog('Error: WebSocket no está abierto al intentar silenciar.');
         }
-    };
+    });
 
     // Botón de expulsión
     const kickBtn = document.createElement('button');
     kickBtn.className = 'participant-control-btn kick-btn';
     kickBtn.title = 'Expulsar';
+    kickBtn.setAttribute('data-participant-name', name); // ✅ Guardar referencia al nombre
 
-    kickBtn.onclick = () => {
+    kickBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const targetName = kickBtn.getAttribute('data-participant-name');
+        
         if (!isModerator) {
             showError('Solo los moderadores pueden expulsar participantes.', 3000);
             debugLog('Intento de expulsión fallido: No es moderador.');
             return;
         }
         if (ws && ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({ type: 'kick-participant', room: roomCode, target: name }));
-            debugLog(`Solicitando expulsar a ${name}`);
+            ws.send(JSON.stringify({ type: 'kick-participant', room: roomCode, target: targetName }));
+            debugLog(`Solicitando expulsar a ${targetName}`);
         } else {
             showError('No se pudo realizar la acción: Conexión con el servidor perdida.', 5000);
             debugLog('Error: WebSocket no está abierto al intentar expulsar.');
         }
-    };
+    });
 
     const assignModeratorBtn = document.createElement('button');
     assignModeratorBtn.className = 'participant-control-btn promote-btn';
     assignModeratorBtn.title = 'Hacer Moderador';
+    assignModeratorBtn.setAttribute('data-participant-name', name); // ✅ Guardar referencia al nombre
 
     assignModeratorBtn.style.display = isModerator && !isLocal && userRoles[name] !== 'Organizador de la Reunión' ? 'inline' : 'none';
-    assignModeratorBtn.onclick = () => {
+    
+    // ✅ Usar addEventListener en lugar de onclick para mejor control
+    assignModeratorBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const targetName = assignModeratorBtn.getAttribute('data-participant-name');
+        
+        if (!isModerator) {
+            showError('Solo los moderadores pueden asignar roles.', 3000);
+            return;
+        }
+        
         if (ws && ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({ type: 'assign-moderator', room: roomCode, target: name }));
-            debugLog(`Solicitando asignar rol de moderador a ${name}`);
+            ws.send(JSON.stringify({ type: 'assign-moderator', room: roomCode, target: targetName }));
+            debugLog(`Solicitando asignar rol de moderador a ${targetName}`);
+            showError(`Asignando moderador a ${targetName}...`, 2000);
         } else {
             showError('No se pudo realizar la acción: Conexión con el servidor perdida.', 5000);
             debugLog('Error: WebSocket no está abierto al intentar asignar moderador.');
         }
-    };
+    }, { once: false }); // ✅ No usar once aquí porque el botón se crea una sola vez
 
     controlsContainer.appendChild(muteBtn);
     controlsContainer.appendChild(kickBtn);
@@ -1311,20 +1341,25 @@ case 'join-request':
                         break;
 
                     case 'moderator-assigned':
+                        console.log('[MODERATOR] Mensaje recibido:', msg);
+                        
                         if (msg.name && msg.role) {
                             userRoles[msg.name] = msg.role;
 
                             if (msg.name === userName) {
                                 isModerator = true;
                                 updateModeratorUI?.();
-                                showNotification("Ahora eres moderador.");
-                                debugLog("Asignado como moderador.");
+                                showError("✅ Ahora eres moderador de la sala.", 4000);
+                                debugLog("✅ Asignado como moderador.");
                             } else {
-                                debugLog(`${msg.name} ha sido asignado como moderador.`);
+                                showError(`✅ ${msg.name} es ahora moderador.`, 3000);
+                                debugLog(`✅ ${msg.name} ha sido asignado como moderador.`);
                             }
 
                             updateParticipantList();  // 🔁 refresca la lista para mostrar la corona
                             updateHandList?.();       // 👋 actualiza panel de manos si es necesario
+                        } else {
+                            console.warn('[MODERATOR] ⚠️ Mensaje incompleto:', msg);
                         }
                         break;
 

@@ -4659,87 +4659,168 @@ function closeNotificationsModal() {
         toggleBtn.classList.toggle('active');
     });
 
-    // Poll creation modal controls
-    document.getElementById('createPollBtn').addEventListener('click', () => {
+    // ============================================
+    // POLL CREATION MODAL - Event Listeners Únicos
+    // ============================================
+    
+    // ✅ Función para abrir modal de creación de encuesta
+    function openPollCreationModalUI() {
         const modal = document.getElementById('pollCreationModal');
-        modal.style.display = 'flex';
-        modal.classList.remove('minimized');
-        modal.querySelector('.modal-content').style.transform = 'translate(0, 0)';
-    });
-
-    document.getElementById('mobileCreatePollBtn').addEventListener('click', () => {
-        const modal = document.getElementById('pollCreationModal');
-        modal.style.display = 'flex';
-        modal.classList.remove('minimized');
-        modal.querySelector('.modal-content').style.transform = 'translate(0, 0)';
-        document.querySelector('.more-menu-content').classList.remove('active');
-    });
-
-    document.querySelector('#pollCreationModal .minimize-modal').addEventListener('click', () => {
-        const modal = document.getElementById('pollCreationModal');
-        modal.classList.add('minimized');
-    });
-
-    document.querySelector('#pollCreationModal .restore-modal').addEventListener('click', () => {
-        const modal = document.getElementById('pollCreationModal');
-        modal.classList.remove('minimized');
-        modal.querySelector('.modal-content').style.transform = 'translate(0, 0)';
-    });
-
-    // Click en el modal minimizado para restaurarlo
-    document.getElementById('pollCreationModal').addEventListener('click', (e) => {
-        const modal = document.getElementById('pollCreationModal');
-        // Solo restaurar si está minimizado y NO se hizo clic en botones del header
-        if (modal.classList.contains('minimized') && 
-            !e.target.closest('.minimize-modal') && 
-            !e.target.closest('.close-modal') &&
-            e.target.closest('.modal-content')) {
-            e.stopPropagation();
+        if (modal) {
+            modal.style.display = 'flex';
             modal.classList.remove('minimized');
-            modal.querySelector('.modal-content').style.transform = 'translate(0, 0)';
+            const modalContent = modal.querySelector('.modal-content');
+            if (modalContent) {
+                modalContent.style.transform = 'translate(0, 0)';
+            }
+            console.log('[POLL] Modal de creación abierto');
         }
-    });
-
-    document.getElementById('closePollCreationModal').addEventListener('click', () => {
+    }
+    
+    // ✅ Función para cerrar modal de creación de encuesta
+    function closePollCreationModalUI() {
         const modal = document.getElementById('pollCreationModal');
-        modal.style.display = 'none';
-        modal.classList.remove('minimized');
-        modal.querySelector('.modal-content').style.transform = 'translate(0, 0)';
-        // Limpiar el formulario al cerrar
-        if (typeof clearPollCreationForm === 'function') {
-            clearPollCreationForm();
+        if (modal) {
+            modal.style.display = 'none';
+            modal.classList.remove('minimized');
+            const modalContent = modal.querySelector('.modal-content');
+            if (modalContent) {
+                modalContent.style.transform = 'translate(0, 0)';
+            }
+            // Limpiar el formulario al cerrar
+            if (typeof clearPollCreationForm === 'function') {
+                clearPollCreationForm();
+            }
+            console.log('[POLL] Modal de creación cerrado');
         }
-    });
+    }
+    
+    // ✅ Botón de crear encuesta (desktop)
+    const createPollBtn = document.getElementById('createPollBtn');
+    if (createPollBtn && !createPollBtn.hasAttribute('data-listener-attached')) {
+        createPollBtn.setAttribute('data-listener-attached', 'true');
+        createPollBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            openPollCreationModalUI();
+        });
+    }
 
-    // Poll panel minimize/restore controls
+    // ✅ Botón de crear encuesta (mobile)
+    const mobileCreatePollBtn = document.getElementById('mobileCreatePollBtn');
+    if (mobileCreatePollBtn && !mobileCreatePollBtn.hasAttribute('data-listener-attached')) {
+        mobileCreatePollBtn.setAttribute('data-listener-attached', 'true');
+        mobileCreatePollBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            openPollCreationModalUI();
+            const moreMenu = document.querySelector('.more-menu-content');
+            if (moreMenu) moreMenu.classList.remove('active');
+        });
+    }
+
+    // ✅ Minimizar modal
+    const minimizePollCreationBtn = document.querySelector('#pollCreationModal .minimize-modal');
+    if (minimizePollCreationBtn && !minimizePollCreationBtn.hasAttribute('data-listener-attached')) {
+        minimizePollCreationBtn.setAttribute('data-listener-attached', 'true');
+        minimizePollCreationBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const modal = document.getElementById('pollCreationModal');
+            if (modal) {
+                modal.classList.add('minimized');
+                console.log('[POLL] Modal minimizado');
+            }
+        });
+    }
+
+    // ✅ Restaurar modal (botón)
+    const restorePollCreationBtn = document.querySelector('#pollCreationModal .restore-modal');
+    if (restorePollCreationBtn && !restorePollCreationBtn.hasAttribute('data-listener-attached')) {
+        restorePollCreationBtn.setAttribute('data-listener-attached', 'true');
+        restorePollCreationBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const modal = document.getElementById('pollCreationModal');
+            if (modal) {
+                modal.classList.remove('minimized');
+                const modalContent = modal.querySelector('.modal-content');
+                if (modalContent) {
+                    modalContent.style.transform = 'translate(0, 0)';
+                }
+                console.log('[POLL] Modal restaurado');
+            }
+        });
+    }
+
+    // ✅ Click en el modal minimizado para restaurarlo
+    const pollCreationModal = document.getElementById('pollCreationModal');
+    if (pollCreationModal && !pollCreationModal.hasAttribute('data-click-listener-attached')) {
+        pollCreationModal.setAttribute('data-click-listener-attached', 'true');
+        pollCreationModal.addEventListener('click', (e) => {
+            const modal = e.currentTarget;
+            // Solo restaurar si está minimizado y se hace clic en el modal content (no en botones)
+            if (modal.classList.contains('minimized') && 
+                !e.target.closest('.minimize-modal') && 
+                !e.target.closest('.close-modal') &&
+                e.target.closest('.modal-content')) {
+                e.stopPropagation();
+                modal.classList.remove('minimized');
+                const modalContent = modal.querySelector('.modal-content');
+                if (modalContent) {
+                    modalContent.style.transform = 'translate(0, 0)';
+                }
+                console.log('[POLL] Modal restaurado por click');
+            }
+        });
+    }
+
+    // ✅ Cerrar modal (botón X)
+    const closePollCreationModalBtn = document.getElementById('closePollCreationModal');
+    if (closePollCreationModalBtn && !closePollCreationModalBtn.hasAttribute('data-listener-attached')) {
+        closePollCreationModalBtn.setAttribute('data-listener-attached', 'true');
+        closePollCreationModalBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            closePollCreationModalUI();
+        });
+    }
+
+    // ============================================
+    // POLL PANEL - Event Listeners Únicos
+    // ============================================
+    
     const pollPanel = document.getElementById('pollPanel');
     const pollPanelMinimizeBtn = document.querySelector('#pollPanel .minimize-btn');
     const pollPanelCloseBtn = document.querySelector('#pollPanel .close-poll-btn');
     
-    if (pollPanelMinimizeBtn) {
+    if (pollPanelMinimizeBtn && !pollPanelMinimizeBtn.hasAttribute('data-listener-attached')) {
+        pollPanelMinimizeBtn.setAttribute('data-listener-attached', 'true');
         pollPanelMinimizeBtn.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
             if (pollPanel) {
                 pollPanel.classList.add('minimized');
-                console.log('Panel minimizado - clases:', pollPanel.className);
+                console.log('[POLL PANEL] Panel minimizado');
             }
         });
     }
 
-    if (pollPanelCloseBtn) {
+    if (pollPanelCloseBtn && !pollPanelCloseBtn.hasAttribute('data-listener-attached')) {
+        pollPanelCloseBtn.setAttribute('data-listener-attached', 'true');
         pollPanelCloseBtn.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
             if (pollPanel) {
                 pollPanel.style.display = 'none';
                 pollPanel.classList.remove('minimized');
-                console.log('Panel cerrado');
+                console.log('[POLL PANEL] Panel cerrado');
             }
         });
     }
 
-    if (pollPanel) {
+    if (pollPanel && !pollPanel.hasAttribute('data-click-listener-attached')) {
+        pollPanel.setAttribute('data-click-listener-attached', 'true');
         pollPanel.addEventListener('click', (e) => {
             // Solo restaurar si está minimizado y se hace clic en el panel mismo (no en botones internos)
             if (pollPanel.classList.contains('minimized')) {
@@ -4748,54 +4829,86 @@ function closeNotificationsModal() {
                     !e.target.closest('.poll-actions') &&
                     !e.target.closest('input')) {
                     pollPanel.classList.remove('minimized');
-                    console.log('Panel restaurado - clases:', pollPanel.className);
+                    console.log('[POLL PANEL] Panel restaurado');
                 }
             }
         });
     }
 
-    // Poll results panel controls
-    document.getElementById('minimizePollResultsBtn').addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        const panel = document.getElementById('pollResultsPanel');
-        if (panel) {
-            panel.classList.add('minimized');
-            console.log('Panel de resultados minimizado');
-        }
-    });
+    // ============================================
+    // POLL RESULTS PANEL - Event Listeners Únicos
+    // ============================================
+    
+    const pollResultsPanel = document.getElementById('pollResultsPanel');
+    const minimizePollResultsBtn = document.getElementById('minimizePollResultsBtn');
+    const closePollResultsPanel = document.getElementById('closePollResultsPanel');
+    const closeResultsBtn = document.getElementById('closeResultsBtn');
+    
+    if (minimizePollResultsBtn && !minimizePollResultsBtn.hasAttribute('data-listener-attached')) {
+        minimizePollResultsBtn.setAttribute('data-listener-attached', 'true');
+        minimizePollResultsBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (pollResultsPanel) {
+                pollResultsPanel.classList.add('minimized');
+                console.log('[POLL RESULTS] Panel de resultados minimizado');
+            }
+        });
+    }
 
     // Click en el panel de resultados minimizado para restaurarlo
-    document.getElementById('pollResultsPanel').addEventListener('click', (e) => {
-        const panel = document.getElementById('pollResultsPanel');
-        // Solo restaurar si está minimizado y NO se hizo clic en botones del header
-        if (panel.classList.contains('minimized') && 
-            !e.target.closest('.minimize-btn') && 
-            !e.target.closest('.close-modal') &&
-            e.target.closest('.modal-content')) {
-            e.stopPropagation();
-            panel.classList.remove('minimized');
-            const modalContent = panel.querySelector('.modal-content');
-            if (modalContent) {
-                modalContent.style.transform = 'translate(0, 0)';
+    if (pollResultsPanel && !pollResultsPanel.hasAttribute('data-click-listener-attached')) {
+        pollResultsPanel.setAttribute('data-click-listener-attached', 'true');
+        pollResultsPanel.addEventListener('click', (e) => {
+            // Solo restaurar si está minimizado y NO se hizo clic en botones del header
+            if (pollResultsPanel.classList.contains('minimized') && 
+                !e.target.closest('.minimize-btn') && 
+                !e.target.closest('.close-modal') &&
+                e.target.closest('.modal-content')) {
+                e.stopPropagation();
+                pollResultsPanel.classList.remove('minimized');
+                const modalContent = pollResultsPanel.querySelector('.modal-content');
+                if (modalContent) {
+                    modalContent.style.transform = 'translate(0, 0)';
+                }
+                console.log('[POLL RESULTS] Panel de resultados restaurado');
             }
-            console.log('Panel de resultados restaurado');
-        }
-    });
+        });
+    }
 
-    document.getElementById('closePollResultsPanel').addEventListener('click', () => {
-        const panel = document.getElementById('pollResultsPanel');
-        panel.style.display = 'none';
-        panel.classList.remove('minimized');
-        panel.querySelector('.modal-content').style.transform = 'translate(0, 0)';
-    });
+    if (closePollResultsPanel && !closePollResultsPanel.hasAttribute('data-listener-attached')) {
+        closePollResultsPanel.setAttribute('data-listener-attached', 'true');
+        closePollResultsPanel.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (pollResultsPanel) {
+                pollResultsPanel.style.display = 'none';
+                pollResultsPanel.classList.remove('minimized');
+                const modalContent = pollResultsPanel.querySelector('.modal-content');
+                if (modalContent) {
+                    modalContent.style.transform = 'translate(0, 0)';
+                }
+                console.log('[POLL RESULTS] Panel cerrado (botón X)');
+            }
+        });
+    }
 
-    document.getElementById('closeResultsBtn').addEventListener('click', () => {
-        const panel = document.getElementById('pollResultsPanel');
-        panel.style.display = 'none';
-        panel.classList.remove('minimized');
-        panel.querySelector('.modal-content').style.transform = 'translate(0, 0)';
-    });
+    if (closeResultsBtn && !closeResultsBtn.hasAttribute('data-listener-attached')) {
+        closeResultsBtn.setAttribute('data-listener-attached', 'true');
+        closeResultsBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (pollResultsPanel) {
+                pollResultsPanel.style.display = 'none';
+                pollResultsPanel.classList.remove('minimized');
+                const modalContent = pollResultsPanel.querySelector('.modal-content');
+                if (modalContent) {
+                    modalContent.style.transform = 'translate(0, 0)';
+                }
+                console.log('[POLL RESULTS] Panel cerrado (botón Cerrar)');
+            }
+        });
+    }
 
     document.addEventListener('keydown', (e) => {
         if (e.key === 'm') {
