@@ -16,7 +16,21 @@ const fs = require('fs');
     fs.writeFileSync('./signaling/public/frontendConfig.json', JSON.stringify(config), 'utf-8');
 
     console.log('✅ Ngrok iniciado en:', url);
-    console.log('🔗 Entra a: ' + url + '/?room=codigo&name=TuNombre');
+    console.log('🔗 Link de prueba (Admin): ' + url + '/room.html?room=test&name=Admin&moderator=true');
+    console.log('📋 Los participantes recibirán un link de join.html automáticamente');
+
+    // Abrir automáticamente la página de join en el navegador
+    const joinUrl = `${url}/join.html?room=test&name=Invitado`;
+    console.log('🚀 Abriendo página de join automáticamente:', joinUrl);
+    
+    // En Windows, usar 'start' para abrir el navegador por defecto
+    exec(`start "" "${joinUrl}"`, (error) => {
+        if (error) {
+            console.warn('⚠️ No se pudo abrir el navegador automáticamente:', error.message);
+        } else {
+            console.log('✅ Página de join abierta en el navegador');
+        }
+    });
 
     
     const serverProcess = exec('node signaling/server.js');

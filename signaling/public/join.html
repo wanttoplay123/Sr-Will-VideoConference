@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unirse a la Reunión</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #22c55e; /* Verde */
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        .container {
+            text-align: center;
+            padding: 40px;
+        }
+
+        .enter-button {
+            background-color: white;
+            color: #22c55e;
+            border: none;
+            padding: 20px 40px;
+            font-size: 24px;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+            min-width: 200px;
+        }
+
+        .enter-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+            background-color: #f8fafc;
+        }
+
+        .enter-button:active {
+            transform: translateY(-1px);
+        }
+
+        .loading {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #22c55e;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 1s ease-in-out infinite;
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <button id="enterBtn" class="enter-button">
+            Entrar
+        </button>
+    </div>
+
+    <script>
+        // Función para obtener parámetros de la URL
+        function getUrlParameter(name) {
+            name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+            const regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+            const results = regex.exec(location.search);
+            return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+        }
+
+        // Función para mostrar loading
+        function setButtonLoading(button, isLoading) {
+            if (isLoading) {
+                button.classList.add('loading');
+                button.disabled = true;
+            } else {
+                button.classList.remove('loading');
+                button.disabled = false;
+            }
+        }
+
+        // Función para obtener la URL base desde el config
+        async function getBaseUrl() {
+            try {
+                const response = await fetch('/frontendConfig.json');
+                const config = await response.json();
+                if (config.wsUrl) {
+                    // Convertir wss:// a https://
+                    return config.wsUrl.replace('wss://', 'https://');
+                }
+            } catch (err) {
+                console.warn('[JOIN] No se pudo cargar frontendConfig.json, usando URL relativa');
+            }
+            // Si no hay config, usar la URL actual
+            return window.location.origin;
+        }
+
+        // Evento del botón
+        document.getElementById('enterBtn').addEventListener('click', async () => {
+            const button = document.getElementById('enterBtn');
+
+            // Obtener parámetros de la URL
+            const room = getUrlParameter('room');
+            const name = getUrlParameter('name');
+            const moderator = getUrlParameter('moderator');
+
+            if (!room || !name) {
+                alert('❌ Error: Faltan parámetros de la reunión (room y name)');
+                return;
+            }
+
+            // Mostrar loading
+            setButtonLoading(button, true);
+
+            // Obtener URL base (ngrok o localhost)
+            const baseUrl = await getBaseUrl();
+
+            // Construir URL de destino completa
+            let url = `${baseUrl}/index.html?room=${encodeURIComponent(room)}&name=${encodeURIComponent(name)}`;
+            if (moderator) {
+                url += `&moderator=${moderator}`;
+            }
+
+            console.log('[JOIN] Redirigiendo a:', url);
+
+            // Redirigir
+            setTimeout(() => {
+                window.location.href = url;
+            }, 500);
+        });
+
+        // Auto-click si se presiona Enter
+        document.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                document.getElementById('enterBtn').click();
+            }
+        });
+
+        // Auto-focus en el botón
+        window.addEventListener('load', () => {
+            document.getElementById('enterBtn').focus();
+        });
+    </script>
+</body>
+</html>

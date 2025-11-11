@@ -16,7 +16,22 @@ app.use((req, res, next) => {
   next();
 });
 
+// Servir archivos estáticos
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Ruta para obtener información del servidor (para ngrok)
+app.get('/server-info', (req, res) => {
+  const host = req.get('host');
+  const isNgrok = host.includes('ngrok') || host.includes('ngrok-free');
+  const protocol = req.protocol;
+  const baseUrl = `${protocol}://${host}`;
+
+  res.json({
+    baseUrl: baseUrl,
+    isNgrok: isNgrok,
+    port: PORT
+  });
+});
 
 wss.on('connection', (ws) => {
   let room = null;

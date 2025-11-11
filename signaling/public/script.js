@@ -1110,6 +1110,12 @@ function initWebSocket() {
                             if (errorPanel && errorPanel.textContent.includes('Esperando aprobación')) {
                                 errorPanel.style.display = 'none';
                             }
+
+                            // Si es moderador, mostrar link para compartir
+                            if (isModerator && !sessionStorage.getItem('linkShown')) {
+                                sessionStorage.setItem('linkShown', 'true');
+                                showShareLink();
+                            }
                         }
                         break;
 
@@ -2992,3 +2998,144 @@ document.getElementById('leaveBtn')?.addEventListener('click', () => {
         window.location.href = '/';
     }, 2000);
 });
+
+// Función para mostrar el link de invitación
+async function showShareLink() {
+    // Obtener la URL base (ngrok o localhost)
+    let baseUrl = window.location.origin;
+    
+    // Intentar obtener la URL de ngrok desde frontendConfig.json
+    try {
+        const response = await fetch('/frontendConfig.json');
+        const config = await response.json();
+        if (config.wsUrl) {
+            // Convertir wss:// a https://
+            baseUrl = config.wsUrl.replace('wss://', 'https://');
+        }
+    } catch (error) {
+        console.log('[JOIN] Usando URL local:', baseUrl);
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const room = params.get('room');
+    const shareUrl = `${baseUrl}/join.html?room=${encodeURIComponent(room)}&name=Invitado`;
+
+    // Crear modal
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.8);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 10000;
+        backdrop-filter: blur(8px);
+    `;
+
+    const content = document.createElement('div');
+    content.style.cssText = `
+        background: linear-gradient(145deg, #1a1a2e 0%, #16213e 100%);
+        padding: 32px;
+        border-radius: 24px;
+        max-width: 600px;
+        width: 90%;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        text-align: center;
+    `;
+
+    content.innerHTML = `
+        <h2 style="color: #22c55e; margin-bottom: 16px; font-size: 24px; font-weight: 700;">
+            🎉 Reunión Creada
+        </h2>
+        <p style="color: rgba(255, 255, 255, 0.8); margin-bottom: 24px; font-size: 14px;">
+            Comparte este link con los participantes para que se unan a la reunión:
+        </p>
+        <div style="
+            background: rgba(0, 0, 0, 0.3);
+            padding: 16px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            word-break: break-all;
+            font-family: monospace;
+            color: #22c55e;
+            font-size: 14px;
+        ">
+            ${shareUrl}
+        </div>
+        <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+            <button id="copyLinkBtn" style="
+                background: linear-gradient(145deg, #22c55e 0%, #16a34a 100%);
+                color: white;
+                border: none;
+                padding: 14px 28px;
+                border-radius: 12px;
+                cursor: pointer;
+                font-weight: 600;
+                font-size: 14px;
+                box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+                transition: all 0.3s ease;
+            ">
+                📋 Copiar Link
+            </button>
+            <button id="closeLinkModalBtn" style="
+                background: linear-gradient(145deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+                color: white;
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                padding: 14px 28px;
+                border-radius: 12px;
+                cursor: pointer;
+                font-weight: 600;
+                font-size: 14px;
+                transition: all 0.3s ease;
+            ">
+                Cerrar
+            </button>
+        </div>
+    `;
+
+    modal.appendChild(content);
+    document.body.appendChild(modal);
+
+    // Botón copiar
+    document.getElementById('copyLinkBtn').addEventListener('click', () => {
+        navigator.clipboard.writeText(shareUrl).then(() => {
+            const btn = document.getElementById('copyLinkBtn');
+            btn.textContent = '✓ Copiado!';
+            btn.style.background = 'linear-gradient(145deg, #16a34a 0%, #15803d 100%)';
+            setTimeout(() => {
+                btn.textContent = '📋 Copiar Link';
+                btn.style.background = 'linear-gradient(145deg, #22c55e 0%, #16a34a 100%)';
+            }, 2000);
+        }).catch(err => {
+            console.error('Error al copiar:', err);
+            alert('No se pudo copiar el link. Inténtalo manualmente.');
+        });
+    });
+
+    // Botón cerrar
+    document.getElementById('closeLinkModalBtn').addEventListener('click', () => {
+        modal.remove();
+    });
+
+    // Cerrar con click fuera del modal
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.remove();
+        }
+    });
+
+    // Cerrar con ESC
+    const escHandler = (e) => {
+        if (e.key === 'Escape') {
+            modal.remove();
+            document.removeEventListener('keydown', escHandler);
+        }
+    };
+    document.addEventListener('keydown', escHandler);
+}

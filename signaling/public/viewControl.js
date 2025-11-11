@@ -43,6 +43,15 @@ function initViewControl() {
 
     viewLog('🚀 Inicializando sistema de control de vistas...');
 
+    // Leer vista desde URL si existe
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlView = urlParams.get('view');
+    
+    if (urlView) {
+        ViewControlSystem.currentView = urlView;
+        viewLog(`🎯 Vista especificada en URL: ${urlView}`);
+    }
+
     // Setup botones del panel
     setupViewControlPanel();
     
@@ -55,11 +64,12 @@ function initViewControl() {
     // Setup observer para cambios en el DOM
     setupDOMObserver();
     
-    // Aplicar vista por defecto
+    // Aplicar vista inicial (desde URL o por defecto)
     setTimeout(() => {
-        setViewMode('grid-auto');
+        const initialView = urlView || 'grid-auto';
+        setViewMode(initialView);
         ViewControlSystem.initialized = true;
-        viewLog('✅ Sistema de control de vistas inicializado');
+        viewLog(`✅ Sistema de control de vistas inicializado con vista: ${initialView}`);
     }, 500);
 }
 
@@ -147,6 +157,14 @@ function setupViewOptions() {
             setViewMode(view);
         });
     });
+
+    // Marcar vista inicial como activa
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlView = urlParams.get('view') || 'grid-auto';
+    const initialOption = document.querySelector(`.view-option[data-view="${urlView}"]`);
+    if (initialOption) {
+        initialOption.classList.add('active');
+    }
 
     viewLog('✅ Opciones de vista configuradas');
 }
