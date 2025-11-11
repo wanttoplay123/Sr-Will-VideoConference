@@ -1301,7 +1301,20 @@ case 'join-request':
                         currentPoll = msg.poll;
                         hidePollForParticipant();
                         if (isModerator) {
-                            displayPollResults(msg.results, msg.question, msg.options);
+                            // Guardar los votos en el poll para que persistan
+                            if (!currentPoll) {
+                                currentPoll = {
+                                    id: msg.pollId,
+                                    question: msg.question,
+                                    options: msg.options,
+                                    results: msg.results,
+                                    votes: msg.votes || []
+                                };
+                            } else {
+                                currentPoll.results = msg.results;
+                                currentPoll.votes = msg.votes || [];
+                            }
+                            displayPollResults(msg.results, msg.question, msg.options, msg.votes);
                         } else {
                             showError('La votación ha terminado.', 3000);
                         }
@@ -2362,7 +2375,8 @@ function displayPollForParticipant(poll) {
     if (isModerator) {
         document.getElementById('pollCreationModal').style.display = 'none';
         if (remainingTimeSeconds === 0) {
-            displayPollResults(poll.results, poll.question, poll.options);
+            // Usar los votos guardados si existen
+            displayPollResults(poll.results, poll.question, poll.options, poll.votes);
         }
     }
 }

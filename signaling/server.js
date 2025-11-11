@@ -273,7 +273,8 @@ wss.on('connection', (ws) => {
                         pollId: endedPoll.id,
                         results: endedPoll.results,
                         question: endedPoll.question,
-                        options: endedPoll.options
+                        options: endedPoll.options,
+                        votes: endedPoll.votes || []
                       }));
                     }
                   });
@@ -379,7 +380,8 @@ wss.on('connection', (ws) => {
                     pollId: endedPoll.id,
                     results: results,
                     question: endedPoll.question,
-                    options: endedPoll.options
+                    options: endedPoll.options,
+                    votes: endedPoll.votes || []
                   }));
                 }
               });
