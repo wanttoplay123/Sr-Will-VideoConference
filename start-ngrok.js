@@ -17,18 +17,18 @@ const fs = require('fs');
 
     console.log('✅ Ngrok iniciado en:', url);
     console.log('🔗 Link de prueba (Admin): ' + url + '/room.html?room=test&name=Admin&moderator=true');
-    console.log('📋 Los participantes recibirán un link de join.html automáticamente');
+    console.log('📋 Los participantes recibirán un link de index.html automáticamente');
 
-    // Abrir automáticamente la página de join en el navegador
-    const joinUrl = `${url}/join.html?room=test&name=Invitado`;
-    console.log('🚀 Abriendo página de join automáticamente:', joinUrl);
+    // Abrir automáticamente la página de index en el navegador
+    const joinUrl = `${url}/index.html?room=test&name=Invitado`;
+    console.log('🚀 Abriendo página de index automáticamente:', joinUrl);
     
     // En Windows, usar 'start' para abrir el navegador por defecto
     exec(`start "" "${joinUrl}"`, (error) => {
         if (error) {
             console.warn('⚠️ No se pudo abrir el navegador automáticamente:', error.message);
         } else {
-            console.log('✅ Página de join abierta en el navegador');
+            console.log('✅ Página de index abierta en el navegador');
         }
     });
 

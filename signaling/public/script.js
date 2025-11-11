@@ -3020,7 +3020,7 @@ async function showShareLink() {
 
     const params = new URLSearchParams(window.location.search);
     const room = params.get('room');
-    const shareUrl = `${baseUrl}/join.html?room=${encodeURIComponent(room)}&name=Invitado`;
+    const shareUrl = `${baseUrl}/index.html?room=${encodeURIComponent(room)}&name=Invitado`;
 
     // Crear modal
     const modal = document.createElement('div');
