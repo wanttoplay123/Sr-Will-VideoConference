@@ -402,19 +402,7 @@ function updateHandNotification() {
     }
 }
 
-document.addEventListener('keydown', e => {
-    if (e.key.toLowerCase() === 'h' && !isModerator && ws && ws.readyState === WebSocket.OPEN && !e.repeat) {
-        if (!raisedHands.has(userName)) {
-            ws.send(JSON.stringify({ type: 'raise-hand', name: userName }));
-            raisedHands.add(userName);
-            updateHandList();
-            updateHandNotification();
-            showError('Has levantado la mano ✋', 3000);
-            debugLog('Levantando mano (tecla H).');
-            document.getElementById('raiseHand')?.classList.add('active');
-        }
-    }
-});
+// Event listener de teclado para levantar mano REMOVIDO para evitar interferencias al escribir
 
 document.getElementById('raiseHand')?.addEventListener('click', () => {
     if (isModerator) {
@@ -3130,12 +3118,5 @@ async function showShareLink() {
         }
     });
 
-    // Cerrar con ESC
-    const escHandler = (e) => {
-        if (e.key === 'Escape') {
-            modal.remove();
-            document.removeEventListener('keydown', escHandler);
-        }
-    };
-    document.addEventListener('keydown', escHandler);
+    // Event listener de teclado REMOVIDO para evitar interferencias al escribir
 }

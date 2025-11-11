@@ -106,12 +106,7 @@ function setupViewControlPanel() {
     // Cerrar con overlay
     viewControlOverlay.addEventListener('click', closeViewControlPanel);
 
-    // Cerrar con ESC
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && viewControlPanel.classList.contains('active')) {
-            closeViewControlPanel();
-        }
-    });
+    // Event listener de teclado REMOVIDO para evitar interferencias al escribir
 
     viewLog('✅ Panel de control configurado');
 }

@@ -433,13 +433,16 @@
         /* MAIN CONTAINER */
         /* ============================================ */
 
-        #main {
-            display: flex;
-            flex: 1;
-            overflow: hidden;
-            height: calc(100vh - 96px); /* ✅ Restar altura del header (padding 20px*2 + contenido ~56px) */
-            position: relative;
-        }
+#main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    height: calc(100vh - 96px);
+    position: relative;
+    /* ✅ Añadir estas propiedades para permitir que los hijos se expandan */
+    align-items: stretch;
+    justify-content: flex-start;
+}
 
         #videos {
             flex: 1;
@@ -4946,17 +4949,8 @@ function closeNotificationsModal() {
         });
     }
 
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'm') {
-            document.getElementById('toggleMic').click();
-        } else if (e.key === 'c') {
-            document.getElementById('toggleCam').click();
-        } else if (e.key === 'h') {
-            document.getElementById('raiseHand').click();
-        } else if (e.key === 'v') {
-            document.getElementById('viewControlToggle').click();
-        }
-    });
+    // Event listeners de teclado REMOVIDOS para evitar interferencias al escribir
+    // Anteriormente manejaba: M (mic), C (cam), H (mano), V (vista)
 
     // ============================================
     // SISTEMA DE CONTROL DE VISTA DE CÁMARAS
