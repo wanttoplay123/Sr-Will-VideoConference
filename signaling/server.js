@@ -2,6 +2,7 @@ const express = require('express');
 const { WebSocketServer } = require('ws');
 const http = require('http');
 const path = require('path');
+const fs = require('fs');
 
 const app = express();
 const server = http.createServer(app);
@@ -31,6 +32,57 @@ app.get('/server-info', (req, res) => {
     isNgrok: isNgrok,
     port: PORT
   });
+});
+
+// Endpoint para generar URL de join completa
+app.get('/generate-join-url', (req, res) => {
+  try {
+    const { room, name, moderator } = req.query;
+
+    if (!room || !name) {
+      return res.status(400).json({
+        error: 'Faltan parámetros: room y name son requeridos'
+      });
+    }
+
+    // Leer configuración de ngrok
+    const configPath = path.join(__dirname, 'public', 'frontendConfig.json');
+    let baseUrl = `${req.protocol}://${req.get('host')}`; // fallback
+
+    try {
+      if (fs.existsSync(configPath)) {
+        const configData = fs.readFileSync(configPath, 'utf8');
+        const config = JSON.parse(configData);
+        if (config.wsUrl) {
+          baseUrl = config.wsUrl.replace('wss://', 'https://').replace('ws://', 'http://');
+          console.log('[SERVER] ✅ Using ngrok URL from config:', baseUrl);
+        }
+      } else {
+        console.warn('[SERVER] ⚠️ frontendConfig.json no existe');
+      }
+    } catch (err) {
+      console.error('[SERVER] ❌ Error leyendo frontendConfig.json:', err.message);
+    }
+
+    // Construir URL completa
+    let url = `${baseUrl}/index.html?room=${encodeURIComponent(room)}&name=${encodeURIComponent(name)}`;
+    if (moderator) {
+      url += `&moderator=${moderator}`;
+    }
+
+    console.log('[SERVER] 🔗 URL generada:', url);
+
+    res.json({
+      success: true,
+      url: url,
+      baseUrl: baseUrl,
+      params: { room, name, moderator }
+    });
+
+  } catch (error) {
+    console.error('[SERVER] Error generando URL:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
 });
 
 wss.on('connection', (ws) => {
