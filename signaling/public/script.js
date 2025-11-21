@@ -163,23 +163,19 @@ console.log('[INIT] Parámetros URL:', {
 
 let isMicActive = true;
 let isCamActive = true;
-let isScreenSharing = false;
 let localStream = null;
-let screenStream = null;
 let peerConnections = {};
 let ws = null;
 let intentionalDisconnect = false;
-let isSharingScreen = false;
-let currentScreenSharePeerId = null;
-let screenShareStream = null;
 let reconnectionAttempts = 0;
-let audioContext = null;
-let originalAudioTrack = null;
-let localMicStream = null;
+// ============ SISTEMA DE COMPARTIR PANTALLA (NUEVO) ============
+let isScreenSharing = false;
+let localScreenStream = null;
+let remoteScreenStreams = {}; // Mapa: userId -> streamId
+// ===============================================================
 
 // Referencias a elementos del DOM
 let videosContainer = null;
-let screenShareContainer = null;
 let participantList = null;
 let participantCount = null;
 
@@ -584,169 +580,69 @@ function toggleHandPanel() {
 }
 
 function updateHandList() {
-    const ul = document.getElementById('handList');
-    if (!ul) return;
-    ul.innerHTML = '';
-    const handCount = document.getElementById('handCount');
-    if (handCount) {
-        handCount.textContent = raisedHands.size;
+    const handList = document.getElementById('handList');
+    if (!handList) return;
+    handList.innerHTML = '';
+
+    const arr = Array.from(raisedHands);
+    if (arr.length === 0) {
+        const li = document.createElement('li');
+        li.className = 'empty';
+        li.textContent = 'No hay manos levantadas';
+        handList.appendChild(li);
+        updateHandNotification();
+        return;
     }
 
-    if (raisedHands.size === 0) {
+    arr.forEach(name => {
         const li = document.createElement('li');
-        li.textContent = "Nadie ha levantado la mano.";
-        li.style.color = "rgba(255,255,255,0.6)";
-        li.style.fontStyle = "italic";
-        li.style.justifyContent = "center";
-        ul.appendChild(li);
-    } else {
-        raisedHands.forEach(name => {
-            const li = document.createElement('li');
-            li.className = 'hand-card';
-            li.style.position = 'relative';
-            li.style.marginBottom = '10px';
-            li.style.display = 'flex';
-            li.style.alignItems = 'center';
-            li.style.padding = '8px';
+        li.className = 'hand-item';
+        li.textContent = name;
 
-            const avatar = document.createElement('div');
-            avatar.className = 'avatar';
-            avatar.style.width = '40px';
-            avatar.style.height = '40px';
-            avatar.style.backgroundColor = '#555';
-            avatar.style.borderRadius = '50%';
-            avatar.style.display = 'inline-flex';
-            avatar.style.alignItems = 'center';
-            avatar.style.justifyContent = 'center';
-            avatar.style.marginRight = '10px';
-            avatar.textContent = name.charAt(0).toUpperCase();
-
-            const nameSpan = document.createElement('span');
-            nameSpan.textContent = name + (name === userName ? ' (Tú)' : '');
-            nameSpan.style.fontWeight = 'bold';
-            nameSpan.style.flexGrow = '1';
-
-            const roleSpan = document.createElement('span');
-            roleSpan.textContent = userRoles[name] || 'Participante';
-            roleSpan.style.color = '#888';
-            roleSpan.style.fontSize = '12px';
-            roleSpan.style.display = 'block';
-
-            const buttonContainer = document.createElement('div');
-            buttonContainer.style.display = 'flex';
-            buttonContainer.style.gap = '8px';
-
-            const lowerBtn = document.createElement('button');
-            lowerBtn.className = 'lower-hand-btn';
-            lowerBtn.innerHTML = '✋';
-            lowerBtn.title = 'Bajar Mano';
-            lowerBtn.style.display = isModerator ? 'inline-flex' : 'none';
-            lowerBtn.onclick = () => {
+        if (isModerator) {
+            const grantBtn = document.createElement('button');
+            grantBtn.className = 'grant-btn';
+            grantBtn.textContent = 'Dar palabra';
+            grantBtn.addEventListener('click', () => {
                 if (ws && ws.readyState === WebSocket.OPEN) {
-                    ws.send(JSON.stringify({ type: 'hand-lowered', name: name }));
-                    debugLog(`Mano bajada para ${name} mediante botón.`);
-                }
-            };
-
-            const grantFloorBtn = document.createElement('button');
-            grantFloorBtn.className = 'grant-floor-btn';
-            grantFloorBtn.innerHTML = '🎤';
-            grantFloorBtn.title = 'Dar la Palabra (1 minuto)';
-            grantFloorBtn.style.display = isModerator ? 'inline-flex' : 'none';
-            grantFloorBtn.onclick = () => {
-                // Dar la palabra al participante (60 segundos)
-                giveWordToParticipant(name, 60);
-                
-                // Bajar automáticamente la mano
-                if (ws && ws.readyState === WebSocket.OPEN) {
-                    ws.send(JSON.stringify({ type: 'hand-lowered', name: name }));
-                    debugLog(`Mano bajada automáticamente para ${name} al dar la palabra.`);
-                }
-            };
-
-            buttonContainer.appendChild(grantFloorBtn);
-            buttonContainer.appendChild(lowerBtn);
-
-            li.appendChild(avatar);
-            li.appendChild(nameSpan);
-            li.appendChild(roleSpan);
-            li.appendChild(buttonContainer);
-
-            ul.appendChild(li);
-        });
-
-        const lowerAllBtn = document.getElementById('lowerAllBtn');
-        if (lowerAllBtn) {
-            // Mostrar u ocultar según rol
-            lowerAllBtn.style.display = isModerator ? '' : 'none';
-            // Evitar duplicar handlers
-            lowerAllBtn.onclick = null;
-            // Handler: bajar todas las manos conocidas
-            lowerAllBtn.addEventListener('click', () => {
-                if (ws && ws.readyState === WebSocket.OPEN) {
-                    // Enviar una instrucción por cada mano levantada
-                    raisedHands.forEach(name => {
-                        ws.send(JSON.stringify({ type: 'hand-lowered', name: name }));
-                        debugLog(`Bajando mano para ${name} mediante botón 'Bajar Todas'.`);
-                    });
-                    raisedHands.clear();
-                    updateHandList();
-                    updateHandNotification();
+                    ws.send(JSON.stringify({ type: 'give-word', room: roomCode, target: name, duration: 60 }));
                 }
             });
-        } else if (isModerator) {
-            // Si no existe en el HTML, crear el botón dinámicamente (compatibilidad)
-            const newLowerAllBtn = document.createElement('button');
-            newLowerAllBtn.id = 'lowerAllBtn';
-            newLowerAllBtn.textContent = 'Bajar Todas';
-            newLowerAllBtn.style.position = 'absolute';
-            newLowerAllBtn.style.top = '10px';
-            newLowerAllBtn.style.right = '10px';
-            newLowerAllBtn.style.padding = '5px 10px';
-            newLowerAllBtn.style.cursor = 'pointer';
-            newLowerAllBtn.onclick = () => {
+
+            const lowerBtn = document.createElement('button');
+            lowerBtn.className = 'lower-btn';
+            lowerBtn.textContent = 'Bajar mano';
+            lowerBtn.addEventListener('click', () => {
                 if (ws && ws.readyState === WebSocket.OPEN) {
-                    raisedHands.forEach(name => {
-                        ws.send(JSON.stringify({ type: 'hand-lowered', name: name }));
-                        debugLog(`Bajando mano para ${name} mediante botón 'Bajar Todas'.`);
-                    });
-                    raisedHands.clear();
-                    updateHandList();
-                    updateHandNotification();
+                    ws.send(JSON.stringify({ type: 'lower-hand', room: roomCode, name }));
                 }
-            };
-            const handPanel = document.getElementById('handPanel');
-            if (handPanel) {
-                handPanel.appendChild(newLowerAllBtn);
-            }
+                raisedHands.delete(name);
+                updateHandList();
+                updateHandNotification();
+            });
+
+            li.appendChild(grantBtn);
+            li.appendChild(lowerBtn);
         }
-    }
-    debugLog('Lista de manos actualizada:', Array.from(raisedHands));
+
+        handList.appendChild(li);
+    });
+
+    updateHandNotification();
 }
 
 function updateHandNotification() {
-    const raiseHandBtn = document.getElementById('raiseHand');
-    if (isModerator && raiseHandBtn) {
-        let notification = document.getElementById('handNotification');
-        if (raisedHands.size > 0) {
-            if (!notification) {
-                notification = document.createElement('span');
-                notification.id = 'handNotification';
-                raiseHandBtn.appendChild(notification);
-            }
-            notification.textContent = raisedHands.size > 9 ? '9+' : raisedHands.size;
-            raiseHandBtn.classList.add('active');
-        } else {
-            if (notification) {
-                notification.remove();
-            }
-            raiseHandBtn.classList.remove('active');
-        }
+    const raiseBtn = document.getElementById('raiseHand');
+    const count = raisedHands.size;
+    if (raiseBtn) {
+        raiseBtn.classList.toggle('has-notification', count > 0);
+    }
+    const badge = document.getElementById('handCountBadge');
+    if (badge) {
+        badge.textContent = count > 0 ? String(count) : '';
+        badge.style.display = count > 0 ? 'inline-block' : 'none';
     }
 }
-
-// Event listener de teclado para levantar mano REMOVIDO para evitar interferencias al escribir
-
 document.getElementById('raiseHand')?.addEventListener('click', () => {
     if (isModerator) {
         toggleHandPanel();
@@ -1239,93 +1135,198 @@ function addVideoElement(userId, stream) {
     } else {
         console.error('❌ No se pudo encontrar o crear elemento de video.');
     }
+    // Si hay una pantalla compartida activa, re-aplicar layout para colocar este video en miniatura
+    try {
+        if (document.querySelector('.screen-share-preview')) {
+            activateScreenShareLayout(videoGrid);
+        }
+    } catch (e) { /* no bloquear por errores menores de layout */ }
 }
 
 
-function addScreenShareVideoElement(userId, stream) {
-    // Verificar que el contenedor existe
-    if (!screenShareContainer) {
-        screenShareContainer = document.getElementById('screenShareContainer');
-        if (!screenShareContainer) {
-            console.error('❌ ERROR: No se puede encontrar el contenedor #screenShareContainer');
-            return;
-        }
-    }
+// ============================================================================
+// NUEVO SISTEMA DE COMPARTIR PANTALLA DESDE CERO
+// ============================================================================
+
+/**
+ * Crea y muestra el preview de pantalla compartida en el layout
+ * @param {string} userId - ID del usuario que comparte
+ * @param {MediaStream} stream - Stream de pantalla compartida
+ */
+function createScreenSharePreview(userId, stream) {
+    console.log(`[SCREEN-SHARE] 📺 Creando preview para ${userId}`);
     
-    let videoContainer = document.getElementById(`video-screen-${userId}`);
-    let videoElement = null;
-
-    if (videoContainer) {
-        videoContainer.innerHTML = ''; // ✅ Limpiar contenido viejo
-        debugLog(`Actualizando video de pantalla compartida existente para ${userId}.`);
-    } else {
-        videoContainer = document.createElement('div');
-        videoContainer.className = 'video-container screen-share';
-        videoContainer.id = `video-screen-${userId}`;
-        screenShareContainer.appendChild(videoContainer);
-
-        videoElement = document.createElement('video');
-        videoElement.autoplay = true;
-        videoElement.playsInline = true;
-        videoElement.controls = true;
-        videoElement.id = `screen-video-${userId}`;
-        videoContainer.appendChild(videoElement);
-
-        const videoInfo = document.createElement('div');
-        videoInfo.className = 'video-info';
-        const nameSpan = document.createElement('span');
-        nameSpan.className = 'user-name';
-        nameSpan.textContent = `${userId} (Pantalla Compartida)`;
-        videoInfo.appendChild(nameSpan);
-        videoContainer.appendChild(videoInfo);
-
-        screenShareContainer.classList.add('active');
-        debugLog(`Creando nuevo elemento de video de pantalla compartida para ${userId}.`);
+    const videoGrid = document.getElementById('videoGrid');
+    if (!videoGrid) {
+        console.error('[SCREEN-SHARE] ❌ #videoGrid no encontrado');
+        return;
     }
 
-    if (videoElement) {
-        videoElement.srcObject = stream;
-        videoElement.play().catch(e => {
-            console.warn(`Autoplay de pantalla compartida para ${userId} falló:`, e);
-        });
-        debugLog(`Stream de pantalla compartida asignado a video para ${userId}.`);
+    // Limpiar preview existente si hay
+    const existingPreview = document.getElementById(`screen-preview-${userId}`);
+    if (existingPreview) {
+        console.log(`[SCREEN-SHARE] 🗑️ Eliminando preview anterior de ${userId}`);
+        existingPreview.remove();
     }
 
-    // Si el stream incluye pistas de audio, crear un elemento <audio> para asegurar reproducción
-    try {
-        const audioTracks = stream.getAudioTracks ? stream.getAudioTracks() : [];
-        if (audioTracks && audioTracks.length > 0) {
-            let audioEl = videoContainer.querySelector('audio.screen-audio');
-            if (!audioEl) {
-                audioEl = document.createElement('audio');
-                audioEl.className = 'screen-audio';
-                audioEl.autoplay = true;
-                audioEl.controls = true;
-                audioEl.style.width = '100%';
-                audioEl.style.marginTop = '8px';
-                videoContainer.appendChild(audioEl);
+    // Crear contenedor principal
+    const previewContainer = document.createElement('div');
+    previewContainer.id = `screen-preview-${userId}`;
+    previewContainer.className = 'video-container screen-share-preview';
+    previewContainer.dataset.userId = userId;
+
+    // Crear elemento de video
+    const video = document.createElement('video');
+    video.id = `screen-video-${userId}`;
+    video.autoplay = true;
+    video.playsInline = true;
+    video.muted = (userId === userName); // Silenciar solo para el que comparte (evita echo)
+    video.style.width = '100%';
+    video.style.height = '100%';
+    video.style.objectFit = 'contain';
+    video.style.backgroundColor = '#000';
+
+    // Asignar stream
+    video.srcObject = stream;
+    
+    // Intentar reproducir
+    video.play()
+        .then(() => {
+            console.log(`[SCREEN-SHARE] ✅ Video reproduciendo para ${userId}`);
+        })
+        .catch(err => {
+            console.error(`[SCREEN-SHARE] ❌ Error reproduciendo video:`, err);
+            if (userId === userName) {
+                showError('Haz clic en la pantalla compartida para activar la reproducción', 4000);
             }
-            audioEl.srcObject = stream;
-            audioEl.play().catch(err => {
-                console.warn('Autoplay de audio de pantalla falló:', err);
-                // Mostrar pequeño aviso en UI para que el usuario permita reproducción
-                const notice = document.createElement('div');
-                notice.className = 'audio-play-hint';
-                notice.textContent = 'Haz clic para reproducir el audio de la pantalla';
-                notice.style.fontSize = '12px';
-                notice.style.color = 'var(--text-tertiary)';
-                notice.style.cursor = 'pointer';
-                notice.onclick = () => {
-                    audioEl.play().catch(e => console.warn('Reproducción manual falló:', e));
-                    notice.remove();
-                };
-                // Evitar duplicar aviso
-                if (!videoContainer.querySelector('.audio-play-hint')) videoContainer.appendChild(notice);
+        });
+
+    // Crear info overlay
+    const infoOverlay = document.createElement('div');
+    infoOverlay.className = 'screen-share-info-overlay';
+    infoOverlay.innerHTML = `
+        <span class="screen-share-user-name">${userId === userName ? 'Tu pantalla' : `Pantalla de ${userId}`}</span>
+        <span class="screen-share-status">●</span>
+    `;
+
+    // Agregar elementos al contenedor
+    previewContainer.appendChild(video);
+    previewContainer.appendChild(infoOverlay);
+
+    // Insertar al principio del grid
+    videoGrid.insertBefore(previewContainer, videoGrid.firstChild);
+
+    // Activar layout de grid para screen-share
+    activateScreenShareLayout(videoGrid);
+
+    // NOTA: No ocultamos la cámara del presentador, para que se vea en pequeño
+    console.log(`[SCREEN-SHARE] ✅ Preview creado exitosamente para ${userId}`);
+}
+
+/**
+ * Activa el layout especial cuando hay pantalla compartida
+ */
+function activateScreenShareLayout(videoGrid) {
+    videoGrid.classList.add('parent');
+    
+    // Asignar clase div1 al preview de pantalla (área grande)
+    const screenPreview = videoGrid.querySelector('.screen-share-preview');
+    if (screenPreview) {
+        screenPreview.classList.add('div1');
+    }
+
+    // Asignar div2-div11 a las cámaras restantes
+    const cameraContainers = Array.from(videoGrid.querySelectorAll('.video-container:not(.screen-share-preview)'))
+        .filter(c => c.style.display !== 'none');
+    
+    cameraContainers.forEach((container, index) => {
+        // Limpiar clases div previas
+        for (let i = 1; i <= 11; i++) {
+            container.classList.remove(`div${i}`);
+        }
+        // Asignar nueva posición (div2 a div11 = máximo 10 cámaras)
+        if (index < 10) {
+            container.classList.add(`div${index + 2}`);
+        }
+    });
+
+    console.log('[SCREEN-SHARE] 📐 Layout activado: grid 5×5');
+}
+
+/**
+ * Crea un placeholder para la pantalla compartida antes de que llegue el stream.
+ * Esto asegura que todos los participantes vean un área principal reservada.
+ */
+function ensureScreenPreviewPlaceholder(userId) {
+    const videoGrid = document.getElementById('videoGrid');
+    if (!videoGrid) return;
+
+    const existing = document.getElementById(`screen-preview-${userId}`);
+    if (existing) return; // ya existe
+
+    const previewContainer = document.createElement('div');
+    previewContainer.id = `screen-preview-${userId}`;
+    previewContainer.className = 'video-container screen-share-preview div1';
+
+    const video = document.createElement('video');
+    video.id = `screen-video-${userId}`;
+    video.autoplay = true;
+    video.playsInline = true;
+    video.muted = true;
+    video.style.width = '100%';
+    video.style.height = '100%';
+    video.style.objectFit = 'contain';
+    // No srcObject aún
+
+    const infoOverlay = document.createElement('div');
+    infoOverlay.className = 'screen-share-info-overlay';
+    infoOverlay.innerHTML = `
+        <span class="screen-share-user-name">${userId === userName ? 'Tu pantalla' : `Pantalla de ${userId}`}</span>
+        <span class="screen-share-status">●</span>
+    `;
+
+    previewContainer.appendChild(video);
+    previewContainer.appendChild(infoOverlay);
+
+    // Insertar primero
+    videoGrid.insertBefore(previewContainer, videoGrid.firstChild);
+    activateScreenShareLayout(videoGrid);
+}
+
+/**
+ * Elimina el preview de pantalla compartida y restaura el layout
+ */
+function removeScreenSharePreview(userId) {
+    console.log(`[SCREEN-SHARE] 🗑️ Eliminando preview de ${userId}`);
+    
+    const videoGrid = document.getElementById('videoGrid');
+    const preview = document.getElementById(`screen-preview-${userId}`);
+    
+    if (preview) {
+        // Detener tracks del stream
+        const video = preview.querySelector('video');
+        if (video && video.srcObject) {
+            video.srcObject.getTracks().forEach(track => {
+                track.stop();
+                console.log(`[SCREEN-SHARE] ⏹️ Track detenido: ${track.kind}`);
             });
         }
-    } catch (e) {
-        console.warn('No se pudo procesar pistas de audio de pantalla compartida:', e);
+        preview.remove();
     }
+
+    // Restaurar layout normal
+    if (videoGrid) {
+        videoGrid.classList.remove('parent');
+        
+        // Limpiar clases de grid de todos los contenedores
+        videoGrid.querySelectorAll('.video-container').forEach(container => {
+            for (let i = 1; i <= 11; i++) {
+                container.classList.remove(`div${i}`);
+            }
+        });
+    }
+
+    console.log('[SCREEN-SHARE] ✅ Preview eliminado y layout restaurado');
 }
 
 async function initMedia() {
@@ -1849,35 +1850,27 @@ case 'join-request':
                         break;
 
                     case 'screen-share-started':
-                        currentScreenSharePeerId = msg.userId;
-                        debugLog(`🟢 Pantalla compartida iniciada por ${msg.userId}`);
-                        // updateVideoLayout?.(currentLayoutMode); // ELIMINADO - función no existe
+                        console.log(`[SCREEN-SHARE] 📡 Notificación recibida de ${msg.userId}`);
+                        if (msg.streamId) {
+                            remoteScreenStreams[msg.userId] = msg.streamId;
+                            console.log(`[SCREEN-SHARE] ID registrado: ${msg.streamId}`);
+
+                            // Crear un placeholder de preview para reservar el área principal
+                            ensureScreenPreviewPlaceholder(msg.userId);
+
+                            // Verificar si el video ya llegó y se asignó incorrectamente a la cámara
+                            const existingVideo = document.getElementById(`video-${msg.userId}`);
+                            if (existingVideo && existingVideo.srcObject && existingVideo.srcObject.id === msg.streamId) {
+                                console.log('[SCREEN-SHARE] ⚠️ Rectificando video asignado a cámara...');
+                                handleRemoteScreenShare(msg.userId, existingVideo.srcObject);
+                            }
+                        }
                         break;
 
                     case 'screen-share-stopped':
-                        if (currentScreenSharePeerId === msg.userId) {
-                            currentScreenSharePeerId = null;
-                        }
-
-                        const screenVideoContainer = document.getElementById(`video-screen-${msg.userId}`);
-                        if (screenVideoContainer) {
-                            const videoEl = screenVideoContainer.querySelector('video');
-                            if (videoEl && videoEl.srcObject) {
-                                videoEl.srcObject.getTracks().forEach(track => track.stop());
-                            }
-                            screenVideoContainer.remove();
-                            screenShareContainer.classList.remove('active');
-                            debugLog(`🔴 Video de pantalla compartida de ${msg.userId} eliminado.`);
-                        }
-                        
-                        // ⭐ MOSTRAR DE NUEVO EL VIDEO DE CÁMARA de quien dejó de compartir
-                        const cameraContainer = document.getElementById(`video-container-${msg.userId}`);
-                        if (cameraContainer) {
-                            cameraContainer.style.display = 'block';
-                            debugLog(`👁️ Video de cámara de ${msg.userId} mostrado nuevamente.`);
-                        }
-                        
-                        // updateVideoLayout?.(currentLayoutMode); // ELIMINADO - función no existe
+                        console.log(`[SCREEN-SHARE] 🛑 Notificación de parada de ${msg.userId}`);
+                        delete remoteScreenStreams[msg.userId];
+                        stopRemoteScreenShare(msg.userId);
                         break;
 
 
@@ -2045,7 +2038,7 @@ case 'join-request':
                                 peerConnections[userId].close();
                             }
                             localStream?.getTracks().forEach(track => track.stop());
-                            screenStream?.getTracks().forEach(track => track.stop());
+                            localScreenStream?.getTracks().forEach(track => track.stop());
                             // ✅ Reasignar micrófono a los peers
                             localStream.getAudioTracks().forEach(micTrack => {
                                 for (const userId in peerConnections) {
@@ -2220,69 +2213,25 @@ function createPeerConnection(userId) {
     };
 
     pc.ontrack = event => {
-        debugLog(`📡 Pista recibida de ${userId}. Tipo: ${event.track.kind}, Streams: ${event.streams.length}`);
+        const stream = event.streams[0];
+        const track = event.track;
         
-        // 🎤 Logging especial para audio
-        if (event.track.kind === 'audio') {
-            console.log(`🔊🔊🔊 AUDIO RECIBIDO DE ${userId}:`);
-            console.log(`  - Track ID: ${event.track.id}`);
-            console.log(`  - Enabled: ${event.track.enabled}`);
-            console.log(`  - Muted: ${event.track.muted}`);
-            console.log(`  - ReadyState: ${event.track.readyState}`);
-            console.log(`  - Label: ${event.track.label}`);
-        }
-        
-        if (event.streams && event.streams[0]) {
-            const stream = event.streams[0];
-            debugLog(`  - Stream ID: ${stream.id}`);
-            debugLog(`  - Tracks en stream: ${stream.getTracks().length}`);
-            
-            // 🔊 Verificar tracks de audio específicamente
-            const audioTracks = stream.getAudioTracks();
-            if (audioTracks.length > 0) {
-                console.log(`🎤 Stream tiene ${audioTracks.length} track(s) de audio:`);
-                audioTracks.forEach((t, idx) => {
-                    console.log(`  [${idx}] enabled=${t.enabled}, muted=${t.muted}, readyState=${t.readyState}`);
-                });
-            } else {
-                console.warn(`⚠️ Stream de ${userId} NO TIENE TRACKS DE AUDIO`);
-            }
-            
-            stream.getTracks().forEach(t => {
-                debugLog(`    * ${t.kind}: enabled=${t.enabled}, muted=${t.muted}, readyState=${t.readyState}`);
-            });
-            
-            // Detectar si es pantalla compartida por el label del track
-            const isScreenTrack = event.track.label.toLowerCase().includes('screen') || 
-                                  event.track.label.toLowerCase().includes('monitor') || 
-                                  event.track.label.toLowerCase().includes('window');
-            
-            if (isScreenTrack && event.track.kind === 'video') {
-                // Es pantalla compartida, mostrar en contenedor separado
-                currentScreenSharePeerId = userId;
-                addScreenShareVideoElement(userId, stream);
-                debugLog(`✅ Pantalla compartida recibida de ${userId}.`);
-                
-                // ⭐ OCULTAR EL VIDEO DE CÁMARA de quien comparte pantalla
-                const cameraContainer = document.getElementById(`video-container-${userId}`);
-                if (cameraContainer) {
-                    cameraContainer.style.display = 'none';
-                    debugLog(`🙈 Video de cámara de ${userId} ocultado (está compartiendo pantalla).`);
-                }
-            } else {
-                // Es video/audio normal de cámara/micrófono
-                addVideoElement(userId, stream);
-                debugLog(`🎥 Stream de cámara/audio recibido de ${userId}.`);
-                
-                // ⭐ Si el video de cámara estaba oculto (porque había screen share), 
-                // mostrarlo de nuevo si ya no hay screen share activo
-                const cameraContainer = document.getElementById(`video-container-${userId}`);
-                if (cameraContainer && currentScreenSharePeerId !== userId) {
-                    cameraContainer.style.display = 'block';
-                }
-            }
+        console.log(`[WEBRTC] 📥 Track recibido de ${userId}: ${track.kind} (${track.label})`);
+        console.log(`[WEBRTC] 🆔 Stream ID: ${stream.id}`);
+
+        // Verificar si este stream corresponde a una pantalla compartida conocida
+        if (remoteScreenStreams[userId] === stream.id) {
+            console.log(`[WEBRTC] 🖥️ Confirmado: Es stream de PANTALLA de ${userId}`);
+            handleRemoteScreenShare(userId, stream);
         } else {
-            console.error(`❌ No se recibió stream válido de ${userId} en evento ontrack`);
+            // Si no coincide con el ID de pantalla, asumimos que es cámara/micrófono
+            console.log(`[WEBRTC] 📷 Asumiendo: Es stream de CÁMARA/AUDIO de ${userId}`);
+            addVideoElement(userId, stream);
+            
+            // Asegurar que el audio esté habilitado
+            if (track.kind === 'audio') {
+                track.enabled = true;
+            }
         }
     };
 
@@ -2588,192 +2537,169 @@ document.getElementById('toggleCam')?.addEventListener('click', () => {
     updateParticipantList();
 });
 
+// ============================================================================
+// NUEVO HANDLER PARA COMPARTIR PANTALLA - COMPLETAMENTE DESDE CERO
+// ============================================================================
 document.getElementById('shareScreen')?.addEventListener('click', async () => {
     if (isScreenSharing) {
-        // Detener el stream de pantalla compartida
-        debugLog('🛑 Deteniendo compartir pantalla...');
-        screenStream?.getTracks().forEach(track => {
-            track.stop();
-            debugLog(`⏹️ Track detenido: ${track.kind}`);
-        });
-        
-        // Cerrar AudioContext si existe
-        if (audioContext) {
-            audioContext.close();
-            audioContext = null;
-            debugLog('🔇 AudioContext cerrado.');
-        }
-
-        screenStream = null;
-        isScreenSharing = false;
-        document.getElementById('shareScreen').classList.remove('active');
-        showError('Compartir pantalla detenido.', 3000);
-
-        // Notificar al servidor
-        if (ws && ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({ type: 'screen-share-stopped', room: roomCode, userId: userName }));
-        }
-
-        // Eliminar el contenedor de pantalla compartida local
-        const localScreenVideoContainer = document.getElementById(`video-screen-${userName}`);
-        if (localScreenVideoContainer) {
-            localScreenVideoContainer.remove();
-            screenShareContainer?.classList.remove('active');
-            debugLog('🗑️ Contenedor de pantalla compartida eliminado.');
-        }
-
-        // Remover SOLO los tracks de pantalla compartida de todas las conexiones
-        try {
-            for (const userId in peerConnections) {
-                const pc = peerConnections[userId];
-                if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'checking') {
-                    const senders = pc.getSenders();
-                    
-                    // Buscar y remover tracks relacionados con pantalla compartida
-                    senders.forEach(sender => {
-                        if (sender.track) {
-                            const label = sender.track.label.toLowerCase();
-                            // Verificar si es un track de pantalla (screen) o de sistema de audio
-                            if (label.includes('screen') || label.includes('monitor') || label.includes('window')) {
-                                pc.removeTrack(sender);
-                                debugLog(`🗑️ Track de pantalla compartida eliminado de ${userId}: ${sender.track.kind}`);
-                            }
-                        }
-                    });
-
-                    // Renegociar para eliminar los tracks
-                    debugLog(`🔄 Renegociando con ${userId} para eliminar pantalla compartida...`);
-                    const offer = await pc.createOffer();
-                    await pc.setLocalDescription(offer);
-                    if (ws && ws.readyState === WebSocket.OPEN) {
-                        ws.send(JSON.stringify({
-                            type: 'signal',
-                            room: roomCode,
-                            target: userId,
-                            payload: { sdp: pc.localDescription }
-                        }));
-                        debugLog(`✅ Renegociación enviada a ${userId}.`);
-                    }
-                }
-            }
-
-            debugLog('✅ Audio y video de cámara mantienen su funcionamiento normal.');
-            showError('✅ Pantalla compartida detenida correctamente.', 2000);
-
-        } catch (e) {
-            console.error('❌ Error al remover tracks de pantalla compartida:', e);
-            showError('⚠️ Error al detener pantalla compartida, pero audio/video siguen funcionando.', 3000);
-        }
-
+        await stopScreenSharing();
     } else {
-        // Iniciar compartición de pantalla
-        try {
-            // Obtener solo el stream de pantalla (sin mezclar audio aún)
-            screenStream = await navigator.mediaDevices.getDisplayMedia({ 
-                video: true, 
-                audio: true 
-            });
-
-            isScreenSharing = true;
-            document.getElementById('shareScreen').classList.add('active');
-            showError('Compartiendo tu pantalla.', 3000);
-            debugLog('Compartiendo pantalla.');
-
-            // Guardar el track de audio original del localStream
-            originalAudioTrack = localStream.getAudioTracks()[0];
-
-            // Mostrar la pantalla compartida en el contenedor dedicado
-            addScreenShareVideoElement(userName, screenStream);
-
-            // Enviar la pantalla compartida a todos los peers SIN reemplazar nada
-            for (const userId in peerConnections) {
-                const pc = peerConnections[userId];
-                const screenVideoTrack = screenStream.getVideoTracks()[0];
-                const screenAudioTrack = screenStream.getAudioTracks()[0];
-
-                // Agregar video de pantalla como track adicional
-                if (screenVideoTrack) {
-                    pc.addTrack(screenVideoTrack, screenStream);
-                    debugLog(`📺 Track de pantalla compartida añadido a ${userId}.`);
-                }
-
-                // Agregar audio de pantalla como track adicional (si existe)
-                if (screenAudioTrack) {
-                    pc.addTrack(screenAudioTrack, screenStream);
-                    debugLog(`🔊 Track de audio de pantalla añadido a ${userId}.`);
-                }
-
-                // El audio del micrófono ya está siendo enviado, NO lo tocamos
-                debugLog(`🎤 Micrófono mantiene su track original para ${userId}.`);
-
-                // Renegociar para agregar los nuevos tracks
-                if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'checking') {
-                    const offer = await pc.createOffer();
-                    await pc.setLocalDescription(offer);
-                    if (ws && ws.readyState === WebSocket.OPEN) {
-                        ws.send(JSON.stringify({
-                            type: 'signal',
-                            room: roomCode,
-                            target: userId,
-                            payload: { sdp: pc.localDescription }
-                        }));
-                        debugLog(`🔁 Renegociación enviada a ${userId} para agregar pantalla compartida.`);
-                    }
-                }
-            }
-
-            // Detectar cuando el usuario deja de compartir desde el navegador
-            screenStream.getVideoTracks()[0].onended = () => {
-                if (isScreenSharing) {
-                    debugLog('Usuario detuvo compartir pantalla desde el navegador.');
-                    document.getElementById('shareScreen').click();
-                }
-            };
-
-            // Notificar al servidor
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({ type: 'screen-share-started', room: roomCode, userId: userName }));
-            }
-
-        } catch (err) {
-            console.error('Error compartiendo pantalla:', err);
-            showError('No se pudo compartir la pantalla. Permiso denegado o error.', 5000);
-            isScreenSharing = false;
-            document.getElementById('shareScreen').classList.remove('active');
-            debugLog('Fallo al compartir pantalla:', err);
-        }
+        await startScreenSharing();
     }
 });
 
+async function startScreenSharing() {
+    console.log('[SCREEN-SHARE] 🚀 Iniciando proceso...');
+    try {
+        localScreenStream = await navigator.mediaDevices.getDisplayMedia({
+            video: { cursor: 'always' },
+            audio: true
+        });
 
+        isScreenSharing = true;
+        document.getElementById('shareScreen')?.classList.add('active');
 
-// Agrega esto una sola vez en cualquier parte global de tu script.js
-async function getMergedStream() {
-    const micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+        // 1. Mostrar preview local
+        createScreenSharePreview(userName, localScreenStream);
+        
+        // Silenciar el video local de pantalla para evitar eco/feedback
+        const myVideo = document.getElementById(`screen-video-${userName}`);
+        if (myVideo) {
+            myVideo.muted = true;
+            myVideo.volume = 0;
+        }
 
-    // Cerrar audioContext anterior si existe
-    if (audioContext) {
-        audioContext.close();
+        // 2. Notificar al servidor (IMPORTANTE: Antes de negociar)
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({
+                type: 'screen-share-started',
+                room: roomCode,
+                userId: userName,
+                streamId: localScreenStream.id
+            }));
+        }
+
+        // 3. Añadir tracks a todas las conexiones
+        const videoTrack = localScreenStream.getVideoTracks()[0];
+        const audioTrack = localScreenStream.getAudioTracks()[0];
+
+        for (const peerId in peerConnections) {
+            const pc = peerConnections[peerId];
+            if (videoTrack) {
+                try {
+                    pc.addTrack(videoTrack, localScreenStream);
+                } catch (e) { console.warn(`Error adding video track to ${peerId}`, e); }
+            }
+            if (audioTrack) {
+                try {
+                    pc.addTrack(audioTrack, localScreenStream);
+                } catch (e) { console.warn(`Error adding audio track to ${peerId}`, e); }
+            }
+            
+            // Renegociar
+            await renegotiate(peerId, pc);
+        }
+
+        // 4. Manejar parada desde el navegador
+        videoTrack.onended = () => {
+            if (isScreenSharing) stopScreenSharing();
+        };
+
+        showError('✅ Compartiendo pantalla', 2000);
+
+    } catch (err) {
+        console.error('[SCREEN-SHARE] ❌ Error:', err);
+        isScreenSharing = false;
+        localScreenStream = null;
+        if (err.name !== 'NotAllowedError') {
+            showError('Error al compartir pantalla', 3000);
+        }
+    }
+}
+
+async function stopScreenSharing() {
+    console.log('[SCREEN-SHARE] 🛑 Deteniendo...');
+    
+    if (!localScreenStream) return;
+
+    // 1. Detener tracks
+    localScreenStream.getTracks().forEach(t => t.stop());
+    
+    // 2. Remover tracks de las conexiones
+    for (const peerId in peerConnections) {
+        const pc = peerConnections[peerId];
+        const senders = pc.getSenders();
+        
+        for (const sender of senders) {
+            if (sender.track && sender.track.kind === 'video' && sender.track.label === localScreenStream.getVideoTracks()[0]?.label) {
+                pc.removeTrack(sender);
+            }
+            // Nota: Audio de pantalla es más difícil de distinguir si no guardamos referencia, 
+            // pero por ahora nos enfocamos en video.
+        }
+        
+        // Renegociar
+        await renegotiate(peerId, pc);
     }
 
-    audioContext = new AudioContext();
-    const destination = audioContext.createMediaStreamDestination();
+    // 3. Limpiar UI y estado
+    removeScreenSharePreview(userName);
+    isScreenSharing = false;
+    localScreenStream = null;
+    document.getElementById('shareScreen')?.classList.remove('active');
 
-    const micSource = audioContext.createMediaStreamSource(micStream);
-    micSource.connect(destination);
+    // 4. Notificar servidor
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({
+            type: 'screen-share-stopped',
+            room: roomCode,
+            userId: userName
+        }));
+    }
+    
+    showError('Pantalla compartida detenida', 2000);
+}
 
-    const screenAudioTrack = screenStream.getAudioTracks()[0];
-    if (screenAudioTrack) {
-        const screenSource = audioContext.createMediaStreamSource(new MediaStream([screenAudioTrack]));
-        screenSource.connect(destination);
+async function renegotiate(peerId, pc) {
+    if (pc.signalingState !== 'stable') return;
+    try {
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({
+                type: 'signal',
+                room: roomCode,
+                target: peerId,
+                payload: { sdp: pc.localDescription }
+            }));
+        }
+    } catch (e) {
+        console.error(`Error renegociando con ${peerId}:`, e);
+    }
+}
+
+// Alias para mantener compatibilidad con el código de initWebSocket
+function handleRemoteScreenShare(userId, stream) {
+    // Si ya existe un placeholder, asignar el stream al video existente
+    const preview = document.getElementById(`screen-preview-${userId}`);
+    if (preview) {
+        const videoEl = preview.querySelector('video');
+        if (videoEl && videoEl.srcObject !== stream) {
+            videoEl.srcObject = stream;
+            try { videoEl.play().catch(() => {}); } catch (e) {}
+        }
+
+        // Asegurar layout
+        activateScreenShareLayout(document.getElementById('videoGrid'));
+        return;
     }
 
-    const finalStream = new MediaStream();
-    finalStream.addTrack(screenStream.getVideoTracks()[0]);
-    destination.stream.getAudioTracks().forEach(track => finalStream.addTrack(track));
+    // Si no hay placeholder, crear la preview normalmente
+    createScreenSharePreview(userId, stream);
+}
 
-    return { finalStream, screenStream, micStream, audioContext };
+function stopRemoteScreenShare(userId) {
+    removeScreenSharePreview(userId);
 }
 
 function openPollCreationModal() {
@@ -3600,9 +3526,9 @@ document.getElementById('leaveBtn')?.addEventListener('click', () => {
     
     // Detener todos los streams
     localStream?.getTracks().forEach(track => track.stop());
-    screenStream?.getTracks().forEach(track => track.stop());
+    localScreenStream?.getTracks().forEach(track => track.stop());
     localStream = null;
-    screenStream = null;
+    localScreenStream = null;
     
     // Cerrar WebSocket
     if (ws) {

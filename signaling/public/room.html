@@ -845,7 +845,8 @@
             border-radius: 16px;
             padding: 20px;
             box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-            z-index: 10000; /* Aumentado significativamente */
+            z-index: 10000;
+            /* Aumentado significativamente */
             display: none;
             backdrop-filter: blur(20px);
             border: 2px solid rgba(255, 255, 255, 0.2);
@@ -863,6 +864,7 @@
                 transform: translateX(100%);
                 opacity: 0;
             }
+
             to {
                 transform: translateX(0);
                 opacity: 1;
@@ -874,6 +876,7 @@
                 transform: translateX(0);
                 opacity: 1;
             }
+
             to {
                 transform: translateX(100%);
                 opacity: 0;
@@ -926,10 +929,13 @@
         }
 
         @keyframes pulse {
-            0%, 100% {
+
+            0%,
+            100% {
                 transform: scale(1);
                 box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4);
             }
+
             50% {
                 transform: scale(1.05);
                 box-shadow: 0 0 0 10px rgba(255, 255, 255, 0);
@@ -2733,7 +2739,8 @@
             }
 
             .logo {
-                display: none; /* Hide logo on very small screens */
+                display: none;
+                /* Hide logo on very small screens */
             }
 
             .room-details {
@@ -4203,9 +4210,12 @@
         }
 
         @keyframes pulseSpeaking {
-            0%, 100% {
+
+            0%,
+            100% {
                 box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.2);
             }
+
             50% {
                 box-shadow: 0 0 0 8px rgba(16, 185, 129, 0.1);
             }
@@ -4557,6 +4567,7 @@
                 opacity: 0;
                 transform: translateY(10px);
             }
+
             to {
                 opacity: 1;
                 transform: translateY(0);
@@ -5102,7 +5113,7 @@
             </div>
         </aside>
     </div>
-    
+
 
     <!-- Panel de "Tiene la palabra" -->
     <div id="speakingPanel">
@@ -5467,30 +5478,30 @@
             const sidebar = document.getElementById('sidebar');
             const toggleBtn = document.getElementById('participantsToggle');
             const chatToggleBtn = document.getElementById('chatToggle');
-            
+
             if (sidebar) {
                 const isCollapsed = sidebar.classList.contains('sidebar-collapsed');
                 const participantsTab = document.querySelector('.sidebar-tab[data-tab="participants"]');
                 const isParticipantsActive = participantsTab && participantsTab.classList.contains('active');
-                
+
                 // Si está colapsado O participantes no está activo, abrir y activar participantes
                 if (isCollapsed || !isParticipantsActive) {
                     // Abrir sidebar
                     sidebar.classList.remove('sidebar-collapsed');
                     toggleBtn.classList.add('active');
                     if (chatToggleBtn) chatToggleBtn.classList.remove('active');
-                    
+
                     const participantsContent = document.getElementById('participantsContent');
-                    
+
                     if (participantsTab && participantsContent) {
                         // Activar tab de participantes
                         document.querySelectorAll('.sidebar-tab').forEach(tab => tab.classList.remove('active'));
                         document.querySelectorAll('.sidebar-content').forEach(content => content.classList.remove('active'));
-                        
+
                         participantsTab.classList.add('active');
                         participantsContent.classList.add('active');
                     }
-                    
+
                     console.log('[SIDEBAR] Abierto - Participantes activos');
                 } else {
                     // Si ya está abierto con participantes activos, cerrar
@@ -5507,14 +5518,14 @@
                 const targetTab = tab.getAttribute('data-tab');
                 const participantsToggleBtn = document.getElementById('participantsToggle');
                 const chatToggleBtn = document.getElementById('chatToggle');
-                
+
                 // Remover active de todos los tabs y contenidos
                 document.querySelectorAll('.sidebar-tab').forEach(t => t.classList.remove('active'));
                 document.querySelectorAll('.sidebar-content').forEach(c => c.classList.remove('active'));
-                
+
                 // Activar tab y contenido correspondiente
                 tab.classList.add('active');
-                
+
                 if (targetTab === 'participants') {
                     document.getElementById('participantsContent').classList.add('active');
                     // Actualizar estados de botones
@@ -5523,11 +5534,11 @@
                 } else if (targetTab === 'chat') {
                     const chatContent = document.getElementById('chatContent');
                     chatContent.classList.add('active');
-                    
+
                     // Actualizar estados de botones
                     if (chatToggleBtn) chatToggleBtn.classList.add('active');
                     if (participantsToggleBtn) participantsToggleBtn.classList.remove('active');
-                    
+
                     // Remover badge de notificaciones
                     const chatBadge = document.getElementById('sidebarChatBadge');
                     if (chatBadge) {
@@ -5535,7 +5546,7 @@
                         chatBadge.textContent = '0';
                     }
                 }
-                
+
                 console.log('[SIDEBAR] Tab cambiado a:', targetTab);
             });
         });
@@ -5548,34 +5559,34 @@
                 const sidebar = document.getElementById('sidebar');
                 const chatTab = document.querySelector('.sidebar-tab[data-tab="chat"]');
                 const participantsToggleBtn = document.getElementById('participantsToggle');
-                
+
                 if (sidebar && chatTab) {
                     const isCollapsed = sidebar.classList.contains('sidebar-collapsed');
                     const isChatActive = chatTab.classList.contains('active');
-                    
+
                     // Si está colapsado O chat no está activo, abrir y activar chat
                     if (isCollapsed || !isChatActive) {
                         // Abrir sidebar
                         sidebar.classList.remove('sidebar-collapsed');
-                        
+
                         // Activar tab de chat
                         document.querySelectorAll('.sidebar-tab').forEach(t => t.classList.remove('active'));
                         document.querySelectorAll('.sidebar-content').forEach(c => c.classList.remove('active'));
-                        
+
                         chatTab.classList.add('active');
                         document.getElementById('chatContent').classList.add('active');
-                        
+
                         chatToggleBtn.classList.add('active');
                         if (participantsToggleBtn) participantsToggleBtn.classList.remove('active');
                         chatToggleBtn.classList.remove('has-notification');
-                        
+
                         // Remover badge
                         const chatBadge = document.getElementById('sidebarChatBadge');
                         if (chatBadge) {
                             chatBadge.style.display = 'none';
                             chatBadge.textContent = '0';
                         }
-                        
+
                         console.log('[CHAT] Panel abierto desde toggle');
                     } else {
                         // Si ya está abierto con chat activo, cerrar

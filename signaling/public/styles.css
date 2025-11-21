@@ -292,6 +292,7 @@ button {
         opacity: 0;
         transform: translateY(-10px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -327,7 +328,9 @@ button {
 }
 
 @keyframes spin {
-    to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 @media (max-width: 768px) {
@@ -436,6 +439,75 @@ button {
     padding: 6px;
 }
 
+/* Layout específico para compartir pantalla: grid 5x5 con área principal grande (div1)
+   y pequeñas para las cámaras (div2..div11) */
+.parent {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    grid-template-rows: repeat(5, 1fr);
+    grid-column-gap: 0px;
+    grid-row-gap: 0px;
+    width: 100%;
+    height: 100%;
+}
+
+.div1 {
+    grid-area: 1 / 1 / 6 / 4;
+}
+
+.div2 {
+    grid-area: 1 / 4 / 2 / 5;
+}
+
+.div3 {
+    grid-area: 1 / 5 / 2 / 6;
+}
+
+.div4 {
+    grid-area: 2 / 4 / 3 / 5;
+}
+
+.div5 {
+    grid-area: 2 / 5 / 3 / 6;
+}
+
+.div6 {
+    grid-area: 3 / 4 / 4 / 5;
+}
+
+.div7 {
+    grid-area: 3 / 5 / 4 / 6;
+}
+
+.div8 {
+    grid-area: 4 / 4 / 5 / 5;
+}
+
+.div9 {
+    grid-area: 4 / 5 / 5 / 6;
+}
+
+.div10 {
+    grid-area: 5 / 4 / 6 / 5;
+}
+
+.div11 {
+    grid-area: 5 / 5 / 6 / 6;
+}
+
+/* Asegurar que los contenedores de video usan tamaño completo dentro de las celdas */
+.video-container {
+    width: 100%;
+    height: 100%;
+}
+
+.video-container video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    /* Mostrar correctamente la pantalla compartida */
+}
+
 #videoGrid.view-spotlight {
     display: grid;
     grid-template-columns: 2fr 1fr;
@@ -485,4 +557,116 @@ button {
 
 .video-container.pinned .pin-indicator {
     display: block;
+}
+
+/* Layout específico para pantalla compartida: grid 5x5 con área principal para la pantalla */
+.parent {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    grid-template-rows: repeat(5, 1fr);
+    grid-column-gap: 0px;
+    grid-row-gap: 0px;
+    width: 100%;
+    height: 100%;
+}
+
+.div1 {
+    grid-area: 1 / 1 / 6 / 4;
+}
+
+.div2 {
+    grid-area: 1 / 4 / 2 / 5;
+}
+
+.div3 {
+    grid-area: 1 / 5 / 2 / 6;
+}
+
+.div4 {
+    grid-area: 2 / 4 / 3 / 5;
+}
+
+.div5 {
+    grid-area: 2 / 5 / 3 / 6;
+}
+
+.div6 {
+    grid-area: 3 / 4 / 4 / 5;
+}
+
+.div7 {
+    grid-area: 3 / 5 / 4 / 6;
+}
+
+.div8 {
+    grid-area: 4 / 4 / 5 / 5;
+}
+
+.div9 {
+    grid-area: 4 / 5 / 5 / 6;
+}
+
+.div10 {
+    grid-area: 5 / 4 / 6 / 5;
+}
+
+.div11 {
+    grid-area: 5 / 5 / 6 / 6;
+}
+
+/* Asegurar que el video de pantalla compartida ocupe toda su celda */
+.video-container.screen-share {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+/* Ajustes para los videos menores (miniaturas) en el layout de pantalla compartida */
+.parent .video-container {
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+/* Estilos para el preview de pantalla compartida */
+.screen-share-preview {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    background: #1e293b;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.screen-share-preview video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+/* Overlay de información sobre la pantalla compartida */
+.screen-share-info-overlay {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    background: rgba(0, 0, 0, 0.75);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    z-index: 10;
+    backdrop-filter: blur(8px);
+}
+
+.screen-share-user-name {
+    color: #60a5fa;
+}
+
+.screen-share-status {
+    color: #10b981;
+    font-size: 12px;
 }
