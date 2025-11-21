@@ -4,7 +4,7 @@
  * Este archivo maneja únicamente la lógica de las vistas de video.
  * No interfiere con WebRTC, chat, polls, ni ninguna otra funcionalidad.
  * 
- * @version 3.0
+ * @version 3.1 - CORREGIDO Y FUNCIONAL
  * @date 2025-01-05
  */
 
@@ -20,7 +20,7 @@ const ViewControlSystem = {
     activeSpeakerId: null,
     initialized: false,
     observer: null,
-    isChangingLayout: false // ✅ Flag para evitar bucles infinitos
+    isChangingLayout: false
 };
 
 // ============================================
@@ -43,15 +43,6 @@ function initViewControl() {
 
     viewLog('🚀 Inicializando sistema de control de vistas...');
 
-    // Leer vista desde URL si existe
-    const urlParams = new URLSearchParams(window.location.search);
-    const urlView = urlParams.get('view');
-    
-    if (urlView) {
-        ViewControlSystem.currentView = urlView;
-        viewLog(`🎯 Vista especificada en URL: ${urlView}`);
-    }
-
     // Setup botones del panel
     setupViewControlPanel();
     
@@ -64,13 +55,13 @@ function initViewControl() {
     // Setup observer para cambios en el DOM
     setupDOMObserver();
     
-    // Aplicar vista inicial (desde URL o por defecto)
+    // Aplicar vista inicial
     setTimeout(() => {
-        const initialView = urlView || 'grid-auto';
+        const initialView = 'grid-auto';
         setViewMode(initialView);
         ViewControlSystem.initialized = true;
         viewLog(`✅ Sistema de control de vistas inicializado con vista: ${initialView}`);
-    }, 500);
+    }, 1000);
 }
 
 // ============================================
@@ -106,8 +97,6 @@ function setupViewControlPanel() {
     // Cerrar con overlay
     viewControlOverlay.addEventListener('click', closeViewControlPanel);
 
-    // Event listener de teclado REMOVIDO para evitar interferencias al escribir
-
     viewLog('✅ Panel de control configurado');
 }
 
@@ -116,12 +105,14 @@ function openViewControlPanel() {
     const viewControlOverlay = document.getElementById('viewControlOverlay');
     const viewControlToggle = document.getElementById('viewControlToggle');
 
-    viewControlPanel.classList.add('active');
-    viewControlOverlay.classList.add('active');
-    viewControlToggle.classList.add('active');
-    document.body.classList.add('view-control-open');
-    
-    viewLog('📖 Panel abierto');
+    if (viewControlPanel && viewControlOverlay && viewControlToggle) {
+        viewControlPanel.classList.add('active');
+        viewControlOverlay.classList.add('active');
+        viewControlToggle.classList.add('active');
+        document.body.classList.add('view-control-open');
+        
+        viewLog('📖 Panel abierto');
+    }
 }
 
 function closeViewControlPanel() {
@@ -129,12 +120,14 @@ function closeViewControlPanel() {
     const viewControlOverlay = document.getElementById('viewControlOverlay');
     const viewControlToggle = document.getElementById('viewControlToggle');
 
-    viewControlPanel.classList.remove('active');
-    viewControlOverlay.classList.remove('active');
-    viewControlToggle.classList.remove('active');
-    document.body.classList.remove('view-control-open');
-    
-    viewLog('📕 Panel cerrado');
+    if (viewControlPanel && viewControlOverlay && viewControlToggle) {
+        viewControlPanel.classList.remove('active');
+        viewControlOverlay.classList.remove('active');
+        viewControlToggle.classList.remove('active');
+        document.body.classList.remove('view-control-open');
+        
+        viewLog('📕 Panel cerrado');
+    }
 }
 
 function setupViewOptions() {
@@ -150,13 +143,14 @@ function setupViewOptions() {
             
             // Cambiar vista
             setViewMode(view);
+            
+            // Cerrar panel después de seleccionar
+            setTimeout(closeViewControlPanel, 300);
         });
     });
 
     // Marcar vista inicial como activa
-    const urlParams = new URLSearchParams(window.location.search);
-    const urlView = urlParams.get('view') || 'grid-auto';
-    const initialOption = document.querySelector(`.view-option[data-view="${urlView}"]`);
+    const initialOption = document.querySelector('.view-option[data-view="grid-auto"]');
     if (initialOption) {
         initialOption.classList.add('active');
     }
@@ -191,7 +185,9 @@ function setupPagination() {
     if (nextPageBtn) {
         nextPageBtn.addEventListener('click', () => {
             const videoGrid = document.getElementById('videoGrid');
-            const videos = videoGrid.querySelectorAll('.video-container');
+            if (!videoGrid) return;
+            
+            const videos = videoGrid.querySelectorAll('.video-container:not(.local)');
             const totalPages = Math.ceil(videos.length / ViewControlSystem.participantsPerPage);
             
             if (ViewControlSystem.currentPage < totalPages) {
@@ -208,26 +204,21 @@ function setupDOMObserver() {
     const videoGrid = document.getElementById('videoGrid');
     
     if (!videoGrid) {
-        viewLog('⚠️ VideoGrid no encontrado');
+        viewLog('⚠️ VideoGrid no encontrado para observer');
         return;
     }
 
     let observerTimeout = null;
     
     ViewControlSystem.observer = new MutationObserver(() => {
-        // ✅ Evitar bucle infinito: solo re-aplicar después de un breve delay
-        // y si NO estamos en medio de un cambio de layout
         if (ViewControlSystem.isChangingLayout) {
-            return; // Ignorar mientras estamos cambiando de vista
+            return;
         }
         
-        // Debounce: esperar 500ms de inactividad antes de re-aplicar
         clearTimeout(observerTimeout);
         observerTimeout = setTimeout(() => {
             if (ViewControlSystem.currentView && ViewControlSystem.initialized) {
                 const allVideos = Array.from(videoGrid.querySelectorAll('.video-container'));
-                
-                // Solo re-aplicar si hay videos reales (no contenedores especiales)
                 const realVideos = allVideos.filter(v => 
                     !v.classList.contains('spotlight-thumbnails') && 
                     !v.classList.contains('sidebar-videos')
@@ -246,7 +237,7 @@ function setupDOMObserver() {
 
     ViewControlSystem.observer.observe(videoGrid, { 
         childList: true, 
-        subtree: false // Solo observar cambios directos, no profundos
+        subtree: false
     });
 
     viewLog('✅ Observer de DOM configurado');
@@ -259,12 +250,17 @@ function setupDOMObserver() {
 function setViewMode(mode) {
     viewLog(`🎯 Cambiando vista a: ${mode}`);
     
-    // ✅ Activar flag para evitar que el Observer interfiera
     ViewControlSystem.isChangingLayout = true;
     
     try {
         ViewControlSystem.currentView = mode;
         const videoGrid = document.getElementById('videoGrid');
+        
+        if (!videoGrid) {
+            viewLog('❌ VideoGrid no encontrado');
+            return;
+        }
+        
         const allVideos = Array.from(videoGrid.querySelectorAll('.video-container'));
         
         if (allVideos.length === 0) {
@@ -275,7 +271,7 @@ function setViewMode(mode) {
         // PASO 1: Limpiar todo
         cleanupAllLayouts(videoGrid, allVideos);
         
-        // PASO 2: Aplicar nuevo layout
+        // PASO 2: Aplicar nuevo layout con screen share como PRINCIPAL
         applyLayout(mode, videoGrid, allVideos);
         
         // PASO 3: Actualizar paginación
@@ -285,7 +281,6 @@ function setViewMode(mode) {
     } catch (e) {
         console.error('❌ Error cambiando vista:', e);
     } finally {
-        // ✅ Desactivar flag después de un breve delay
         setTimeout(() => {
             ViewControlSystem.isChangingLayout = false;
         }, 100);
@@ -305,7 +300,7 @@ function cleanupAllLayouts(videoGrid, allVideos) {
         container.remove();
     });
     
-    // Reset del grid - mantener solo ID
+    // Reset del grid
     const gridId = videoGrid.id;
     videoGrid.className = '';
     videoGrid.id = gridId;
@@ -313,23 +308,9 @@ function cleanupAllLayouts(videoGrid, allVideos) {
     
     // Limpiar todos los estilos inline de los videos
     allVideos.forEach(video => {
-        video.classList.remove('spotlight-main', 'main-video', 'active-speaker');
-        video.style.display = '';
-        video.style.width = '';
-        video.style.height = '';
-        video.style.minHeight = '';
-        video.style.maxHeight = '';
-        video.style.maxWidth = '';
-        video.style.objectFit = '';
-        video.style.aspectRatio = '';
-        video.style.flex = '';
-        video.style.margin = '';
-        video.style.gridRow = '';
-        video.style.gridColumn = '';
-        video.style.gridArea = '';
-        video.style.gridRowStart = '';
-        video.style.gridColumnStart = '';
-        video.style.boxSizing = '';
+        video.classList.remove('spotlight-main', 'main-video', 'active-speaker', 'pinned');
+        video.style.cssText = '';
+        video.removeAttribute('style');
     });
 }
 
@@ -342,31 +323,24 @@ function applyLayout(mode, videoGrid, allVideos) {
         case 'grid-auto':
             applyGridAutoLayout(videoGrid, allVideos);
             break;
-            
         case 'grid-fixed-4':
             applyGridFixedLayout(videoGrid, allVideos, 4);
             break;
-            
         case 'grid-fixed-9':
             applyGridFixedLayout(videoGrid, allVideos, 9);
             break;
-            
         case 'grid-many':
             applyGridManyLayout(videoGrid, allVideos);
             break;
-            
         case 'spotlight':
             applySpotlightLayout(videoGrid, allVideos);
             break;
-            
         case 'sidebar':
             applySidebarLayout(videoGrid, allVideos);
             break;
-            
         case 'active-speaker':
             applyActiveSpeakerLayout(videoGrid, allVideos);
             break;
-            
         default:
             viewLog(`⚠️ Modo desconocido: ${mode}`);
             applyGridAutoLayout(videoGrid, allVideos);
@@ -374,50 +348,63 @@ function applyLayout(mode, videoGrid, allVideos) {
 }
 
 // ============================================
-// LAYOUTS ESPECÍFICOS
+// LAYOUTS ESPECÍFICOS - CORREGIDOS
 // ============================================
 
 function applyGridAutoLayout(videoGrid, allVideos) {
     const count = allVideos.length;
     
+    // PRIORIZAR: screen share SIEMPRE primero, luego speaking, luego pinned
+    const sortedVideos = [...allVideos].sort((a, b) => {
+        if (a.classList.contains('screen-share')) return -1;
+        if (b.classList.contains('screen-share')) return 1;
+        if (a.classList.contains('speaking')) return -1;
+        if (b.classList.contains('speaking')) return 1;
+        if (a.classList.contains('pinned')) return -1;
+        if (b.classList.contains('pinned')) return 1;
+        return 0;
+    });
+    
+    // Configuración base del grid
     videoGrid.style.display = 'grid';
     videoGrid.style.gap = '8px';
     videoGrid.style.width = '100%';
     videoGrid.style.height = '100%';
     videoGrid.style.padding = '8px';
-    videoGrid.style.overflow = 'hidden';
+    videoGrid.style.overflow = 'auto';
     videoGrid.style.boxSizing = 'border-box';
     
-    // Calcular columnas adaptativas según cantidad
-    let cols;
-    if (count === 1) cols = 1;
-    else if (count === 2) cols = 2;
-    else if (count === 3) cols = 3;
-    else if (count === 4) cols = 2;
-    else if (count <= 6) cols = 3;
-    else if (count <= 9) cols = 3;
-    else if (count <= 16) cols = 4;
-    else cols = 5;
+    // Calcular columnas adaptativas
+    let cols = 1;
+    if (count >= 2) cols = 2;
+    if (count >= 3) cols = 3;
+    if (count >= 5) cols = 3;
+    if (count >= 7) cols = 4;
+    if (count >= 10) cols = 5;
     
     videoGrid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
     
     // Calcular filas necesarias
     const rows = Math.ceil(count / cols);
     videoGrid.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+    videoGrid.style.autoRows = '1fr';
+    
+    // Reorganizar videos en el DOM según prioridad
+    sortedVideos.forEach(video => {
+        videoGrid.appendChild(video);
+    });
     
     // Aplicar estilos uniformes a TODOS los videos
-    allVideos.forEach(video => {
+    sortedVideos.forEach(video => {
         video.style.display = 'block';
         video.style.width = '100%';
         video.style.height = '100%';
+        video.style.minHeight = '200px';
         video.style.objectFit = 'cover';
+        video.style.borderRadius = '12px';
         video.style.gridColumn = '';
         video.style.gridRow = '';
         video.style.gridArea = '';
-        video.style.gridRowStart = '';
-        video.style.minHeight = '';
-        video.style.maxHeight = '';
-        video.style.aspectRatio = '';
     });
     
     viewLog(`✅ Grid Auto: ${count} videos en ${cols}x${rows}`);
@@ -427,6 +414,17 @@ function applyGridFixedLayout(videoGrid, allVideos, maxVideos) {
     const count = allVideos.length;
     const cols = maxVideos === 4 ? 2 : 3;
     const rows = maxVideos === 4 ? 2 : 3;
+    
+    // PRIORIZAR: screen share SIEMPRE primero
+    const sortedVideos = [...allVideos].sort((a, b) => {
+        if (a.classList.contains('screen-share')) return -1;
+        if (b.classList.contains('screen-share')) return 1;
+        if (a.classList.contains('speaking')) return -1;
+        if (b.classList.contains('speaking')) return 1;
+        if (a.classList.contains('pinned')) return -1;
+        if (b.classList.contains('pinned')) return 1;
+        return 0;
+    });
     
     videoGrid.style.display = 'grid';
     videoGrid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
@@ -439,24 +437,20 @@ function applyGridFixedLayout(videoGrid, allVideos, maxVideos) {
     videoGrid.style.boxSizing = 'border-box';
     
     // Limitar la cantidad de videos mostrados
-    const videosToShow = allVideos.slice(0, maxVideos);
-    const videosToHide = allVideos.slice(maxVideos);
+    const videosToShow = sortedVideos.slice(0, maxVideos);
+    const videosToHide = sortedVideos.slice(maxVideos);
     
-    // Mostrar solo los primeros N videos con estilos uniformes
+    // Mostrar solo los primeros N videos
     videosToShow.forEach(video => {
         video.style.display = 'block';
         video.style.width = '100%';
         video.style.height = '100%';
-        video.style.maxWidth = '100%';
-        video.style.maxHeight = '100%';
+        video.style.minHeight = '200px';
         video.style.objectFit = 'cover';
-        video.style.boxSizing = 'border-box';
+        video.style.borderRadius = '12px';
         video.style.gridColumn = '';
         video.style.gridRow = '';
         video.style.gridArea = '';
-        video.style.gridRowStart = '';
-        video.style.minHeight = '';
-        video.style.aspectRatio = '';
     });
     
     // Ocultar el resto de videos
@@ -470,43 +464,86 @@ function applyGridFixedLayout(videoGrid, allVideos, maxVideos) {
 function applyGridManyLayout(videoGrid, allVideos) {
     const count = allVideos.length;
     
+    // PRIORIZAR: screen share SIEMPRE primero
+    const sortedVideos = [...allVideos].sort((a, b) => {
+        if (a.classList.contains('screen-share')) return -1;
+        if (b.classList.contains('screen-share')) return 1;
+        if (a.classList.contains('speaking')) return -1;
+        if (b.classList.contains('speaking')) return 1;
+        if (a.classList.contains('pinned')) return -1;
+        if (b.classList.contains('pinned')) return 1;
+        return 0;
+    });
+    
+    // Configurar grid 5×5 exacto
     videoGrid.style.display = 'grid';
-    videoGrid.style.gap = '6px';
+    videoGrid.style.gridTemplateColumns = 'repeat(5, 1fr)';
+    videoGrid.style.gridTemplateRows = 'repeat(5, 1fr)';
+    videoGrid.style.gridColumnGap = '0px';
+    videoGrid.style.gridRowGap = '0px';
+    videoGrid.style.gap = '4px';
     videoGrid.style.width = '100%';
     videoGrid.style.height = '100%';
-    videoGrid.style.padding = '6px';
+    videoGrid.style.padding = '4px';
     videoGrid.style.overflow = 'hidden';
     videoGrid.style.boxSizing = 'border-box';
     
-    // Grid compacto: 5 columnas adaptable
-    let cols = 5;
-    let rows = Math.ceil(count / cols);
+    // Posiciones exactas del grid 5×5 (máximo 25 videos)
+    const gridPositions = [
+        '1 / 1 / 2 / 2',  // div1
+        '1 / 2 / 2 / 3',  // div2
+        '1 / 3 / 2 / 4',  // div3
+        '1 / 4 / 2 / 5',  // div4
+        '1 / 5 / 2 / 6',  // div5
+        '2 / 1 / 3 / 2',  // div6
+        '2 / 2 / 3 / 3',  // div7
+        '2 / 3 / 3 / 4',  // div8
+        '2 / 4 / 3 / 5',  // div9
+        '2 / 5 / 3 / 6',  // div10
+        '3 / 1 / 4 / 2',  // div11
+        '3 / 2 / 4 / 3',  // div12
+        '3 / 3 / 4 / 4',  // div13
+        '3 / 4 / 4 / 5',  // div14
+        '3 / 5 / 4 / 6',  // div15
+        '4 / 1 / 5 / 2',  // div16
+        '4 / 2 / 5 / 3',  // div17
+        '4 / 3 / 5 / 4',  // div18
+        '4 / 4 / 5 / 5',  // div19
+        '4 / 5 / 5 / 6',  // div20
+        '5 / 1 / 6 / 2',  // div21
+        '5 / 2 / 6 / 3',  // div22
+        '5 / 3 / 6 / 4',  // div23
+        '5 / 4 / 6 / 5',  // div24
+        '5 / 5 / 6 / 6'   // div25
+    ];
     
-    // Si son muchos videos, usar 6 columnas
-    if (count > 25) {
-        cols = 6;
-        rows = Math.ceil(count / cols);
-    }
-    
-    videoGrid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
-    videoGrid.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
-    
-    // Aplicar estilos uniformes a TODOS los videos
-    allVideos.forEach(video => {
-        video.style.display = 'block';
-        video.style.width = '100%';
-        video.style.height = '100%';
-        video.style.objectFit = 'cover';
-        video.style.gridColumn = '';
-        video.style.gridRow = '';
-        video.style.gridArea = '';
-        video.style.gridRowStart = '';
-        video.style.minHeight = '';
-        video.style.maxHeight = '';
-        video.style.aspectRatio = '';
+    // Reorganizar videos en el DOM
+    sortedVideos.forEach(video => {
+        videoGrid.appendChild(video);
     });
     
-    viewLog(`✅ Grid Compacto: ${count} videos en ${rows} filas x ${cols} columnas`);
+    // Mostrar hasta 25 videos en el grid 5×5
+    const videosToShow = sortedVideos.slice(0, 25);
+    const videosToHide = sortedVideos.slice(25);
+    
+    videosToShow.forEach((video, index) => {
+        video.style.display = 'block';
+        video.style.gridArea = gridPositions[index];
+        video.style.width = '100%';
+        video.style.height = '100%';
+        video.style.minHeight = '100px';
+        video.style.objectFit = 'cover';
+        video.style.borderRadius = '6px';
+        video.style.gridColumn = '';
+        video.style.gridRow = '';
+    });
+    
+    // Ocultar videos adicionales
+    videosToHide.forEach(video => {
+        video.style.display = 'none';
+    });
+    
+    viewLog(`✅ Grid Compacto 5×5: mostrando ${videosToShow.length} de ${count} videos`);
 }
 
 function applySpotlightLayout(videoGrid, allVideos) {
@@ -514,36 +551,19 @@ function applySpotlightLayout(videoGrid, allVideos) {
     
     viewLog(`Aplicando Spotlight con ${allVideos.length} videos`);
     
-    // Si solo hay 1 video, usar grid simple
-    if (allVideos.length === 1) {
-        videoGrid.style.display = 'grid';
-        videoGrid.style.gridTemplateColumns = '1fr';
-        videoGrid.style.gridTemplateRows = '1fr';
-        videoGrid.style.gap = '8px';
-        videoGrid.style.padding = '8px';
-        videoGrid.style.overflow = 'hidden';
-        videoGrid.style.boxSizing = 'border-box';
-        
-        allVideos[0].style.display = 'block';
-        allVideos[0].style.width = '100%';
-        allVideos[0].style.height = '100%';
-        allVideos[0].style.objectFit = 'cover';
-        allVideos[0].style.gridColumn = '';
-        allVideos[0].style.gridRow = '';
-        allVideos[0].style.gridArea = '';
-        return;
-    }
-    
     try {
-        // Video principal (hablando, pinned, o primero)
-        let mainVideo = allVideos.find(v => v.classList.contains('speaking')) ||
+        // Video principal: SCREEN SHARE siempre primero, luego speaking, pinned
+        let mainVideo = allVideos.find(v => v.classList.contains('screen-share')) ||
+                       allVideos.find(v => v.classList.contains('speaking')) ||
                        allVideos.find(v => v.classList.contains('pinned')) ||
                        allVideos[0];
         
-        // Grid 5x5: 3 columnas principales + 2 columnas de miniaturas
+        const otherVideos = allVideos.filter(v => v !== mainVideo);
+        
+        // Configurar grid para spotlight
         videoGrid.style.display = 'grid';
-        videoGrid.style.gridTemplateColumns = 'repeat(5, 1fr)';
-        videoGrid.style.gridTemplateRows = 'repeat(5, 1fr)';
+        videoGrid.style.gridTemplateColumns = '3fr 1fr';
+        videoGrid.style.gridTemplateRows = 'repeat(4, 1fr)';
         videoGrid.style.gap = '8px';
         videoGrid.style.width = '100%';
         videoGrid.style.height = '100%';
@@ -551,44 +571,27 @@ function applySpotlightLayout(videoGrid, allVideos) {
         videoGrid.style.overflow = 'hidden';
         videoGrid.style.boxSizing = 'border-box';
         
-        const otherVideos = allVideos.filter(v => v !== mainVideo);
-        
-        // Video principal: columnas 1-3, filas 1-5
+        // Video principal: ocupa toda la izquierda (4 filas)
         mainVideo.classList.add('spotlight-main');
         mainVideo.style.display = 'block';
-        mainVideo.style.gridColumn = '1 / 4';
-        mainVideo.style.gridRow = '1 / 6';
+        mainVideo.style.gridColumn = '1 / 2';
+        mainVideo.style.gridRow = '1 / 5';
         mainVideo.style.width = '100%';
         mainVideo.style.height = '100%';
         mainVideo.style.objectFit = 'cover';
-        mainVideo.style.gridArea = '';
-        mainVideo.style.gridRowStart = '';
-        mainVideo.style.minHeight = '';
-        mainVideo.style.maxHeight = '';
-        mainVideo.style.aspectRatio = '';
+        mainVideo.style.borderRadius = '12px';
         
-        // Miniaturas: máximo 4 videos en 2x2 (columnas 4-5)
+        // Miniaturas: máximo 4 videos (derecha vertical)
         const thumbnails = otherVideos.slice(0, 4);
-        const positions = [
-            { column: '4 / 5', row: '1 / 3' },  // Superior izquierda
-            { column: '5 / 6', row: '1 / 3' },  // Superior derecha
-            { column: '4 / 5', row: '3 / 5' },  // Inferior izquierda
-            { column: '5 / 6', row: '3 / 5' }   // Inferior derecha
-        ];
         
         thumbnails.forEach((video, index) => {
-            const pos = positions[index];
             video.style.display = 'block';
-            video.style.gridColumn = pos.column;
-            video.style.gridRow = pos.row;
+            video.style.gridColumn = '2 / 3';
+            video.style.gridRow = `${index + 1} / ${index + 2}`;
             video.style.width = '100%';
             video.style.height = '100%';
             video.style.objectFit = 'cover';
-            video.style.gridArea = '';
-            video.style.gridRowStart = '';
-            video.style.minHeight = '';
-            video.style.maxHeight = '';
-            video.style.aspectRatio = '';
+            video.style.borderRadius = '8px';
         });
         
         // Ocultar videos adicionales
@@ -608,81 +611,57 @@ function applySidebarLayout(videoGrid, allVideos) {
     
     viewLog(`Aplicando Sidebar con ${allVideos.length} videos`);
     
-    // Si solo hay 1 video, usar grid simple
-    if (allVideos.length === 1) {
+    try {
+        // Video principal: SCREEN SHARE siempre primero, luego speaking, pinned
+        let mainVideo = allVideos.find(v => v.classList.contains('screen-share')) ||
+                       allVideos.find(v => v.classList.contains('speaking')) ||
+                       allVideos.find(v => v.classList.contains('pinned')) ||
+                       allVideos[0];
+        
+        const otherVideos = allVideos.filter(v => v !== mainVideo);
+        
+        // Configurar grid 5x5 para sidebar mejorado
         videoGrid.style.display = 'grid';
-        videoGrid.style.gridTemplateColumns = '1fr';
-        videoGrid.style.gridTemplateRows = '1fr';
+        videoGrid.style.gridTemplateColumns = 'repeat(5, 1fr)';
+        videoGrid.style.gridTemplateRows = 'repeat(5, 1fr)';
         videoGrid.style.gap = '8px';
+        videoGrid.style.width = '100%';
+        videoGrid.style.height = '100%';
         videoGrid.style.padding = '8px';
         videoGrid.style.overflow = 'hidden';
         videoGrid.style.boxSizing = 'border-box';
         
-        allVideos[0].style.display = 'block';
-        allVideos[0].style.width = '100%';
-        allVideos[0].style.height = '100%';
-        allVideos[0].style.objectFit = 'cover';
-        allVideos[0].style.gridColumn = '';
-        allVideos[0].style.gridRow = '';
-        allVideos[0].style.gridArea = '';
-        return;
-    }
-    
-    try {
-        // Video principal
-        let mainVideo = allVideos.find(v => v.classList.contains('speaking')) ||
-                       allVideos.find(v => v.classList.contains('pinned')) ||
-                       allVideos[0];
-        
-        // Grid 7x5: 4 columnas principales + 3 columnas sidebar
-        videoGrid.style.display = 'grid';
-        videoGrid.style.gridTemplateColumns = 'repeat(7, 1fr)';
-        videoGrid.style.gridTemplateRows = 'repeat(5, 1fr)';
-        videoGrid.style.gap = '6px';
-        videoGrid.style.width = '100%';
-        videoGrid.style.height = '100%';
-        videoGrid.style.padding = '6px';
-        videoGrid.style.overflow = 'hidden';
-        videoGrid.style.boxSizing = 'border-box';
-        
-        const otherVideos = allVideos.filter(v => v !== mainVideo);
-        
-        // Video principal: columnas 1-4, filas 1-5
+        // Video principal: ocupa área grande (1/1 -> 4/3)
         mainVideo.classList.add('main-video');
         mainVideo.style.display = 'block';
-        mainVideo.style.gridColumn = '1 / 5';
-        mainVideo.style.gridRow = '1 / 6';
+        mainVideo.style.gridArea = '1 / 1 / 4 / 3';
         mainVideo.style.width = '100%';
         mainVideo.style.height = '100%';
         mainVideo.style.objectFit = 'cover';
-        mainVideo.style.gridArea = '';
-        mainVideo.style.gridRowStart = '';
-        mainVideo.style.minHeight = '';
-        mainVideo.style.maxHeight = '';
-        mainVideo.style.aspectRatio = '';
+        mainVideo.style.borderRadius = '12px';
         
-        // Miniaturas en sidebar: máximo 15 (3 columnas x 5 filas)
-        const thumbnails = otherVideos.slice(0, 15);
+        // Configurar miniaturas en el lado derecho (máximo 6 visibles)
+        const thumbnails = otherVideos.slice(0, 6);
+        const gridAreas = [
+            '1 / 3 / 2 / 4',  // div2
+            '1 / 4 / 2 / 5',  // div3
+            '1 / 5 / 2 / 6',  // div4
+            '2 / 3 / 3 / 4',  // div5
+            '2 / 4 / 3 / 5',  // div6
+            '2 / 5 / 3 / 6'   // div7
+        ];
         
         thumbnails.forEach((video, index) => {
-            const col = (index % 3) + 5; // Columnas 5, 6, 7
-            const row = Math.floor(index / 3) + 1; // Filas 1-5
-            
             video.style.display = 'block';
-            video.style.gridColumn = `${col} / ${col + 1}`;
-            video.style.gridRow = `${row} / ${row + 1}`;
+            video.style.gridArea = gridAreas[index];
             video.style.width = '100%';
             video.style.height = '100%';
             video.style.objectFit = 'cover';
-            video.style.gridArea = '';
-            video.style.gridRowStart = '';
-            video.style.minHeight = '';
-            video.style.maxHeight = '';
-            video.style.aspectRatio = '';
+            video.style.borderRadius = '8px';
         });
         
         // Ocultar videos adicionales
-        otherVideos.slice(15).forEach(video => {
+        otherVideos.slice(6).forEach(video => {
             video.style.display = 'none';
         });
         
@@ -694,44 +673,44 @@ function applySidebarLayout(videoGrid, allVideos) {
 }
 
 function applyActiveSpeakerLayout(videoGrid, allVideos) {
+    viewLog('Aplicando Active Speaker layout');
+    
     videoGrid.style.display = 'flex';
-    videoGrid.style.justifyContent = 'center';
+    videoGrid.style.flexDirection = 'column';
     videoGrid.style.alignItems = 'center';
+    videoGrid.style.justifyContent = 'center';
     videoGrid.style.width = '100%';
     videoGrid.style.height = '100%';
     videoGrid.style.padding = '16px';
     videoGrid.style.overflow = 'hidden';
     videoGrid.style.boxSizing = 'border-box';
-    videoGrid.style.gridTemplateColumns = '';
-    videoGrid.style.gridTemplateRows = '';
     
-    // Ocultar todos MENOS el hablante activo
+    // Ocultar todos los videos primero
     allVideos.forEach(video => {
         video.style.display = 'none';
         video.style.gridColumn = '';
         video.style.gridRow = '';
         video.style.gridArea = '';
-        video.style.gridRowStart = '';
     });
     
-    // Mostrar solo el hablante activo
-    const speakingVideo = allVideos.find(v => v.classList.contains('speaking')) ||
-                         allVideos.find(v => v.classList.contains('active-speaker')) ||
-                         allVideos[0];
+    // PRIORIZAR: screen share SIEMPRE primero, luego speaking, active-speaker
+    const activeVideo = allVideos.find(v => v.classList.contains('screen-share')) ||
+                       allVideos.find(v => v.classList.contains('speaking')) ||
+                       allVideos.find(v => v.classList.contains('active-speaker')) ||
+                       allVideos[0];
     
-    if (speakingVideo) {
-        speakingVideo.style.display = 'block';
-        speakingVideo.style.width = '100%';
-        speakingVideo.style.height = '100%';
-        speakingVideo.style.maxWidth = '100%';
-        speakingVideo.style.maxHeight = '100%';
-        speakingVideo.style.objectFit = 'contain';
-        speakingVideo.style.margin = '0 auto';
-        speakingVideo.style.minHeight = '';
-        speakingVideo.style.aspectRatio = '';
+    if (activeVideo) {
+        activeVideo.style.display = 'block';
+        activeVideo.style.width = '90%';
+        activeVideo.style.height = '90%';
+        activeVideo.style.maxWidth = '1200px';
+        activeVideo.style.maxHeight = '800px';
+        activeVideo.style.objectFit = 'contain';
+        activeVideo.style.borderRadius = '12px';
+        activeVideo.classList.add('active-speaker');
     }
     
-    viewLog(`✅ Active Speaker: ${speakingVideo ? '1 video visible' : 'ninguno'}`);
+    viewLog(`✅ Active Speaker: ${activeVideo ? '1 video visible' : 'ninguno'}`);
 }
 
 // ============================================
@@ -740,20 +719,21 @@ function applyActiveSpeakerLayout(videoGrid, allVideos) {
 
 function updatePagination() {
     const videoGrid = document.getElementById('videoGrid');
-    const videos = Array.from(videoGrid.querySelectorAll('.video-container'));
     const paginationControls = document.getElementById('paginationControls');
     
-    if (!paginationControls) return;
+    if (!videoGrid || !paginationControls) return;
     
+    const videos = Array.from(videoGrid.querySelectorAll('.video-container:not(.local)'));
     const perPage = ViewControlSystem.participantsPerPage;
     const currentView = ViewControlSystem.currentView;
     
-    // No paginar en ciertas vistas
-    if (perPage === 'all' || currentView === 'active-speaker') {
+    // No paginar en ciertas vistas o cuando se muestran todos
+    if (perPage === 'all' || 
+        currentView === 'active-speaker' || 
+        currentView === 'spotlight' || 
+        currentView === 'sidebar') {
         videos.forEach(video => {
-            if (!video.style.display || video.style.display === 'none') {
-                video.style.display = '';
-            }
+            video.style.display = '';
         });
         paginationControls.style.display = 'none';
         return;
@@ -764,9 +744,7 @@ function updatePagination() {
     if (totalPages <= 1) {
         paginationControls.style.display = 'none';
         videos.forEach(video => {
-            if (!video.style.display || video.style.display === 'none') {
-                video.style.display = '';
-            }
+            video.style.display = '';
         });
         return;
     }
@@ -780,15 +758,13 @@ function updatePagination() {
     document.getElementById('prevPageBtn').disabled = ViewControlSystem.currentPage === 1;
     document.getElementById('nextPageBtn').disabled = ViewControlSystem.currentPage === totalPages;
     
-    // Mostrar/ocultar videos
+    // Mostrar/ocultar videos según la página
     const startIndex = (ViewControlSystem.currentPage - 1) * perPage;
     const endIndex = startIndex + perPage;
     
     videos.forEach((video, index) => {
         if (index >= startIndex && index < endIndex) {
-            if (!video.style.display || video.style.display === 'none') {
-                video.style.display = '';
-            }
+            video.style.display = '';
         } else {
             video.style.display = 'none';
         }
@@ -801,66 +777,175 @@ function updatePagination() {
 // API PÚBLICA - Para llamar desde script.js
 // ============================================
 
-// Marcar hablante activo (llamar desde script.js cuando detecte audio)
 function markActiveSpeaker(peerId) {
+    if (!ViewControlSystem.initialized) return;
+    
     ViewControlSystem.activeSpeakerId = peerId;
     
     const videoGrid = document.getElementById('videoGrid');
+    if (!videoGrid) return;
+    
     const allVideos = videoGrid.querySelectorAll('.video-container');
     
+    // Remover clases anteriores
     allVideos.forEach(video => {
         video.classList.remove('active-speaker', 'speaking');
     });
     
+    // Encontrar y marcar el video activo
     const activeVideo = peerId === 'local' 
         ? videoGrid.querySelector('.video-container.local')
-        : document.querySelector(`[data-peer-id="${peerId}"]`)?.closest('.video-container');
+        : Array.from(allVideos).find(video => {
+            const peerElement = video.querySelector('[data-peer-id]');
+            return peerElement && peerElement.getAttribute('data-peer-id') === peerId;
+        });
     
     if (activeVideo) {
         activeVideo.classList.add('active-speaker', 'speaking');
         
-        // Re-aplicar layout si está en modo active-speaker
+        // Si estamos en modo active-speaker, re-aplicar el layout
         if (ViewControlSystem.currentView === 'active-speaker') {
-            const allVideos = Array.from(videoGrid.querySelectorAll('.video-container'));
-            applyActiveSpeakerLayout(videoGrid, allVideos);
+            const allVideosArray = Array.from(allVideos);
+            applyActiveSpeakerLayout(videoGrid, allVideosArray);
         }
         
         viewLog(`🔊 Hablante activo: ${peerId}`);
     }
 }
 
-// Forzar actualización del layout (útil después de agregar/quitar participantes)
 function refreshViewLayout() {
     if (!ViewControlSystem.initialized) return;
     
     const videoGrid = document.getElementById('videoGrid');
+    if (!videoGrid) return;
+    
     const allVideos = Array.from(videoGrid.querySelectorAll('.video-container'));
     
     if (allVideos.length > 0) {
+        viewLog('🔄 Refrescando layout manualmente');
+        ViewControlSystem.isChangingLayout = true;
         applyLayout(ViewControlSystem.currentView, videoGrid, allVideos);
         updatePagination();
-        viewLog('🔄 Layout actualizado manualmente');
+        ViewControlSystem.isChangingLayout = false;
     }
 }
 
 // ============================================
-// AUTO-INICIALIZACIÓN
+// SISTEMA DE PIN/FIJAR VIDEOS
 // ============================================
+
+function setupPinButtons() {
+    // Los botones de pin se configuran automáticamente cuando se crean los videos
+    // Esta función se llama desde refreshViewLayout
+}
+
+function pinVideo(peerId) {
+    if (ViewControlSystem.pinnedPeerId === peerId) {
+        // Si ya está pinned, des-pin
+        ViewControlSystem.pinnedPeerId = null;
+    } else {
+        ViewControlSystem.pinnedPeerId = peerId;
+    }
+    
+    // Actualizar la UI
+    const videoGrid = document.getElementById('videoGrid');
+    if (!videoGrid) return;
+    
+    const allVideos = videoGrid.querySelectorAll('.video-container');
+    allVideos.forEach(video => {
+        video.classList.remove('pinned');
+        
+        // Mostrar/ocultar indicador de pin
+        const pinIndicator = video.querySelector('.pin-indicator');
+        if (pinIndicator) {
+            pinIndicator.style.display = 'none';
+        }
+    });
+    
+    // Marcar el video pinned
+    if (ViewControlSystem.pinnedPeerId) {
+        const pinnedVideo = Array.from(allVideos).find(video => {
+            if (ViewControlSystem.pinnedPeerId === 'local') {
+                return video.classList.contains('local');
+            }
+            const peerElement = video.querySelector('[data-peer-id]');
+            return peerElement && peerElement.getAttribute('data-peer-id') === ViewControlSystem.pinnedPeerId;
+        });
+        
+        if (pinnedVideo) {
+            pinnedVideo.classList.add('pinned');
+            const pinIndicator = pinnedVideo.querySelector('.pin-indicator');
+            if (pinIndicator) {
+                pinIndicator.style.display = 'block';
+            }
+        }
+    }
+    
+    // Re-aplicar el layout si es necesario
+    refreshViewLayout();
+    
+    viewLog(`📌 Video ${ViewControlSystem.pinnedPeerId ? 'pinned: ' + ViewControlSystem.pinnedPeerId : 'unpinned'}`);
+}
+
+// ============================================
+// AUTO-INICIALIZACIÓN MEJORADA
+// ============================================
+
+function waitForElement(selector, callback, maxAttempts = 20, interval = 250) {
+    let attempts = 0;
+    
+    function checkElement() {
+        attempts++;
+        const element = document.querySelector(selector);
+        
+        if (element) {
+            callback(element);
+        } else if (attempts < maxAttempts) {
+            setTimeout(checkElement, interval);
+        } else {
+            console.warn(`❌ Elemento no encontrado: ${selector} después de ${maxAttempts} intentos`);
+        }
+    }
+    
+    checkElement();
+}
+
+// Inicialización mejorada
+function initializeViewControlSystem() {
+    waitForElement('#videoGrid', (videoGrid) => {
+        viewLog('✅ VideoGrid encontrado, inicializando sistema...');
+        
+        // Pequeño delay para asegurar que todo esté listo
+        setTimeout(() => {
+            try {
+                initViewControl();
+                
+                // Configurar botones de pin existentes
+                setTimeout(setupPinButtons, 1000);
+                
+            } catch (error) {
+                console.error('❌ Error en inicialización:', error);
+            }
+        }, 500);
+    });
+}
 
 // Inicializar cuando el DOM esté listo
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-        setTimeout(initViewControl, 500);
-    });
+    document.addEventListener('DOMContentLoaded', initializeViewControlSystem);
 } else {
-    setTimeout(initViewControl, 500);
+    initializeViewControlSystem();
 }
 
-// Exportar API pública
+// ============================================
+// EXPORTAR API PÚBLICA
+// ============================================
+
 window.ViewControl = {
     markActiveSpeaker,
     refreshViewLayout,
-    setViewMode
+    setViewMode,
+    pinVideo
 };
 
-viewLog('📦 Módulo de control de vistas cargado');
+viewLog('📦 Módulo de control de vistas cargado y listo');

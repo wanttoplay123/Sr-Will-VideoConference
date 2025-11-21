@@ -152,6 +152,7 @@ if (!userName || userName.trim() === '') {
     console.warn('⚠️ Nombre de usuario vacío, asignando nombre aleatorio:', userName);
 }
 let isModerator = urlParams.has('moderator');
+let isRoomAdmin = false; // ✅ Flag para identificar al admin de la sala
 
 console.log('[INIT] URL completa:', window.location.href);
 console.log('[INIT] Parámetros URL:', {
@@ -172,11 +173,15 @@ let isSharingScreen = false;
 let currentScreenSharePeerId = null;
 let screenShareStream = null;
 let reconnectionAttempts = 0;
+let audioContext = null;
+let originalAudioTrack = null;
+let localMicStream = null;
 
 // Referencias a elementos del DOM
 let videosContainer = null;
 let screenShareContainer = null;
 let participantList = null;
+let participantCount = null;
 
 const raisedHands = new Set();
 const userRoles = {
@@ -191,6 +196,311 @@ const participantStates = {
 let currentPoll = null;
 let hasVoted = false;
 let pollChart = null;
+
+// ======================= SISTEMA DE "DAR LA PALABRA" =======================
+let currentSpeaker = null; // { name: string, timeLeft: number (segundos), totalTime: number }
+let speakingTimerInterval = null;
+
+// Variables para hacer el panel arrastrable
+let isDragging = false;
+let currentX;
+let currentY;
+let initialX;
+let initialY;
+let xOffset = 0;
+let yOffset = 0;
+
+// Función para inicializar el panel como arrastrable
+function initDraggableSpeakingPanel() {
+    const speakingPanel = document.getElementById('speakingPanel');
+    if (!speakingPanel) return;
+
+    const header = speakingPanel.querySelector('.speaking-header');
+    if (!header) return;
+
+    // Hacer que el cursor indique que se puede arrastrar
+    header.style.cursor = 'move';
+
+    header.addEventListener('mousedown', dragStart);
+    document.addEventListener('mousemove', drag);
+    document.addEventListener('mouseup', dragEnd);
+
+    // Soporte táctil para móviles
+    header.addEventListener('touchstart', dragStart);
+    document.addEventListener('touchmove', drag);
+    document.addEventListener('touchend', dragEnd);
+}
+
+function dragStart(e) {
+    const speakingPanel = document.getElementById('speakingPanel');
+    if (!speakingPanel || !speakingPanel.classList.contains('visible')) return;
+
+    if (e.type === 'touchstart') {
+        initialX = e.touches[0].clientX - xOffset;
+        initialY = e.touches[0].clientY - yOffset;
+    } else {
+        initialX = e.clientX - xOffset;
+        initialY = e.clientY - yOffset;
+    }
+
+    if (e.target.closest('.speaking-header')) {
+        isDragging = true;
+    }
+}
+
+function drag(e) {
+    if (!isDragging) return;
+
+    e.preventDefault();
+
+    if (e.type === 'touchmove') {
+        currentX = e.touches[0].clientX - initialX;
+        currentY = e.touches[0].clientY - initialY;
+    } else {
+        currentX = e.clientX - initialX;
+        currentY = e.clientY - initialY;
+    }
+
+    xOffset = currentX;
+    yOffset = currentY;
+
+    const speakingPanel = document.getElementById('speakingPanel');
+    if (speakingPanel) {
+        setTranslate(currentX, currentY, speakingPanel);
+    }
+}
+
+function dragEnd(e) {
+    initialX = currentX;
+    initialY = currentY;
+    isDragging = false;
+}
+
+function setTranslate(xPos, yPos, el) {
+    el.style.transform = `translate(${xPos}px, ${yPos}px)`;
+}
+
+function giveWordToParticipant(participantName, duration = 60) {
+    console.log('[GIVE-WORD-FUNC] 📢 Función llamada');
+    console.log('[GIVE-WORD-FUNC] participantName:', participantName);
+    console.log('[GIVE-WORD-FUNC] duration:', duration);
+    
+    // Si ya hay alguien con la palabra, quitársela primero
+    if (currentSpeaker) {
+        console.log('[GIVE-WORD-FUNC] ⚠️ Ya hay alguien con la palabra:', currentSpeaker.name);
+        console.log('[GIVE-WORD-FUNC] Quitando palabra primero...');
+        takeWordFromParticipant();
+    }
+
+    currentSpeaker = {
+        name: participantName,
+        timeLeft: duration,
+        totalTime: duration
+    };
+    console.log('[GIVE-WORD-FUNC] ✅ currentSpeaker actualizado:', currentSpeaker);
+
+    // Mostrar panel
+    const speakingPanel = document.getElementById('speakingPanel');
+    const speakingPersonName = document.getElementById('speakingPersonName');
+    const timerDisplay = document.getElementById('timerDisplay');
+    const timerProgressBar = document.getElementById('timerProgressBar');
+    const speakingActions = document.getElementById('speakingActions');
+
+    console.log('[GIVE-WORD-FUNC] Elementos DOM:', {
+        speakingPanel: !!speakingPanel,
+        speakingPersonName: !!speakingPersonName,
+        timerDisplay: !!timerDisplay,
+        speakingActions: !!speakingActions
+    });
+
+    if (speakingPanel && speakingPersonName && timerDisplay) {
+        // ✅ ASEGURAR que el panel esté en el body
+        if (speakingPanel.parentNode !== document.body) {
+            document.body.appendChild(speakingPanel);
+            console.log('[GIVE-WORD-FUNC] Panel movido al body');
+        }
+
+        speakingPersonName.textContent = participantName;
+        updateTimerDisplay();
+        speakingPanel.classList.remove('closing');
+        speakingPanel.classList.add('visible');
+        
+        // ✅ FORZAR VISIBILIDAD TOTAL con estilos inline importantes
+        speakingPanel.style.cssText = 'display: block !important; opacity: 1 !important; visibility: visible !important; z-index: 10000 !important;';
+        console.log('[GIVE-WORD-FUNC] ✅ Panel mostrado localmente');
+
+        // Mostrar botón de quitar palabra solo si eres moderador
+        if (speakingActions) {
+            speakingActions.style.display = isModerator ? 'flex' : 'none';
+            console.log('[GIVE-WORD-FUNC] Botones de acción:', isModerator ? 'VISIBLES' : 'OCULTOS');
+        }
+    }
+
+    // ❌ NO iniciar temporizador LOCAL aquí para evitar duplicados
+    // El temporizador se iniciará cuando llegue el mensaje 'give-word' del servidor
+    // Así todos los clientes están sincronizados
+    console.log('[GIVE-WORD-FUNC] ⏰ Temporizador se iniciará al recibir confirmación del servidor');
+
+    // Notificar al servidor que se dio la palabra
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        const message = {
+            type: 'give-word',
+            room: roomCode,
+            target: participantName,
+            duration: duration
+        };
+        console.log('[GIVE-WORD-FUNC] 📤 Enviando mensaje al servidor:', message);
+        ws.send(JSON.stringify(message));
+        console.log('[GIVE-WORD-FUNC] ✅ Mensaje enviado al servidor');
+        
+        // También activar el micrófono del participante
+        ws.send(JSON.stringify({ 
+            type: 'mute-participant', 
+            room: roomCode, 
+            target: participantName, 
+            micActive: true 
+        }));
+        console.log('[GIVE-WORD-FUNC] ✅ Solicitud de activación de micrófono enviada');
+    } else {
+        console.error('[GIVE-WORD-FUNC] ❌ ERROR: WebSocket no está abierto');
+        console.error('[GIVE-WORD-FUNC] ws:', ws);
+        console.error('[GIVE-WORD-FUNC] readyState:', ws?.readyState);
+    }
+
+    showError(`${participantName} tiene la palabra (${duration}s)`, 3000);
+    console.log(`[GIVE-WORD-FUNC] ✅ Función completada. ${participantName} tiene la palabra por ${duration} segundos`);
+}
+
+function handleTimeExpired(participantName) {
+    console.log('[TIME-EXPIRED] ⏰ Tiempo expirado para:', participantName);
+    
+    // 🔇 PASO 1: Silenciar inmediatamente al participante
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        console.log('[TIME-EXPIRED] 📤 Enviando mute-participant (micActive: false)');
+        ws.send(JSON.stringify({
+            type: 'mute-participant',
+            room: roomCode,
+            target: participantName,
+            micActive: false
+        }));
+    }
+    
+    // 📢 PASO 2: Quitar la palabra
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        console.log('[TIME-EXPIRED] 📤 Enviando take-word');
+        ws.send(JSON.stringify({
+            type: 'take-word',
+            room: roomCode,
+            target: participantName
+        }));
+    }
+    
+    // PASO 3: Limpiar estado local
+    if (speakingTimerInterval) {
+        clearInterval(speakingTimerInterval);
+        speakingTimerInterval = null;
+    }
+    
+    currentSpeaker = null;
+    
+    // PASO 4: Ocultar panel
+    const speakingPanel = document.getElementById('speakingPanel');
+    if (speakingPanel) {
+        speakingPanel.classList.add('closing');
+        setTimeout(() => {
+            speakingPanel.classList.remove('visible', 'closing');
+            speakingPanel.style.cssText = 'display: none !important; opacity: 0 !important; visibility: hidden !important;';
+            speakingPanel.style.transform = 'translate(0px, 0px)';
+            xOffset = 0;
+            yOffset = 0;
+        }, 400);
+    }
+    
+    showError(`⏰ Tiempo agotado: ${participantName} fue silenciado`, 3000);
+    console.log('[TIME-EXPIRED] ✅ Proceso completado');
+}
+
+function takeWordFromParticipant() {
+    console.log('[TAKE-WORD-FUNC] 📢 Función llamada');
+    console.log('[TAKE-WORD-FUNC] currentSpeaker:', currentSpeaker);
+    
+    if (!currentSpeaker) {
+        console.log('[TAKE-WORD-FUNC] ❌ No hay nadie con la palabra, abortando');
+        return;
+    }
+
+    const participantName = currentSpeaker.name;
+    console.log('[TAKE-WORD-FUNC] 🎯 Quitando palabra a:', participantName);
+
+    // Detener temporizador
+    if (speakingTimerInterval) {
+        clearInterval(speakingTimerInterval);
+        speakingTimerInterval = null;
+        console.log('[TAKE-WORD-FUNC] ⏰ Temporizador detenido');
+    }
+
+    // ✅ Ocultar panel con animación para TODOS
+    const speakingPanel = document.getElementById('speakingPanel');
+    if (speakingPanel) {
+        speakingPanel.classList.add('closing');
+        setTimeout(() => {
+            speakingPanel.classList.remove('visible', 'closing');
+            speakingPanel.style.cssText = 'display: none !important; opacity: 0 !important; visibility: hidden !important;';
+            // Resetear posición del panel
+            speakingPanel.style.transform = 'translate(0px, 0px)';
+            xOffset = 0;
+            yOffset = 0;
+        }, 400);
+        console.log('[TAKE-WORD-FUNC] ✅ Panel ocultado localmente');
+    }
+
+    // 📢 Notificar al servidor que se quitó la palabra
+    // El servidor se encargará de silenciar al participante automáticamente
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        const message = {
+            type: 'take-word',
+            room: roomCode,
+            target: participantName
+        };
+        console.log('[TAKE-WORD-FUNC] 📤 Enviando mensaje al servidor:', message);
+        ws.send(JSON.stringify(message));
+        console.log('[TAKE-WORD-FUNC] ✅ Mensaje enviado al servidor');
+    } else {
+        console.error('[TAKE-WORD-FUNC] ❌ ERROR: WebSocket no está abierto');
+        console.error('[TAKE-WORD-FUNC] ws:', ws);
+        console.error('[TAKE-WORD-FUNC] readyState:', ws?.readyState);
+    }
+
+    currentSpeaker = null;
+    showError(`Se quitó la palabra a ${participantName}`, 2000);
+    console.log(`[TAKE-WORD-FUNC] ✅ Función completada. Palabra quitada a ${participantName}`);
+}
+
+function updateTimerDisplay() {
+    if (!currentSpeaker) return;
+
+    const timerDisplay = document.getElementById('timerDisplay');
+    const timerProgressBar = document.getElementById('timerProgressBar');
+
+    if (timerDisplay) {
+        const minutes = Math.floor(currentSpeaker.timeLeft / 60);
+        const seconds = currentSpeaker.timeLeft % 60;
+        timerDisplay.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    }
+
+    if (timerProgressBar) {
+        const percentage = (currentSpeaker.timeLeft / currentSpeaker.totalTime) * 100;
+        timerProgressBar.style.width = percentage + '%';
+
+        // Cambiar color según el tiempo restante
+        timerProgressBar.classList.remove('warning', 'danger');
+        if (percentage <= 20) {
+            timerProgressBar.classList.add('danger');
+        } else if (percentage <= 50) {
+            timerProgressBar.classList.add('warning');
+        }
+    }
+}
 
 // ======================= CHAT FUNCTIONS =======================
 function addChatMessage(authorName, message, timestamp, isOwn = false) {
@@ -241,11 +551,21 @@ function sendChatMessage() {
 
 function updateModeratorUI() {
     const createPollBtn = document.getElementById('createPollBtn');
+    const mobileCreatePollBtn = document.getElementById('mobileCreatePollBtn');
     const handPanel = document.getElementById('handPanel');
     const joinRequestsPanel = document.getElementById('joinRequestsPanel');
     
     if (createPollBtn) {
         createPollBtn.style.display = isModerator ? 'flex' : 'none';
+        // Agregar clase para que se muestre en móvil si es moderador
+        if (isModerator) {
+            createPollBtn.classList.add('moderator-visible');
+        } else {
+            createPollBtn.classList.remove('moderator-visible');
+        }
+    }
+    if (mobileCreatePollBtn) {
+        mobileCreatePollBtn.style.display = isModerator ? 'flex' : 'none';
     }
     if (handPanel) {
         handPanel.style.display = isModerator ? 'block' : 'none';
@@ -331,12 +651,16 @@ function updateHandList() {
             const grantFloorBtn = document.createElement('button');
             grantFloorBtn.className = 'grant-floor-btn';
             grantFloorBtn.innerHTML = '🎤';
-            grantFloorBtn.title = 'Conceder Palabra';
+            grantFloorBtn.title = 'Dar la Palabra (1 minuto)';
             grantFloorBtn.style.display = isModerator ? 'inline-flex' : 'none';
             grantFloorBtn.onclick = () => {
+                // Dar la palabra al participante (60 segundos)
+                giveWordToParticipant(name, 60);
+                
+                // Bajar automáticamente la mano
                 if (ws && ws.readyState === WebSocket.OPEN) {
-                    ws.send(JSON.stringify({ type: 'floor-granted', target: name }));
-                    debugLog(`Palabra concedida a ${name} mediante botón.`);
+                    ws.send(JSON.stringify({ type: 'hand-lowered', name: name }));
+                    debugLog(`Mano bajada automáticamente para ${name} al dar la palabra.`);
                 }
             };
 
@@ -352,7 +676,26 @@ function updateHandList() {
         });
 
         const lowerAllBtn = document.getElementById('lowerAllBtn');
-        if (!lowerAllBtn && isModerator) {
+        if (lowerAllBtn) {
+            // Mostrar u ocultar según rol
+            lowerAllBtn.style.display = isModerator ? '' : 'none';
+            // Evitar duplicar handlers
+            lowerAllBtn.onclick = null;
+            // Handler: bajar todas las manos conocidas
+            lowerAllBtn.addEventListener('click', () => {
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    // Enviar una instrucción por cada mano levantada
+                    raisedHands.forEach(name => {
+                        ws.send(JSON.stringify({ type: 'hand-lowered', name: name }));
+                        debugLog(`Bajando mano para ${name} mediante botón 'Bajar Todas'.`);
+                    });
+                    raisedHands.clear();
+                    updateHandList();
+                    updateHandNotification();
+                }
+            });
+        } else if (isModerator) {
+            // Si no existe en el HTML, crear el botón dinámicamente (compatibilidad)
             const newLowerAllBtn = document.createElement('button');
             newLowerAllBtn.id = 'lowerAllBtn';
             newLowerAllBtn.textContent = 'Bajar Todas';
@@ -505,6 +848,25 @@ function handleFloorEnded(name) {
     }
 }
 
+// Función para actualizar el contador de participantes
+function updateParticipantCount() {
+    const count = document.querySelectorAll('.participant-item').length;
+    
+    // Actualizar contador en el navbar
+    const navbarCount = document.getElementById('participantCount');
+    if (navbarCount) {
+        navbarCount.textContent = count;
+    }
+    
+    // Actualizar contador en el sidebar
+    const sidebarCount = document.getElementById('sidebarParticipantCountText');
+    if (sidebarCount) {
+        sidebarCount.textContent = count;
+    }
+    
+    debugLog(`📊 Contador actualizado: ${count} participantes`);
+}
+
 function addParticipant(name, isLocal) {
     // ✅ Verificación más estricta para evitar duplicados
     const existingParticipant = document.getElementById(`participant-${name}`);
@@ -639,37 +1001,60 @@ function addParticipant(name, isLocal) {
     controlsContainer.appendChild(kickBtn);
     controlsContainer.appendChild(assignModeratorBtn);
 
+    const revokeModeratorBtn = document.createElement('button');
+    revokeModeratorBtn.className = 'participant-control-btn revoke-btn';
+    revokeModeratorBtn.title = '❌ Quitar Moderador';
+    revokeModeratorBtn.innerHTML = '❌';
+    revokeModeratorBtn.setAttribute('data-participant-name', name); // ✅ Guardar referencia al nombre
+
+    revokeModeratorBtn.style.display = isModerator && !isLocal && userRoles[name] === 'Moderador' ? 'inline' : 'none';
+    
+    // ✅ Usar addEventListener en lugar de onclick para mejor control
+    revokeModeratorBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const targetName = revokeModeratorBtn.getAttribute('data-participant-name');
+        
+        if (!isModerator) {
+            showError('Solo los moderadores pueden quitar roles.', 3000);
+            return;
+        }
+        
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'revoke-moderator', room: roomCode, target: targetName }));
+            debugLog(`Solicitando quitar rol de moderador a ${targetName}`);
+            showError(`Quitando moderador a ${targetName}...`, 2000);
+        } else {
+            showError('No se pudo realizar la acción: Conexión con el servidor perdida.', 5000);
+            debugLog('Error: WebSocket no está abierto al intentar quitar moderador.');
+        }
+    }, { once: false }); // ✅ No usar once aquí porque el botón se crea una sola vez
+
+    controlsContainer.appendChild(revokeModeratorBtn);
+
     participantItem.append(avatar, participantInfo, controlsContainer);
     participantList?.appendChild(participantItem);
 
-    if (participantCount) {
-        participantCount.textContent = document.querySelectorAll('.participant-item').length;
-    }
+    updateParticipantCount();
     debugLog(`Participante añadido: ${name} (local: ${isLocal})`);
 }
 
 function updateParticipantList() {
-    const participantListTitle = document.querySelector('#participantsPanel h3');
-    if (participantListTitle) {
-        let lowerAllHandsBtn = document.getElementById('lowerAllHandsBtn');
-        if (!lowerAllHandsBtn && isModerator) {
-            lowerAllHandsBtn = document.createElement('button');
-            lowerAllHandsBtn.id = 'lowerAllHandsBtn';
-            lowerAllHandsBtn.className = 'lower-all-hands-btn';
-            lowerAllHandsBtn.innerHTML = '✋';
-            lowerAllHandsBtn.title = 'Bajar Todas las Manos';
-            lowerAllHandsBtn.onclick = () => {
+    // Mostrar/ocultar botón de silenciar a todos si ya existe en el HTML
+    const muteAllBtn = document.getElementById('muteAllBtn');
+    if (muteAllBtn) {
+        muteAllBtn.style.display = isModerator ? 'flex' : 'none';
+        
+        // Configurar el evento click si no está ya configurado
+        if (!muteAllBtn.onclick) {
+            muteAllBtn.onclick = () => {
                 if (ws && ws.readyState === WebSocket.OPEN) {
-                    raisedHands.forEach(name => {
-                        ws.send(JSON.stringify({ type: 'hand-lowered', name: name }));
-                        debugLog(`Bajando mano para ${name} mediante botón 'Bajar Todas las Manos'.`);
-                    });
-                    raisedHands.clear();
-                    updateHandList();
-                    updateHandNotification();
+                    ws.send(JSON.stringify({ type: 'mute-all-participants', room: roomCode }));
+                    debugLog('Enviando solicitud para silenciar a todos los participantes.');
+                    showError('Silenciando a todos los participantes...', 2000);
                 }
             };
-            participantListTitle.appendChild(lowerAllHandsBtn);
         }
     }
 
@@ -686,9 +1071,15 @@ function updateParticipantList() {
         }
 
         // Mostrar u ocultar botón de "Hacer moderador"
-        const assignModeratorBtn = item.querySelector('.assign-moderator');
+        const assignModeratorBtn = item.querySelector('.participant-control-btn.promote-btn');
         if (assignModeratorBtn) {
             assignModeratorBtn.style.display = isModerator && name !== userName && userRoles[name] !== 'Organizador de la Reunión' ? 'inline' : 'none';
+        }
+
+        // Mostrar u ocultar botón de "Quitar moderador"
+        const revokeModeratorBtn = item.querySelector('.participant-control-btn.revoke-btn');
+        if (revokeModeratorBtn) {
+            revokeModeratorBtn.style.display = isModerator && name !== userName && userRoles[name] === 'Moderador' ? 'inline' : 'none';
         }
 
         // Mostrar u ocultar estado mic/cam solo si yo soy moderador
@@ -724,9 +1115,7 @@ function removeParticipant(userId) {
         participantItem.remove();
         debugLog(`Participante ${userId} eliminado de la lista.`);
     }
-    if (participantCount) {
-        participantCount.textContent = document.querySelectorAll('.participant-item').length;
-    }
+    updateParticipantCount();
 
     const videoContainer = document.getElementById(`video-container-${userId}`);
     if (videoContainer) {
@@ -901,6 +1290,42 @@ function addScreenShareVideoElement(userId, stream) {
         });
         debugLog(`Stream de pantalla compartida asignado a video para ${userId}.`);
     }
+
+    // Si el stream incluye pistas de audio, crear un elemento <audio> para asegurar reproducción
+    try {
+        const audioTracks = stream.getAudioTracks ? stream.getAudioTracks() : [];
+        if (audioTracks && audioTracks.length > 0) {
+            let audioEl = videoContainer.querySelector('audio.screen-audio');
+            if (!audioEl) {
+                audioEl = document.createElement('audio');
+                audioEl.className = 'screen-audio';
+                audioEl.autoplay = true;
+                audioEl.controls = true;
+                audioEl.style.width = '100%';
+                audioEl.style.marginTop = '8px';
+                videoContainer.appendChild(audioEl);
+            }
+            audioEl.srcObject = stream;
+            audioEl.play().catch(err => {
+                console.warn('Autoplay de audio de pantalla falló:', err);
+                // Mostrar pequeño aviso en UI para que el usuario permita reproducción
+                const notice = document.createElement('div');
+                notice.className = 'audio-play-hint';
+                notice.textContent = 'Haz clic para reproducir el audio de la pantalla';
+                notice.style.fontSize = '12px';
+                notice.style.color = 'var(--text-tertiary)';
+                notice.style.cursor = 'pointer';
+                notice.onclick = () => {
+                    audioEl.play().catch(e => console.warn('Reproducción manual falló:', e));
+                    notice.remove();
+                };
+                // Evitar duplicar aviso
+                if (!videoContainer.querySelector('.audio-play-hint')) videoContainer.appendChild(notice);
+            });
+        }
+    } catch (e) {
+        console.warn('No se pudo procesar pistas de audio de pantalla compartida:', e);
+    }
 }
 
 async function initMedia() {
@@ -973,32 +1398,45 @@ async function initMedia() {
         console.log(`✅ Cámara inicial: ${isCamActive ? 'ACTIVADA' : 'DESACTIVADA'}`);
 
         setInterval(async () => {
+            // Sólo intentar re-obtener/reemplazar la pista de audio si la pista actual terminó
             if (localStream && isMicActive) {
                 const audioTrack = localStream.getAudioTracks()[0];
-                if (audioTrack) {
-                    audioTrack.stop();
-                    const newStream = await navigator.mediaDevices.getUserMedia({
-                        audio: {
-                            echoCancellation: true,
-                            noiseSuppression: true,
-                            autoGainControl: true,
-                            sampleRate: 48000,
-                            channelCount: 2
+                if (!audioTrack || audioTrack.readyState === 'ended' || audioTrack.enabled === false) {
+                    debugLog('🔁 Audio track finalizado o deshabilitado. Intentando recuperar pista de audio...');
+                    try {
+                        const newStream = await navigator.mediaDevices.getUserMedia({
+                            audio: {
+                                echoCancellation: true,
+                                noiseSuppression: true,
+                                autoGainControl: true,
+                                sampleRate: 48000,
+                                channelCount: 2
+                            }
+                        });
+                        const newAudioTrack = newStream.getAudioTracks()[0];
+                        if (newAudioTrack) {
+                            // Remover cualquier pista antigua marcada como ended
+                            localStream.getAudioTracks().forEach(t => {
+                                try { if (t.readyState === 'ended') localStream.removeTrack(t); } catch(e){}
+                            });
+                            localStream.addTrack(newAudioTrack);
+                            for (const userId in peerConnections) {
+                                const pc = peerConnections[userId];
+                                const sender = pc.getSenders().find(s => s.track && s.track.kind === 'audio');
+                                if (sender) {
+                                    try {
+                                        await sender.replaceTrack(newAudioTrack);
+                                        debugLog(`Pista de audio reemplazada para ${userId}.`);
+                                    } catch (e) {
+                                        debugLog(`Error reemplazando pista de audio para ${userId}:`, e);
+                                    }
+                                }
+                            }
                         }
-                    });
-                    const newAudioTrack = newStream.getAudioTracks()[0];
-                    localStream.addTrack(newAudioTrack);
-                    for (const userId in peerConnections) {
-                        const pc = peerConnections[userId];
-                        const sender = pc.getSenders().find(s => s.track && s.track.kind === 'audio');
-                        if (sender) {
-                            await sender.replaceTrack(newAudioTrack);
-                            debugLog(`Pista de audio actualizada para ${userId}.`);
-                        }
+                        newStream.getTracks().forEach(t => { if (t !== newAudioTrack) t.stop(); });
+                    } catch (err) {
+                        debugLog('⚠️ No se pudo recuperar pista de audio automáticamente:', err);
                     }
-                    newStream.getTracks().forEach(t => {
-                        if (t !== newAudioTrack) t.stop();
-                    });
                 }
             }
         }, 30000);
@@ -1093,6 +1531,11 @@ function initWebSocket() {
                             showError(`Error: ${msg.error || 'La sala no existe'}`, 5000);
                             setTimeout(() => window.location.href = '/', 3000);
                         } else {
+                            // ✅ Guardar si es admin de la sala
+                            if (msg.isRoomAdmin) {
+                                isRoomAdmin = true;
+                                console.log('[ADMIN] Este usuario es el administrador de la sala');
+                            }
                             debugLog('Unido a la sala exitosamente.');
                             const errorPanel = document.getElementById('errorPanel');
                             if (errorPanel && errorPanel.textContent.includes('Esperando aprobación')) {
@@ -1220,6 +1663,145 @@ case 'join-request':
                         }
                         break;
 
+                    case 'give-word':
+                        // Recibir notificación de que alguien tiene la palabra
+                        console.log('[GIVE-WORD] 📢 Mensaje recibido:', msg);
+                        if (msg.target && msg.duration) {
+                            // Si ya hay alguien con la palabra y es diferente, quitársela primero
+                            if (currentSpeaker && currentSpeaker.name !== msg.target) {
+                                console.log('[GIVE-WORD] Ya hay un speaker diferente, cerrando panel anterior');
+                                if (speakingTimerInterval) {
+                                    clearInterval(speakingTimerInterval);
+                                    speakingTimerInterval = null;
+                                }
+                            }
+                            
+                            currentSpeaker = {
+                                name: msg.target,
+                                timeLeft: msg.duration,
+                                totalTime: msg.duration
+                            };
+                            
+                            const speakingPanel = document.getElementById('speakingPanel');
+                            const speakingPersonName = document.getElementById('speakingPersonName');
+                            const speakingActions = document.getElementById('speakingActions');
+                            
+                            console.log('[GIVE-WORD] Elementos DOM:', {
+                                panel: !!speakingPanel,
+                                name: !!speakingPersonName,
+                                actions: !!speakingActions,
+                                isModerator: isModerator,
+                                userName: userName
+                            });
+                            
+                            if (speakingPanel && speakingPersonName) {
+                                // ✅ ASEGURAR que el panel esté en el body para evitar problemas de z-index/overflow
+                                if (speakingPanel.parentNode !== document.body) {
+                                    document.body.appendChild(speakingPanel);
+                                    console.log('[GIVE-WORD] Panel movido al body');
+                                }
+
+                                // ✅ Actualizar contenido del panel
+                                speakingPersonName.textContent = msg.target;
+                                updateTimerDisplay();
+                                
+                                // ✅ FORZAR VISIBILIDAD TOTAL - Remover clases anteriores y aplicar estilos directamente
+                                speakingPanel.classList.remove('closing');
+                                speakingPanel.classList.add('visible');
+                                speakingPanel.style.cssText = 'display: block !important; opacity: 1 !important; visibility: visible !important; z-index: 10000 !important;';
+                                
+                                console.log('[GIVE-WORD] ✅✅✅ PANEL MOSTRADO PARA TODOS LOS PARTICIPANTES ✅✅✅');
+                                console.log('[GIVE-WORD] Classes:', speakingPanel.className);
+                                console.log('[GIVE-WORD] Display:', window.getComputedStyle(speakingPanel).display);
+                                console.log('[GIVE-WORD] Opacity:', window.getComputedStyle(speakingPanel).opacity);
+                                console.log('[GIVE-WORD] Z-index:', window.getComputedStyle(speakingPanel).zIndex);
+                                
+                                // ✅ TODOS pueden ver el panel, pero SOLO los moderadores ven los botones de control
+                                if (speakingActions) {
+                                    speakingActions.style.display = isModerator ? 'flex' : 'none';
+                                    console.log('[GIVE-WORD] Botones de control:', isModerator ? 'VISIBLE (Moderador)' : 'OCULTOS (Participante)');
+                                }
+                            } else {
+                                console.error('[GIVE-WORD] ❌ ERROR: No se encontró el panel o el nombre!');
+                            }
+                            
+                            // Iniciar temporizador sincronizado
+                            if (speakingTimerInterval) {
+                                clearInterval(speakingTimerInterval);
+                            }
+                            
+                            speakingTimerInterval = setInterval(() => {
+                                if (currentSpeaker && currentSpeaker.timeLeft > 0) {
+                                    currentSpeaker.timeLeft--;
+                                    updateTimerDisplay();
+                                    
+                                    // Cuando el tiempo se acaba
+                                    if (currentSpeaker.timeLeft <= 0) {
+                                        console.log('[GIVE-WORD] ⏰ Tiempo agotado en este cliente');
+                                        const targetName = currentSpeaker.name;
+                                        
+                                        // 📢 SOLO EL MODERADOR ejecuta el cierre automático
+                                        if (isModerator) {
+                                            console.log('[GIVE-WORD] 🔴 Moderador detectó expiración, ejecutando handleTimeExpired()');
+                                            handleTimeExpired(targetName);
+                                        } else {
+                                            // Los participantes solo actualizan la UI localmente
+                                            console.log('[GIVE-WORD] ⏱️ Participante detectó expiración, esperando confirmación del servidor');
+                                            if (speakingTimerInterval) {
+                                                clearInterval(speakingTimerInterval);
+                                                speakingTimerInterval = null;
+                                            }
+                                            currentSpeaker = null;
+                                        }
+                                    }
+                                }
+                            }, 1000);
+                            
+                            // Mostrar notificación a todos
+                            showError(`🎤 ${msg.target} tiene la palabra (${msg.duration}s)`, 3000);
+                            debugLog(`📢 ${msg.target} tiene la palabra por ${msg.duration} segundos`);
+                        }
+                        break;
+
+                    case 'take-word':
+                        // Recibir notificación de que se quitó la palabra
+                        console.log('[TAKE-WORD] 🔇 Mensaje recibido:', msg);
+                        
+                        if (currentSpeaker || msg.target) {
+                            const participantName = currentSpeaker?.name || msg.target;
+                            
+                            // Detener temporizador
+                            if (speakingTimerInterval) {
+                                clearInterval(speakingTimerInterval);
+                                speakingTimerInterval = null;
+                                console.log('[TAKE-WORD] ⏰ Temporizador detenido');
+                            }
+                            
+                            // ✅ Ocultar panel con animación PARA TODOS LOS PARTICIPANTES
+                            const speakingPanel = document.getElementById('speakingPanel');
+                            if (speakingPanel && speakingPanel.classList.contains('visible')) {
+                                speakingPanel.classList.add('closing');
+                                setTimeout(() => {
+                                    speakingPanel.classList.remove('visible', 'closing');
+                                    speakingPanel.style.cssText = 'display: none !important; opacity: 0 !important; visibility: hidden !important;';
+                                    // Resetear posición del panel
+                                    speakingPanel.style.transform = 'translate(0px, 0px)';
+                                    xOffset = 0;
+                                    yOffset = 0;
+                                }, 400);
+                                console.log('[TAKE-WORD] ✅ Panel ocultado para todos los participantes');
+                            }
+                            
+                            // ✅ Limpiar el speaker actual
+                            currentSpeaker = null;
+                            
+                            showError(`🔇 Se quitó la palabra a ${participantName}`, 2000);
+                            console.log(`[TAKE-WORD] ✅ Palabra quitada a ${participantName}`);
+                            
+                            // NOTA: El silenciamiento del micrófono se maneja en el mensaje 'mute-participant' que el servidor envía
+                        }
+                        break;
+
                     case 'chat':
                         console.log('[CHAT] Mensaje de chat recibido:', msg);
                         if (msg.author && msg.message) {
@@ -1287,6 +1869,14 @@ case 'join-request':
                             screenShareContainer.classList.remove('active');
                             debugLog(`🔴 Video de pantalla compartida de ${msg.userId} eliminado.`);
                         }
+                        
+                        // ⭐ MOSTRAR DE NUEVO EL VIDEO DE CÁMARA de quien dejó de compartir
+                        const cameraContainer = document.getElementById(`video-container-${msg.userId}`);
+                        if (cameraContainer) {
+                            cameraContainer.style.display = 'block';
+                            debugLog(`👁️ Video de cámara de ${msg.userId} mostrado nuevamente.`);
+                        }
+                        
                         // updateVideoLayout?.(currentLayoutMode); // ELIMINADO - función no existe
                         break;
 
@@ -1370,24 +1960,79 @@ case 'join-request':
                         }
                         break;
 
+                    case 'moderator-revoked':
+                        console.log('[MODERATOR] Mensaje de revocación recibido:', msg);
+                        
+                        if (msg.name && msg.role) {
+                            userRoles[msg.name] = msg.role;
 
+                            if (msg.name === userName) {
+                                isModerator = false;
+                                updateModeratorUI?.();
+                                showError("❌ Ya no eres moderador de la sala.", 4000);
+                                debugLog("❌ Rol de moderador revocado.");
+                            } else {
+                                showError(`❌ ${msg.name} ya no es moderador.`, 3000);
+                                debugLog(`❌ Rol de moderador revocado para ${msg.name}.`);
+                            }
+
+                            updateParticipantList();  // 🔁 refresca la lista para quitar la corona
+                            updateHandList?.();       // 👋 actualiza panel de manos si es necesario
+                        } else {
+                            console.warn('[MODERATOR] ⚠️ Mensaje de revocación incompleto:', msg);
+                        }
+                        break;
 
                     case 'mute-participant':
+                        console.log('[MUTE-PARTICIPANT] 🔇 Mensaje recibido:', msg);
+                        
                         if (msg.target === userName) {
+                            // ✅ Si es admin de la sala, ignorar orden de silencio
+                            if (isRoomAdmin) {
+                                console.log('[ADMIN] Ignorando orden de silencio (el admin no puede ser silenciado)');
+                                return;
+                            }
+                            
+                            // 🎤 APLICAR EL CAMBIO DE ESTADO DEL MICRÓFONO
                             isMicActive = msg.micActive;
-                            localStream?.getAudioTracks().forEach(t => t.enabled = isMicActive);
-                            document.getElementById('toggleMic')?.classList.toggle('active', isMicActive);
+                            console.log(`[MUTE-PARTICIPANT] Cambiando estado de micrófono a: ${isMicActive}`);
+                            
+                            if (localStream) {
+                                localStream.getAudioTracks().forEach(track => {
+                                    track.enabled = isMicActive;
+                                    console.log(`[MUTE-PARTICIPANT] Track ${track.id} enabled=${track.enabled}`);
+                                });
+                            }
+                            
+                            const toggleMicBtn = document.getElementById('toggleMic');
+                            if (toggleMicBtn) {
+                                // ✅ CORREGIDO: active = micrófono ENCENDIDO (verde)
+                                // isMicActive = true → añadir 'active' (verde)
+                                // isMicActive = false → quitar 'active' (gris/apagado)
+                                if (isMicActive) {
+                                    toggleMicBtn.classList.add('active');
+                                } else {
+                                    toggleMicBtn.classList.remove('active');
+                                }
+                                console.log(`[MUTE-PARTICIPANT] Botón actualizado: active=${toggleMicBtn.classList.contains('active')}`);
+                            }
+                            
                             showError(isMicActive ? 'Tu micrófono ha sido activado por un moderador.' : 'Tu micrófono ha sido silenciado por un moderador.', 3000);
-                            debugLog(`Micrófono ${isMicActive ? 'activado' : 'silenciado'} para ${userName} por moderador.`);
+                            console.log(`[MUTE-PARTICIPANT] ✅ Micrófono ${isMicActive ? 'ACTIVADO' : 'SILENCIADO'} para ${userName}`);
                         }
+                        
+                        // 📊 Actualizar estado en la lista de participantes
                         participantStates[msg.target] = participantStates[msg.target] || {};
                         participantStates[msg.target].micActive = msg.micActive;
                         updateParticipantList();
-                        // Actualizar el título del botón de silenciar
-                        const muteBtn = document.querySelector(`#participant-${msg.target} .mute`);
+                        
+                        // 🔄 Actualizar el título del botón de silenciar
+                        const muteBtn = document.querySelector(`#participant-${msg.target} .mute-btn`);
                         if (muteBtn) {
                             muteBtn.title = msg.micActive ? 'Silenciar' : 'Activar Micrófono';
                         }
+                        
+                        console.log(`[MUTE-PARTICIPANT] ✅ Estado actualizado para ${msg.target}: micActive=${msg.micActive}`);
                         break;
 
                     case 'kick-participant':
@@ -1607,12 +2252,34 @@ function createPeerConnection(userId) {
                 debugLog(`    * ${t.kind}: enabled=${t.enabled}, muted=${t.muted}, readyState=${t.readyState}`);
             });
             
-            if (userId === currentScreenSharePeerId && event.track.kind === 'video') {
+            // Detectar si es pantalla compartida por el label del track
+            const isScreenTrack = event.track.label.toLowerCase().includes('screen') || 
+                                  event.track.label.toLowerCase().includes('monitor') || 
+                                  event.track.label.toLowerCase().includes('window');
+            
+            if (isScreenTrack && event.track.kind === 'video') {
+                // Es pantalla compartida, mostrar en contenedor separado
+                currentScreenSharePeerId = userId;
                 addScreenShareVideoElement(userId, stream);
                 debugLog(`✅ Pantalla compartida recibida de ${userId}.`);
+                
+                // ⭐ OCULTAR EL VIDEO DE CÁMARA de quien comparte pantalla
+                const cameraContainer = document.getElementById(`video-container-${userId}`);
+                if (cameraContainer) {
+                    cameraContainer.style.display = 'none';
+                    debugLog(`🙈 Video de cámara de ${userId} ocultado (está compartiendo pantalla).`);
+                }
             } else {
+                // Es video/audio normal de cámara/micrófono
                 addVideoElement(userId, stream);
                 debugLog(`🎥 Stream de cámara/audio recibido de ${userId}.`);
+                
+                // ⭐ Si el video de cámara estaba oculto (porque había screen share), 
+                // mostrarlo de nuevo si ya no hay screen share activo
+                const cameraContainer = document.getElementById(`video-container-${userId}`);
+                if (cameraContainer && currentScreenSharePeerId !== userId) {
+                    cameraContainer.style.display = 'block';
+                }
             }
         } else {
             console.error(`❌ No se recibió stream válido de ${userId} en evento ontrack`);
@@ -1924,232 +2591,146 @@ document.getElementById('toggleCam')?.addEventListener('click', () => {
 document.getElementById('shareScreen')?.addEventListener('click', async () => {
     if (isScreenSharing) {
         // Detener el stream de pantalla compartida
-        screenStream?.getTracks().forEach(track => track.stop());
+        debugLog('🛑 Deteniendo compartir pantalla...');
+        screenStream?.getTracks().forEach(track => {
+            track.stop();
+            debugLog(`⏹️ Track detenido: ${track.kind}`);
+        });
+        
+        // Cerrar AudioContext si existe
+        if (audioContext) {
+            audioContext.close();
+            audioContext = null;
+            debugLog('🔇 AudioContext cerrado.');
+        }
+
         screenStream = null;
         isScreenSharing = false;
         document.getElementById('shareScreen').classList.remove('active');
         showError('Compartir pantalla detenido.', 3000);
-        debugLog('Compartir pantalla detenido.');
 
-        // Notificar al servidor que la pantalla compartida ha terminado
+        // Notificar al servidor
         if (ws && ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({ type: 'screen-share-stopped', room: roomCode, userId: userName }));
-        }
-
-        // Restaurar el flujo de video de la cámara en la UI local
-        const localVideoElement = document.getElementById('localVideo');
-        if (localVideoElement) {
-            localVideoElement.srcObject = localStream;
-            localVideoElement.classList.remove('screen-share');
         }
 
         // Eliminar el contenedor de pantalla compartida local
         const localScreenVideoContainer = document.getElementById(`video-screen-${userName}`);
         if (localScreenVideoContainer) {
             localScreenVideoContainer.remove();
-            screenShareContainer.classList.remove('active');
+            screenShareContainer?.classList.remove('active');
+            debugLog('🗑️ Contenedor de pantalla compartida eliminado.');
         }
 
-        // Restaurar micrófono y cámara en todas las conexiones WebRTC
+        // Remover SOLO los tracks de pantalla compartida de todas las conexiones
         try {
-            // Verificar y recuperar pista de audio si es necesario
-            let micTrack = localStream?.getAudioTracks()?.[0];
-            if (!micTrack || micTrack.readyState === 'ended') {
-                debugLog('🎤 Micrófono perdido o no disponible. Intentando recuperar...');
-                const newStream = await navigator.mediaDevices.getUserMedia({
-                    audio: {
-                        echoCancellation: true,
-                        noiseSuppression: true,
-                        autoGainControl: true,
-                        sampleRate: 48000,
-                        channelCount: 2
-                    }
-                });
-                micTrack = newStream.getAudioTracks()[0];
-
-                // Actualizar localStream con la nueva pista de audio
-                localStream.getAudioTracks().forEach(t => localStream.removeTrack(t));
-                localStream.addTrack(micTrack);
-
-                // Limpieza del stream temporal
-                newStream.getTracks().forEach(t => {
-                    if (t !== micTrack) t.stop();
-                });
-
-                showError('🎙️ Micrófono reconectado automáticamente.', 3000);
-                debugLog('🎙️ Nueva pista de micrófono obtenida.');
-            } else {
-                debugLog('🎙️ Micrófono sigue activo en localStream.');
-            }
-
-            // Verificar y recuperar pista de video si la cámara está activa
-            let videoTrack = localStream?.getVideoTracks()?.[0];
-            if (isCamActive && (!videoTrack || videoTrack.readyState === 'ended')) {
-                debugLog('📹 Cámara perdida o no disponible. Intentando recuperar...');
-                const newStream = await navigator.mediaDevices.getUserMedia({
-                    video: {
-                        width: { ideal: 640, max: 1280 },
-                        height: { ideal: 480, max: 720 },
-                        frameRate: { ideal: 15, max: 30 }
-                    }
-                });
-                videoTrack = newStream.getVideoTracks()[0];
-
-                // Actualizar localStream con la nueva pista de video
-                localStream.getVideoTracks().forEach(t => localStream.removeTrack(t));
-                localStream.addTrack(videoTrack);
-
-                // Limpieza del stream temporal
-                newStream.getTracks().forEach(t => {
-                    if (t !== videoTrack) t.stop();
-                });
-
-                showError('📹 Cámara reconectada automáticamente.', 3000);
-                debugLog('📹 Nueva pista de cámara obtenida.');
-            }
-
-            // Actualizar todas las conexiones WebRTC
             for (const userId in peerConnections) {
                 const pc = peerConnections[userId];
                 if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'checking') {
-                    // Eliminar pistas de pantalla compartida
-                    const screenSender = pc.getSenders().find(sender => sender.track?.kind === 'video' && sender.track.label.includes('screen'));
-                    if (screenSender) {
-                        pc.removeTrack(screenSender);
-                        debugLog(`📺 Pista de pantalla compartida eliminada de PeerConnection con ${userId}.`);
-                    }
-
-                    // Reemplazar o añadir pista de audio
-                    const audioSender = pc.getSenders().find(sender => sender.track?.kind === 'audio');
-                    if (audioSender) {
-                        try {
-                            await audioSender.replaceTrack(micTrack);
-                            debugLog(`🎙️ Pista de micrófono reemplazada para ${userId}.`);
-                        } catch (e) {
-                            debugLog(`⚠️ Error al reemplazar pista de micrófono para ${userId}:`, e);
-                        }
-                    } else {
-                        try {
-                            pc.addTrack(micTrack, localStream);
-                            debugLog(`🎙️ Pista de micrófono añadida a PeerConnection con ${userId}.`);
-                        } catch (e) {
-                            debugLog(`⚠️ Error al añadir pista de micrófono a ${userId}:`, e);
-                        }
-                    }
-
-                    // Reemplazar o añadir pista de video (si la cámara está activa)
-                    if (isCamActive && videoTrack) {
-                        const videoSender = pc.getSenders().find(sender => sender.track?.kind === 'video' && !sender.track.label.includes('screen'));
-                        if (videoSender) {
-                            try {
-                                await videoSender.replaceTrack(videoTrack);
-                                debugLog(`📹 Pista de cámara reemplazada para ${userId}.`);
-                            } catch (e) {
-                                debugLog(`⚠️ Error al reemplazar pista de cámara para ${userId}:`, e);
-                            }
-                        } else {
-                            try {
-                                pc.addTrack(videoTrack, localStream);
-                                debugLog(`📹 Pista de cámara añadida a PeerConnection con ${userId}.`);
-                            } catch (e) {
-                                debugLog(`⚠️ Error al añadir pista de cámara a ${userId}:`, e);
+                    const senders = pc.getSenders();
+                    
+                    // Buscar y remover tracks relacionados con pantalla compartida
+                    senders.forEach(sender => {
+                        if (sender.track) {
+                            const label = sender.track.label.toLowerCase();
+                            // Verificar si es un track de pantalla (screen) o de sistema de audio
+                            if (label.includes('screen') || label.includes('monitor') || label.includes('window')) {
+                                pc.removeTrack(sender);
+                                debugLog(`🗑️ Track de pantalla compartida eliminado de ${userId}: ${sender.track.kind}`);
                             }
                         }
-                    }
+                    });
 
-                    // Forzar renegociación WebRTC
-                    try {
-                        const offer = await pc.createOffer();
-                        await pc.setLocalDescription(offer);
-                        if (ws && ws.readyState === WebSocket.OPEN) {
-                            ws.send(JSON.stringify({
-                                type: 'signal',
-                                room: roomCode,
-                                target: userId,
-                                payload: { sdp: pc.localDescription }
-                            }));
-                            debugLog(`🔁 Oferta de renegociación enviada a ${userId} después de detener pantalla compartida.`);
-                        }
-                    } catch (e) {
-                        debugLog(`⚠️ Error al renegociar con ${userId}:`, e);
-                        showError(`Error al reconectar con ${userId}.`, 5000);
+                    // Renegociar para eliminar los tracks
+                    debugLog(`🔄 Renegociando con ${userId} para eliminar pantalla compartida...`);
+                    const offer = await pc.createOffer();
+                    await pc.setLocalDescription(offer);
+                    if (ws && ws.readyState === WebSocket.OPEN) {
+                        ws.send(JSON.stringify({
+                            type: 'signal',
+                            room: roomCode,
+                            target: userId,
+                            payload: { sdp: pc.localDescription }
+                        }));
+                        debugLog(`✅ Renegociación enviada a ${userId}.`);
                     }
-                } else {
-                    debugLog(`⚠️ No se puede actualizar PeerConnection con ${userId}: estado ICE ${pc.iceConnectionState}`);
                 }
             }
 
-            // Notificar al servidor del estado actualizado del participante
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({
-                    type: 'participant-state-update',
-                    room: roomCode,
-                    name: userName,
-                    micActive: isMicActive,
-                    camActive: isCamActive
-                }));
-                debugLog('Estado del participante actualizado enviado al servidor.');
-            }
+            debugLog('✅ Audio y video de cámara mantienen su funcionamiento normal.');
+            showError('✅ Pantalla compartida detenida correctamente.', 2000);
 
         } catch (e) {
-            debugLog('❌ Error al restaurar micrófono o cámara:', e);
-            showError('⚠️ No se pudo reconectar el micrófono o la cámara. Por favor, verifica los permisos.', 5000);
+            console.error('❌ Error al remover tracks de pantalla compartida:', e);
+            showError('⚠️ Error al detener pantalla compartida, pero audio/video siguen funcionando.', 3000);
         }
 
     } else {
         // Iniciar compartición de pantalla
         try {
-            const { finalStream, screenStream: rawScreen, micStream } = await getMergedStream();
-            screenStream = rawScreen;
-            localMicStream = micStream;
+            // Obtener solo el stream de pantalla (sin mezclar audio aún)
+            screenStream = await navigator.mediaDevices.getDisplayMedia({ 
+                video: true, 
+                audio: true 
+            });
 
             isScreenSharing = true;
             document.getElementById('shareScreen').classList.add('active');
             showError('Compartiendo tu pantalla.', 3000);
             debugLog('Compartiendo pantalla.');
 
-            addScreenShareVideoElement(userName, finalStream);
+            // Guardar el track de audio original del localStream
+            originalAudioTrack = localStream.getAudioTracks()[0];
 
+            // Mostrar la pantalla compartida en el contenedor dedicado
+            addScreenShareVideoElement(userName, screenStream);
+
+            // Enviar la pantalla compartida a todos los peers SIN reemplazar nada
             for (const userId in peerConnections) {
                 const pc = peerConnections[userId];
-                const screenTrack = finalStream.getVideoTracks()[0];
-                const micTrack = finalStream.getAudioTracks()[0];
+                const screenVideoTrack = screenStream.getVideoTracks()[0];
+                const screenAudioTrack = screenStream.getAudioTracks()[0];
 
-                if (screenTrack) {
-                    pc.addTrack(screenTrack, finalStream);
+                // Agregar video de pantalla como track adicional
+                if (screenVideoTrack) {
+                    pc.addTrack(screenVideoTrack, screenStream);
                     debugLog(`📺 Track de pantalla compartida añadido a ${userId}.`);
                 }
 
-                if (micTrack) {
-                    const audioSender = pc.getSenders().find(sender => sender.track?.kind === 'audio');
-                    if (audioSender) {
-                        await audioSender.replaceTrack(micTrack);
-                        debugLog(`🎙️ Track de micrófono reemplazado para ${userId}.`);
-                    } else {
-                        pc.addTrack(micTrack, finalStream);
-                        debugLog(`🎙️ Track de micrófono añadido a ${userId}.`);
-                    }
+                // Agregar audio de pantalla como track adicional (si existe)
+                if (screenAudioTrack) {
+                    pc.addTrack(screenAudioTrack, screenStream);
+                    debugLog(`🔊 Track de audio de pantalla añadido a ${userId}.`);
                 }
 
+                // El audio del micrófono ya está siendo enviado, NO lo tocamos
+                debugLog(`🎤 Micrófono mantiene su track original para ${userId}.`);
+
+                // Renegociar para agregar los nuevos tracks
                 if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'checking') {
                     const offer = await pc.createOffer();
                     await pc.setLocalDescription(offer);
-                    ws.send(JSON.stringify({
-                        type: 'signal',
-                        room: roomCode,
-                        target: userId,
-                        payload: { sdp: pc.localDescription }
-                    }));
-                    debugLog(`🔁 Renegociación enviada a ${userId}.`);
+                    if (ws && ws.readyState === WebSocket.OPEN) {
+                        ws.send(JSON.stringify({
+                            type: 'signal',
+                            room: roomCode,
+                            target: userId,
+                            payload: { sdp: pc.localDescription }
+                        }));
+                        debugLog(`🔁 Renegociación enviada a ${userId} para agregar pantalla compartida.`);
+                    }
                 }
             }
 
+            // Detectar cuando el usuario deja de compartir desde el navegador
             screenStream.getVideoTracks()[0].onended = () => {
                 if (isScreenSharing) {
+                    debugLog('Usuario detuvo compartir pantalla desde el navegador.');
                     document.getElementById('shareScreen').click();
                 }
             };
 
+            // Notificar al servidor
             if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify({ type: 'screen-share-started', room: roomCode, userId: userName }));
             }
@@ -2171,7 +2752,12 @@ async function getMergedStream() {
     const micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
     const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
 
-    const audioContext = new AudioContext();
+    // Cerrar audioContext anterior si existe
+    if (audioContext) {
+        audioContext.close();
+    }
+
+    audioContext = new AudioContext();
     const destination = audioContext.createMediaStreamDestination();
 
     const micSource = audioContext.createMediaStreamSource(micStream);
@@ -2187,7 +2773,7 @@ async function getMergedStream() {
     finalStream.addTrack(screenStream.getVideoTracks()[0]);
     destination.stream.getAudioTracks().forEach(track => finalStream.addTrack(track));
 
-    return { finalStream, screenStream, micStream };
+    return { finalStream, screenStream, micStream, audioContext };
 }
 
 function openPollCreationModal() {
@@ -2905,7 +3491,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ✅ CAMBIO: Ahora usamos #videoGrid directamente
     videosContainer = document.getElementById('videoGrid');
     screenShareContainer = document.getElementById('screenShareContainer');
-    participantList = document.getElementById('participantList');
+    participantList = document.getElementById('participantsList');
+    participantCount = document.getElementById('participantCount');
     
     if (!videosContainer) {
         console.error('❌ ERROR: Contenedor de videos (#videoGrid) no encontrado');
@@ -2928,6 +3515,35 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (createPollBtn) {
         createPollBtn.addEventListener('click', openPollCreationModal);
     }
+
+    // Event listener para quitar la palabra
+    const endWordBtn = document.getElementById('endWordBtn');
+    if (endWordBtn) {
+        console.log('[INIT] ✅ Botón "Quitar palabra" encontrado y configurando listener');
+        endWordBtn.addEventListener('click', () => {
+            console.log('[END-WORD-BTN] 🔴 Botón clickeado');
+            console.log('[END-WORD-BTN] currentSpeaker:', currentSpeaker);
+            console.log('[END-WORD-BTN] isModerator:', isModerator);
+            
+            if (currentSpeaker && isModerator) {
+                console.log('[END-WORD-BTN] ✅ Condiciones cumplidas, llamando a takeWordFromParticipant()');
+                takeWordFromParticipant();
+            } else {
+                if (!currentSpeaker) {
+                    console.log('[END-WORD-BTN] ❌ No hay nadie con la palabra actualmente');
+                }
+                if (!isModerator) {
+                    console.log('[END-WORD-BTN] ❌ Usuario no es moderador');
+                }
+            }
+        });
+        console.log('[INIT] ✅ Listener para botón "Quitar palabra" configurado');
+    } else {
+        console.error('[INIT] ❌ ERROR: No se encontró el botón #endWordBtn');
+    }
+
+    // Inicializar panel arrastrable
+    initDraggableSpeakingPanel();
 
     debugLog('Contenido DOM cargado. Medios y WebSocket inicializados.');
 
@@ -3132,5 +3748,5 @@ async function showShareLink() {
         }
     });
 
-    // Event listener de teclado REMOVIDO para evitar interferencias al escribir
+
 }

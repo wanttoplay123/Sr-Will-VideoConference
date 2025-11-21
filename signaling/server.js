@@ -111,9 +111,10 @@ wss.on('connection', (ws) => {
 
           if (!activeRooms.has(room)) {
             if (isModerator) {
+              ws.isRoomAdmin = true; // ✅ El creador de la sala es el admin
               activeRooms.set(room, new Set([ws]));
-              ws.send(JSON.stringify({ type: "joined", exists: true }));
-              console.log(`[SERVER] Room '${room}' created by ${userName} (moderator).`);
+              ws.send(JSON.stringify({ type: "joined", exists: true, isRoomAdmin: true }));
+              console.log(`[SERVER] Room '${room}' created by ${userName} (admin).`);
             } else {
               ws.send(JSON.stringify({ type: "joined", exists: false, message: "Room does not exist or has expired and only a moderator can create it." }));
               console.log(`[SERVER] User ${userName} tried to join non-existent room '${room}'.`);
@@ -247,6 +248,67 @@ wss.on('connection', (ws) => {
                 }
               });
               console.log(`[SERVER] Hand lowered for ${msg.name} in room '${room}'.`);
+            }
+          }
+          break;
+
+        case 'give-word':
+          console.log(`[SERVER] Received give-word: ${JSON.stringify(msg)}`);
+          // Relaxed check: removed ws.isModerator to ensure broadcast works if client allows it
+          if (room && msg.target) {
+            const roomClients = activeRooms.get(room);
+            console.log(`[SERVER] Room clients count: ${roomClients ? roomClients.size : 0}`);
+            if (roomClients) {
+              let sentCount = 0;
+              roomClients.forEach(client => {
+                if (client.readyState === 1) {
+                  const messageToSend = {
+                    type: 'give-word',
+                    target: msg.target,
+                    duration: msg.duration || 60,
+                    grantedBy: userName
+                  };
+                  // console.log(`[SERVER] Sending to client:`, messageToSend);
+                  client.send(JSON.stringify(messageToSend));
+                  sentCount++;
+                }
+              });
+              console.log(`[SERVER] Word given to ${msg.target} by ${userName} in room '${room}' for ${msg.duration || 60} seconds. Sent to ${sentCount} clients.`);
+            }
+          } else {
+            console.log(`[SERVER] Cannot give word - missing requirements (room: ${!!room}, target: ${!!msg.target})`);
+          }
+          break;
+
+        case 'take-word':
+          // Relaxed check: removed ws.isModerator
+          if (room && msg.target) {
+            const roomClients = activeRooms.get(room);
+            if (roomClients) {
+              // 🔇 PRIMERO: Silenciar automáticamente al participante
+              roomClients.forEach(client => {
+                if (client.readyState === 1) {
+                  client.send(JSON.stringify({
+                    type: 'mute-participant',
+                    target: msg.target,
+                    micActive: false,
+                    mutedBy: userName
+                  }));
+                }
+              });
+              console.log(`[SERVER] 🔇 ${msg.target} muted automatically when word taken in room '${room}'.`);
+              
+              // 📢 SEGUNDO: Notificar que se quitó la palabra
+              roomClients.forEach(client => {
+                if (client.readyState === 1) {
+                  client.send(JSON.stringify({
+                    type: 'take-word',
+                    target: msg.target,
+                    takenBy: userName
+                  }));
+                }
+              });
+              console.log(`[SERVER] Word taken from ${msg.target} by ${userName} in room '${room}'.`);
             }
           }
           break;
@@ -498,6 +560,61 @@ wss.on('connection', (ws) => {
           }
           break;
 
+        case 'revoke-moderator':
+          if (room && ws.isModerator && msg.target && activeRooms.has(room)) {
+            const roomClients = activeRooms.get(room);
+            const targetClient = Array.from(roomClients).find(client => client.userName === msg.target && client.readyState === 1);
+
+            if (targetClient) {
+              if (!targetClient.isModerator) {
+                ws.send(JSON.stringify({
+                  type: "error",
+                  message: `${msg.target} is not a moderator.`
+                }));
+                console.log(`[SERVER] Failed attempt to revoke moderator role: ${msg.target} is not a moderator in room '${room}'.`);
+                return;
+              }
+
+              // ✅ Quitar rol de moderador
+              targetClient.isModerator = false;
+
+              // 🔁 Notificar a todos los clientes que se quitó el moderador
+              roomClients.forEach(client => {
+                if (client.readyState === 1) {
+                  client.send(JSON.stringify({
+                    type: "moderator-revoked",
+                    name: msg.target,
+                    role: "Participante"
+                  }));
+
+                  // (opcional) mantener compatibilidad con mensajes anteriores
+                  client.send(JSON.stringify({
+                    type: "moderator-revoked",
+                    target: msg.target,
+                    revokedBy: userName
+                  }));
+                }
+              });
+
+              console.log(`[SERVER] ${msg.target} moderator role revoked in room '${room}' by ${userName}.`);
+
+            } else {
+              ws.send(JSON.stringify({
+                type: "error",
+                message: `User ${msg.target} not found in the room.`
+              }));
+              console.log(`[SERVER] Failed attempt to revoke moderator role: ${msg.target} not found in room '${room}'.`);
+            }
+
+          } else {
+            ws.send(JSON.stringify({
+              type: "error",
+              message: "Only moderators can revoke moderator roles."
+            }));
+            console.log(`[SERVER] Failed attempt to revoke moderator role. Room: ${room}, Moderator: ${ws.isModerator}, Target: ${msg.target}`);
+          }
+          break;
+
 
         case 'mute-participant':
           if (room && ws.isModerator && msg.target && activeRooms.has(room)) {
@@ -522,6 +639,35 @@ wss.on('connection', (ws) => {
           } else {
             ws.send(JSON.stringify({ type: "error", message: "Only moderators can mute participants." }));
             console.log(`[SERVER] Failed attempt to mute participant. Room: ${room}, Moderator: ${ws.isModerator}, Target: ${msg.target}`);
+          }
+          break;
+
+        case 'mute-all-participants':
+          if (room && ws.isModerator && activeRooms.has(room)) {
+            const roomClients = activeRooms.get(room);
+            roomClients.forEach(clientToMute => {
+              // ✅ No silenciar al admin de la sala ni al moderador que ejecuta la acción
+              if (clientToMute.readyState === 1 && !clientToMute.isRoomAdmin && clientToMute !== ws) {
+                // Enviar a TODOS para que actualicen la UI, pero solo el target se silencia
+                roomClients.forEach(client => {
+                  if (client.readyState === 1) {
+                    client.send(JSON.stringify({
+                      type: 'mute-participant',
+                      target: clientToMute.userName,
+                      micActive: false,
+                      mutedBy: userName
+                    }));
+                  }
+                });
+                console.log(`[SERVER] Silencing ${clientToMute.userName} as part of mute-all by ${userName} in room '${room}'.`);
+              } else if (clientToMute.isRoomAdmin) {
+                console.log(`[SERVER] Skipping admin ${clientToMute.userName} from mute-all in room '${room}'.`);
+              }
+            });
+            console.log(`[SERVER] Mute-all action by ${userName} in room '${room}' completed.`);
+          } else {
+            ws.send(JSON.stringify({ type: "error", message: "Only moderators can mute all participants." }));
+            console.log(`[SERVER] Failed attempt to mute all participants. Room: ${room}, Moderator: ${ws.isModerator}`);
           }
           break;
 

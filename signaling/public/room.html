@@ -95,7 +95,8 @@
             max-height: 100vh;
             display: flex;
             flex-direction: column;
-            overflow: hidden; /* Sin scroll en body */
+            overflow: hidden;
+            /* Sin scroll en body */
             position: relative;
             transition: background 0.3s ease, color 0.3s ease;
         }
@@ -210,7 +211,7 @@
             background: var(--glass-bg);
             backdrop-filter: blur(20px) saturate(180%);
             -webkit-backdrop-filter: blur(20px) saturate(180%);
-            padding: 20px 32px;
+            padding: 16px 32px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -220,24 +221,82 @@
             position: sticky;
             top: 0;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            height: 80px;
+        }
+
+        /* Header izquierdo con logo e info */
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--primary-color);
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-light));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .logo i {
+            font-size: 24px;
+            color: var(--primary-color);
+            -webkit-text-fill-color: var(--primary-color);
+        }
+
+        .room-details {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .room-code-badge,
+        .participants-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            font-size: 14px;
+            color: var(--text-secondary);
+            transition: all 0.3s ease;
+        }
+
+        .room-code-badge:hover,
+        .participants-badge:hover {
+            background: var(--glass-hover);
+            border-color: var(--primary-color);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .room-code-badge i {
+            color: var(--primary-color);
+            font-size: 16px;
+        }
+
+        .participants-badge i {
+            color: var(--secondary-light);
+            font-size: 16px;
+        }
+
+        .room-code-badge strong,
+        .participants-badge strong {
+            color: var(--text-primary);
+            font-weight: 700;
         }
 
         #participantCount {
             color: var(--secondary-light);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-weight: 600;
-            background: var(--glass-bg);
-            padding: 8px 16px;
-            border-radius: 12px;
-            border: 1px solid rgba(5, 150, 105, 0.2);
-        }
-
-        #participantCount::before {
-            content: '👥';
-            font-size: 18px;
-            filter: drop-shadow(0 0 8px rgba(5, 150, 105, 0.5));
+            font-weight: 700;
         }
 
         .controls {
@@ -388,9 +447,12 @@
         }
 
         @keyframes pulse-notification {
-            0%, 100% {
+
+            0%,
+            100% {
                 box-shadow: var(--shadow-md), 0 0 0 0 rgba(239, 68, 68, 0.4);
             }
+
             50% {
                 box-shadow: var(--shadow-md), 0 0 0 8px rgba(239, 68, 68, 0);
             }
@@ -401,10 +463,12 @@
                 transform: scale(1);
                 opacity: 1;
             }
+
             50% {
                 transform: scale(1.3);
                 opacity: 0.8;
             }
+
             100% {
                 transform: scale(1);
                 opacity: 1;
@@ -422,128 +486,6 @@
                 transform: translateY(-4px) scale(1.05);
                 box-shadow: var(--shadow-md), var(--glow-warning);
             }
-
-            50% {
-                transform: translateY(-4px) scale(1.1);
-                box-shadow: var(--shadow-lg), 0 0 35px rgba(245, 158, 11, 0.7);
-            }
-        }
-
-        /* ============================================ */
-        /* MAIN CONTAINER */
-        /* ============================================ */
-
-#main {
-    display: flex;
-    flex: 1;
-    overflow: hidden;
-    height: calc(100vh - 96px);
-    position: relative;
-    /* ✅ Añadir estas propiedades para permitir que los hijos se expandan */
-    align-items: stretch;
-    justify-content: flex-start;
-}
-
-        #videos {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            gap: 0; /* ✅ Sin gap para aprovechar todo el espacio */
-            padding: 0; /* ✅ Sin padding para que las cámaras usen todo el espacio */
-            overflow: hidden;
-            height: 100%; /* ✅ Asegurar que use toda la altura disponible */
-        }
-        
-        #videos::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        #videos::-webkit-scrollbar-track {
-            background: transparent;
-        }
-
-        #videos::-webkit-scrollbar-thumb {
-            background: var(--glass-border);
-            border-radius: 3px;
-        }
-
-        #videos::-webkit-scrollbar-thumb:hover {
-            background: var(--glass-hover);
-        }
-
-        #screenShareContainer {
-            display: none;
-            background: linear-gradient(145deg, var(--bg-card) 0%, var(--surface) 100%);
-            border-radius: 24px;
-            overflow: hidden;
-            box-shadow: var(--shadow-lg);
-            margin-bottom: 24px;
-            border: 1px solid var(--glass-border);
-            backdrop-filter: blur(20px);
-        }
-
-        #screenShareContainer.active {
-            display: block;
-        }
-
-        #screenShareContainer video {
-            width: 100%;
-            height: auto;
-            object-fit: contain;
-            background: var(--bg-primary);
-        }
-
-        #screenShareContainer .video-info {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.8) 100%);
-            padding: 16px 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            backdrop-filter: blur(20px);
-            font-size: 15px;
-        }
-
-        #screenShareContainer .user-name {
-            font-weight: 600;
-            color: var(--secondary);
-        }
-
-        #videoGrid {
-            display: grid;
-            gap: 8px;
-            width: 100%;
-            height: 100%;
-            padding: 8px;
-            overflow: hidden;
-            box-sizing: border-box;
-            /* Las columnas y filas se definen dinámicamente por viewControl.js */
-        }
-
-        .video-container {
-            position: relative;
-            background: linear-gradient(145deg, var(--bg-card) 0%, var(--surface) 100%);
-            border-radius: 16px;
-            overflow: hidden;
-            box-shadow: var(--shadow-md);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            border: 1px solid var(--glass-border);
-            backdrop-filter: blur(20px);
-            width: 100%;
-            height: 100%;
-            max-width: 100%;
-            max-height: 100%;
-            box-sizing: border-box;
-            /* aspect-ratio removido para permitir flexibilidad total en layouts */
-        }
-
-        .video-container:hover {
-            transform: translateY(-4px) scale(1.01);
-            box-shadow: var(--shadow-lg);
-            border-color: var(--primary);
         }
 
         .video-container.local {
@@ -689,6 +631,45 @@
             font-weight: 700;
         }
 
+        .mute-all-btn {
+            background: linear-gradient(145deg, var(--glass-bg) 0%, var(--glass-hover) 100%);
+            border: 1px solid var(--glass-border);
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(16px);
+            box-shadow: var(--shadow-sm);
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-primary);
+        }
+
+        .mute-all-btn:hover {
+            background: linear-gradient(145deg, var(--danger) 0%, var(--danger-dark) 100%);
+            transform: scale(1.05);
+            box-shadow: var(--shadow-md);
+            border-color: var(--danger);
+        }
+
+        .mute-all-btn:active {
+            transform: scale(0.95);
+        }
+
+        body.light-theme .mute-all-btn {
+            background: linear-gradient(145deg, var(--light-bg-card) 0%, var(--light-surface) 100%);
+            border-color: rgba(0, 0, 0, 0.1);
+            color: var(--light-text-primary);
+        }
+
+        body.light-theme .mute-all-btn:hover {
+            background: linear-gradient(145deg, var(--danger) 0%, var(--danger-dark) 100%);
+            color: white;
+        }
+
         .participant-item {
             display: flex;
             align-items: center;
@@ -824,6 +805,228 @@
         .participant-control-btn.promote-btn:hover {
             background: linear-gradient(145deg, var(--success-dark) 0%, var(--success) 100%);
             box-shadow: var(--shadow-md), var(--glow-success);
+        }
+
+        .participant-control-btn.give-word-btn {
+            background: var(--primary-color);
+            border: 1px solid var(--primary-color);
+        }
+
+        .participant-control-btn.give-word-btn:hover {
+            background: var(--primary-hover);
+            border-color: var(--primary-hover);
+        }
+
+        .participant-control-btn.give-word-btn::before {
+            content: '🎤';
+        }
+
+        .participant-control-btn.take-word-btn {
+            background: var(--warning-color);
+            border: 1px solid var(--warning-color);
+        }
+
+        .participant-control-btn.take-word-btn:hover {
+            background: #d97706;
+            border-color: #d97706;
+        }
+
+        .participant-control-btn.take-word-btn::before {
+            content: '⏹️';
+        }
+
+        /* Panel de "Tiene la palabra" */
+        #speakingPanel {
+            position: fixed;
+            top: 100px;
+            right: 20px;
+            width: 320px;
+            background: linear-gradient(145deg, rgba(79, 70, 229, 0.95) 0%, rgba(99, 102, 241, 0.95) 100%);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            z-index: 10000; /* Aumentado significativamente */
+            display: none;
+            backdrop-filter: blur(20px);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            animation: slideInRight 0.4s ease;
+            transition: box-shadow 0.3s ease;
+            user-select: none;
+        }
+
+        #speakingPanel:hover {
+            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.4);
+        }
+
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideOutRight {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+
+        #speakingPanel.visible {
+            display: block !important;
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        #speakingPanel.closing {
+            animation: slideOutRight 0.4s ease forwards;
+            pointer-events: none;
+        }
+
+        .speaking-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+            color: white;
+            cursor: move;
+            padding: 8px;
+            margin: -8px -8px 16px -8px;
+            border-radius: 8px;
+            transition: background 0.3s ease;
+        }
+
+        .speaking-header:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .speaking-header:active {
+            background: rgba(255, 255, 255, 0.15);
+            cursor: grabbing;
+        }
+
+        .speaking-icon {
+            width: 48px;
+            height: 48px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4);
+            }
+            50% {
+                transform: scale(1.05);
+                box-shadow: 0 0 0 10px rgba(255, 255, 255, 0);
+            }
+        }
+
+        .speaking-info h3 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 700;
+            color: white;
+        }
+
+        .speaking-info p {
+            margin: 4px 0 0 0;
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.9);
+            font-weight: 600;
+        }
+
+        .speaking-timer {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+            margin-bottom: 12px;
+        }
+
+        .timer-display {
+            font-size: 48px;
+            font-weight: 700;
+            color: white;
+            font-family: 'Courier New', monospace;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .timer-label {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.8);
+            margin-top: 4px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .timer-progress {
+            width: 100%;
+            height: 6px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+
+        .timer-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #10b981 0%, #22c55e 100%);
+            border-radius: 3px;
+            transition: width 1s linear, background 0.3s ease;
+        }
+
+        .timer-progress-bar.warning {
+            background: linear-gradient(90deg, #f59e0b 0%, #fbbf24 100%);
+        }
+
+        .timer-progress-bar.danger {
+            background: linear-gradient(90deg, #ef4444 0%, #f87171 100%);
+        }
+
+        .speaking-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .speaking-btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .end-word-btn {
+            background: rgba(239, 68, 68, 0.9);
+            color: white;
+        }
+
+        .end-word-btn:hover {
+            background: rgba(220, 38, 38, 1);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
         }
 
         .participant-control-btn:hover::after {
@@ -970,12 +1173,34 @@
         }
 
         @keyframes waveHand {
-            0%, 100% { transform: rotate(0deg); }
-            10%, 30% { transform: rotate(14deg); }
-            20%, 40% { transform: rotate(-8deg); }
-            50%, 60% { transform: rotate(14deg); }
-            70% { transform: rotate(-4deg); }
-            80% { transform: rotate(10deg); }
+
+            0%,
+            100% {
+                transform: rotate(0deg);
+            }
+
+            10%,
+            30% {
+                transform: rotate(14deg);
+            }
+
+            20%,
+            40% {
+                transform: rotate(-8deg);
+            }
+
+            50%,
+            60% {
+                transform: rotate(14deg);
+            }
+
+            70% {
+                transform: rotate(-4deg);
+            }
+
+            80% {
+                transform: rotate(10deg);
+            }
         }
 
         #handPanel-header #handCount {
@@ -991,7 +1216,7 @@
             flex-shrink: 0;
         }
 
-        #handPanel-header > div {
+        #handPanel-header>div {
             display: flex;
             gap: 8px;
             align-items: center;
@@ -1399,10 +1624,12 @@
                 opacity: 0;
                 transform: translateY(100px) scale(0.3);
             }
+
             50% {
                 opacity: 1;
                 transform: translateY(-10px) scale(1.05);
             }
+
             100% {
                 transform: translateY(0) scale(1);
             }
@@ -1539,8 +1766,8 @@
             color: var(--primary);
         }
 
-        .modal-header > div,
-        .poll-results-header > div {
+        .modal-header>div,
+        .poll-results-header>div {
             display: flex;
             gap: 8px;
             align-items: center;
@@ -1817,7 +2044,7 @@
             color: var(--accent-dark);
         }
 
-        .poll-header > div {
+        .poll-header>div {
             display: flex;
             gap: 8px;
             align-items: center;
@@ -2010,7 +2237,7 @@
             min-width: 150px;
         }
 
-        #pollResultsPanel .poll-results-header > div {
+        #pollResultsPanel .poll-results-header>div {
             display: flex;
             gap: 8px;
             flex-shrink: 0;
@@ -2165,7 +2392,7 @@
                 min-width: unset;
             }
 
-            #pollResultsPanel .poll-results-header > div {
+            #pollResultsPanel .poll-results-header>div {
                 width: 100%;
                 justify-content: flex-end;
             }
@@ -2385,14 +2612,40 @@
         @media (max-width: 768px) {
             #header {
                 flex-direction: column;
-                gap: 20px;
-                padding: 20px 24px;
+                gap: 16px;
+                padding: 16px 20px;
+                height: auto;
             }
 
-            #roomInfo {
+            .header-left {
                 flex-direction: column;
-                gap: 16px;
-                text-align: center;
+                align-items: center;
+                gap: 12px;
+            }
+
+            .logo {
+                font-size: 18px;
+            }
+
+            .logo i {
+                font-size: 20px;
+            }
+
+            .room-details {
+                flex-direction: column;
+                gap: 8px;
+                align-items: center;
+            }
+
+            .room-code-badge,
+            .participants-badge {
+                padding: 6px 12px;
+                font-size: 13px;
+            }
+
+            .room-code-badge i,
+            .participants-badge i {
+                font-size: 14px;
             }
 
             .controls {
@@ -2407,6 +2660,11 @@
                 font-size: 18px;
             }
 
+            /* Ocultar botón de crear encuesta en móvil si no es moderador */
+            #createPollBtn:not(.moderator-visible) {
+                display: none !important;
+            }
+
             .more-menu {
                 display: flex;
             }
@@ -2417,15 +2675,6 @@
 
             #participantsToggle {
                 display: flex;
-            }
-
-            #videos {
-                padding: 20px;
-            }
-
-            #videoGrid {
-                grid-template-columns: 1fr;
-                gap: 16px;
             }
 
             #participants {
@@ -2475,6 +2724,33 @@
         }
 
         @media (max-width: 480px) {
+            #header {
+                padding: 12px 16px;
+            }
+
+            .header-left {
+                gap: 8px;
+            }
+
+            .logo {
+                display: none; /* Hide logo on very small screens */
+            }
+
+            .room-details {
+                gap: 6px;
+            }
+
+            .room-code-badge,
+            .participants-badge {
+                padding: 4px 8px;
+                font-size: 11px;
+            }
+
+            .room-code-badge i,
+            .participants-badge i {
+                font-size: 12px;
+            }
+
             .control-btn {
                 width: 48px;
                 height: 48px;
@@ -2788,1722 +3064,2291 @@
                 opacity: 0.8;
             }
         }
-#notificationsContainer {
-    position: relative;
-    width: 100%;
-}
 
-#notificationsMiniModal {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    background: linear-gradient(135deg, rgba(31, 41, 55, 0.95), rgba(17, 24, 39, 0.95));
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 12px;
-    padding: 12px 16px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-    z-index: 4000;
-    color: #fff;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    display: none;
-    flex-direction: column;
-    gap: 10px;
-    animation: slideIn 0.3s ease;
-}
+        #notificationsContainer {
+            position: relative;
+            width: 100%;
+        }
 
-.mini-modal-content {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
+        #notificationsMiniModal {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, rgba(31, 41, 55, 0.95), rgba(17, 24, 39, 0.95));
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 12px;
+            padding: 12px 16px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+            z-index: 4000;
+            color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            display: none;
+            flex-direction: column;
+            gap: 10px;
+            animation: slideIn 0.3s ease;
+        }
 
-.mini-modal-title {
-    font-size: 14px;
-    font-weight: 600;
-    color: #fff;
-}
+        .mini-modal-content {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
 
-.request-count {
-    background: #ef4444; /* Rojo para el contador */
-    color: #fff;
-    font-weight: 700;
-    font-size: 14px;
-    padding: 4px 8px;
-    border-radius: 10px;
-    min-width: 24px;
-    text-align: center;
-}
+        .mini-modal-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #fff;
+        }
 
-.modal-actions {
-    display: flex;
-    gap: 8px;
-}
+        .request-count {
+            background: #ef4444;
+            /* Rojo para el contador */
+            color: #fff;
+            font-weight: 700;
+            font-size: 14px;
+            padding: 4px 8px;
+            border-radius: 10px;
+            min-width: 24px;
+            text-align: center;
+        }
 
-.expand-btn, .minimize-btn, .close-btn {
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    padding: 5px;
-    color: #9ca3af;
-    transition: color 0.2s ease;
-}
+        .modal-actions {
+            display: flex;
+            gap: 8px;
+        }
 
-.expand-btn:hover, .minimize-btn:hover, .close-btn:hover {
-    color: #fff;
-}
+        .expand-btn,
+        .minimize-btn,
+        .close-btn {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            padding: 5px;
+            color: #9ca3af;
+            transition: color 0.2s ease;
+        }
 
-.expand-icon, .minimize-icon, .close-icon {
-    width: 20px;
-    height: 20px;
-}
+        .expand-btn:hover,
+        .minimize-btn:hover,
+        .close-btn:hover {
+            color: #fff;
+        }
 
-.notifications-list {
-    max-height: 200px;
-    overflow-y: auto;
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 8px;
-    padding: 10px;
-    transition: max-height 0.3s ease, opacity 0.3s ease;
-}
+        .expand-icon,
+        .minimize-icon,
+        .close-icon {
+            width: 20px;
+            height: 20px;
+        }
 
-.notifications-list[style*="display: none"] {
-    max-height: 0;
-    opacity: 0;
-}
+        .notifications-list {
+            max-height: 200px;
+            overflow-y: auto;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 10px;
+            transition: max-height 0.3s ease, opacity 0.3s ease;
+        }
 
-.notification-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 10px;
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 8px;
-    margin-bottom: 10px;
-    color: #fff;
-    font-size: 14px;
-}
+        .notifications-list[style*="display: none"] {
+            max-height: 0;
+            opacity: 0;
+        }
 
-.accept-btn, .reject-btn {
-    padding: 6px 12px;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 13px;
-    transition: transform 0.2s ease, background 0.2s ease;
-}
+        .notification-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            margin-bottom: 10px;
+            color: #fff;
+            font-size: 14px;
+        }
 
-.accept-btn {
-    background: #22c55e; /* Verde */
-    color: #fff;
-}
+        .accept-btn,
+        .reject-btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: transform 0.2s ease, background 0.2s ease;
+        }
 
-.accept-btn:hover {
-    background: #16a34a;
-    transform: translateY(-1px);
-}
+        .accept-btn {
+            background: #22c55e;
+            /* Verde */
+            color: #fff;
+        }
 
-.reject-btn {
-    background: #ef4444; /* Rojo */
-    color: #fff;
-}
+        .accept-btn:hover {
+            background: #16a34a;
+            transform: translateY(-1px);
+        }
 
-.reject-btn:hover {
-    background: #dc2626;
-    transform: translateY(-1px);
-}
+        .reject-btn {
+            background: #ef4444;
+            /* Rojo */
+            color: #fff;
+        }
 
-@keyframes slideIn {
-    from {
-        transform: translateY(20px);
-        opacity: 0;
-    }
-    to {
-        transform: translateY(0);
-        opacity: 1;
-    }
-}
+        .reject-btn:hover {
+            background: #dc2626;
+            transform: translateY(-1px);
+        }
 
-@media (max-width: 768px) {
-    #notificationsMiniModal {
-        bottom: 15px;
-        right: 15px;
-        padding: 10px 14px;
-    }
+        @keyframes slideIn {
+            from {
+                transform: translateY(20px);
+                opacity: 0;
+            }
 
-    .mini-modal-title, .request-count {
-        font-size: 13px;
-    }
-}
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
 
-/* Estilos del Chat */
-#chatPanel {
-    position: fixed;
-    right: 0;
-    top: 0;
-    height: 100%;
-    width: 380px;
-    background: linear-gradient(160deg, rgba(15, 15, 35, 0.98) 0%, rgba(26, 26, 46, 0.98) 50%, rgba(22, 33, 62, 0.98) 100%);
-    box-shadow: -4px 0 32px rgba(0, 0, 0, 0.5), 0 0 80px rgba(75, 94, 170, 0.15);
-    z-index: 1000;
-    transform: translateX(100%);
-    transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-    backdrop-filter: blur(32px) saturate(180%);
-    border-left: 2px solid rgba(75, 94, 170, 0.3);
-    display: flex;
-    flex-direction: column;
-}
+        @media (max-width: 768px) {
+            #notificationsMiniModal {
+                bottom: 15px;
+                right: 15px;
+                padding: 10px 14px;
+            }
 
-body.light-theme #chatPanel {
-    background: linear-gradient(160deg, rgba(249, 250, 251, 0.98) 0%, rgba(243, 244, 246, 0.98) 50%, rgba(229, 231, 235, 0.98) 100%);
-    border-left: 2px solid rgba(75, 94, 170, 0.3);
-    box-shadow: -4px 0 32px rgba(0, 0, 0, 0.15), 0 0 60px rgba(75, 94, 170, 0.1);
-}
+            .mini-modal-title,
+            .request-count {
+                font-size: 13px;
+            }
+        }
 
-#chatPanel.visible {
-    transform: translateX(0);
-}
+        /* Estilos del Chat */
+        #chatPanel {
+            position: fixed;
+            right: 0;
+            top: 0;
+            height: 100%;
+            width: 380px;
+            background: linear-gradient(160deg, rgba(15, 15, 35, 0.98) 0%, rgba(26, 26, 46, 0.98) 50%, rgba(22, 33, 62, 0.98) 100%);
+            box-shadow: -4px 0 32px rgba(0, 0, 0, 0.5), 0 0 80px rgba(75, 94, 170, 0.15);
+            z-index: 1000;
+            transform: translateX(100%);
+            transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+            backdrop-filter: blur(32px) saturate(180%);
+            border-left: 2px solid rgba(75, 94, 170, 0.3);
+            display: flex;
+            flex-direction: column;
+        }
 
-#chatPanel-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 24px 20px;
-    background: linear-gradient(145deg, rgba(75, 94, 170, 0.1) 0%, rgba(75, 94, 170, 0.05) 100%);
-    border-bottom: 2px solid rgba(75, 94, 170, 0.2);
-    flex-shrink: 0;
-}
+        body.light-theme #chatPanel {
+            background: linear-gradient(160deg, rgba(249, 250, 251, 0.98) 0%, rgba(243, 244, 246, 0.98) 50%, rgba(229, 231, 235, 0.98) 100%);
+            border-left: 2px solid rgba(75, 94, 170, 0.3);
+            box-shadow: -4px 0 32px rgba(0, 0, 0, 0.15), 0 0 60px rgba(75, 94, 170, 0.1);
+        }
 
-body.light-theme #chatPanel-header {
-    background: linear-gradient(145deg, rgba(75, 94, 170, 0.08) 0%, rgba(75, 94, 170, 0.04) 100%);
-    border-bottom: 2px solid rgba(75, 94, 170, 0.2);
-}
+        #chatPanel.visible {
+            transform: translateX(0);
+        }
 
-#chatPanel-header h4 {
-    color: var(--primary-light);
-    font-size: 18px;
-    font-weight: 700;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
+        #chatPanel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 24px 20px;
+            background: linear-gradient(145deg, rgba(75, 94, 170, 0.1) 0%, rgba(75, 94, 170, 0.05) 100%);
+            border-bottom: 2px solid rgba(75, 94, 170, 0.2);
+            flex-shrink: 0;
+        }
 
-body.light-theme #chatPanel-header h4 {
-    color: var(--primary);
-}
+        body.light-theme #chatPanel-header {
+            background: linear-gradient(145deg, rgba(75, 94, 170, 0.08) 0%, rgba(75, 94, 170, 0.04) 100%);
+            border-bottom: 2px solid rgba(75, 94, 170, 0.2);
+        }
 
-#closeChatPanel {
-    background: linear-gradient(145deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
-    border: 1.5px solid rgba(255, 255, 255, 0.2);
-    border-radius: 10px;
-    padding: 8px 14px;
-    color: var(--text-primary);
-    cursor: pointer;
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    font-size: 12px;
-    font-weight: 600;
-    backdrop-filter: blur(12px);
-}
+        #chatPanel-header h4 {
+            color: var(--primary-light);
+            font-size: 18px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
 
-body.light-theme #closeChatPanel {
-    background: linear-gradient(145deg, rgba(0, 0, 0, 0.04) 0%, rgba(0, 0, 0, 0.02) 100%);
-    border: 1.5px solid rgba(0, 0, 0, 0.1);
-    color: var(--light-text-primary);
-}
+        body.light-theme #chatPanel-header h4 {
+            color: var(--primary);
+        }
 
-#closeChatPanel:hover {
-    background: linear-gradient(145deg, var(--danger) 0%, var(--danger-light) 100%);
-    border-color: var(--danger-light);
-    color: white;
-    transform: translateY(-2px) scale(1.05);
-}
+        #closeChatPanel {
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+            border: 1.5px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            padding: 8px 14px;
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            font-size: 12px;
+            font-weight: 600;
+            backdrop-filter: blur(12px);
+        }
 
-#chatMessages {
-    flex: 1;
-    overflow-y: auto;
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(75, 94, 170, 0.4) transparent;
-}
+        body.light-theme #closeChatPanel {
+            background: linear-gradient(145deg, rgba(0, 0, 0, 0.04) 0%, rgba(0, 0, 0, 0.02) 100%);
+            border: 1.5px solid rgba(0, 0, 0, 0.1);
+            color: var(--light-text-primary);
+        }
 
-#chatMessages::-webkit-scrollbar {
-    width: 6px;
-}
+        #closeChatPanel:hover {
+            background: linear-gradient(145deg, var(--danger) 0%, var(--danger-light) 100%);
+            border-color: var(--danger-light);
+            color: white;
+            transform: translateY(-2px) scale(1.05);
+        }
 
-#chatMessages::-webkit-scrollbar-track {
-    background: transparent;
-}
+        #chatMessages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(75, 94, 170, 0.4) transparent;
+        }
 
-#chatMessages::-webkit-scrollbar-thumb {
-    background: rgba(75, 94, 170, 0.4);
-    border-radius: 3px;
-}
+        #chatMessages::-webkit-scrollbar {
+            width: 6px;
+        }
 
-#chatMessages::-webkit-scrollbar-thumb:hover {
-    background: rgba(75, 94, 170, 0.6);
-}
+        #chatMessages::-webkit-scrollbar-track {
+            background: transparent;
+        }
 
-.chat-message {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    padding: 12px 16px;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.04) 100%);
-    border-radius: 16px;
-    backdrop-filter: blur(20px);
-    border: 1.5px solid rgba(255, 255, 255, 0.12);
-    animation: slideInChat 0.3s ease-out;
-}
+        #chatMessages::-webkit-scrollbar-thumb {
+            background: rgba(75, 94, 170, 0.4);
+            border-radius: 3px;
+        }
 
-body.light-theme .chat-message {
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(249, 250, 251, 0.9) 100%);
-    border: 1.5px solid rgba(0, 0, 0, 0.08);
-}
+        #chatMessages::-webkit-scrollbar-thumb:hover {
+            background: rgba(75, 94, 170, 0.6);
+        }
 
-.chat-message.own {
-    background: linear-gradient(135deg, rgba(75, 94, 170, 0.2) 0%, rgba(75, 94, 170, 0.1) 100%);
-    border-color: rgba(75, 94, 170, 0.3);
-}
+        .chat-message {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            padding: 12px 16px;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.04) 100%);
+            border-radius: 16px;
+            backdrop-filter: blur(20px);
+            border: 1.5px solid rgba(255, 255, 255, 0.12);
+            animation: slideInChat 0.3s ease-out;
+        }
 
-body.light-theme .chat-message.own {
-    background: linear-gradient(135deg, rgba(75, 94, 170, 0.15) 0%, rgba(75, 94, 170, 0.08) 100%);
-    border-color: rgba(75, 94, 170, 0.3);
-}
+        body.light-theme .chat-message {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(249, 250, 251, 0.9) 100%);
+            border: 1.5px solid rgba(0, 0, 0, 0.08);
+        }
 
-.chat-message-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
+        .chat-message.own {
+            background: linear-gradient(135deg, rgba(75, 94, 170, 0.2) 0%, rgba(75, 94, 170, 0.1) 100%);
+            border-color: rgba(75, 94, 170, 0.3);
+        }
 
-.chat-message-author {
-    font-weight: 600;
-    font-size: 14px;
-    color: var(--primary-light);
-}
+        body.light-theme .chat-message.own {
+            background: linear-gradient(135deg, rgba(75, 94, 170, 0.15) 0%, rgba(75, 94, 170, 0.08) 100%);
+            border-color: rgba(75, 94, 170, 0.3);
+        }
 
-body.light-theme .chat-message-author {
-    color: var(--primary);
-}
+        .chat-message-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
 
-.chat-message-time {
-    font-size: 11px;
-    color: var(--text-tertiary);
-    opacity: 0.8;
-}
+        .chat-message-author {
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--primary-light);
+        }
 
-.chat-message-text {
-    font-size: 14px;
-    color: var(--text-primary);
-    word-wrap: break-word;
-}
+        body.light-theme .chat-message-author {
+            color: var(--primary);
+        }
 
-body.light-theme .chat-message-text {
-    color: var(--light-text-primary);
-}
+        .chat-message-time {
+            font-size: 11px;
+            color: var(--text-tertiary);
+            opacity: 0.8;
+        }
 
-#chatInputContainer {
-    padding: 16px 20px;
-    background: linear-gradient(145deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
-    border-top: 1.5px solid rgba(255, 255, 255, 0.1);
-    display: flex;
-    gap: 12px;
-    flex-shrink: 0;
-}
+        .chat-message-text {
+            font-size: 14px;
+            color: var(--text-primary);
+            word-wrap: break-word;
+        }
 
-body.light-theme #chatInputContainer {
-    background: linear-gradient(145deg, rgba(0, 0, 0, 0.02) 0%, rgba(0, 0, 0, 0.01) 100%);
-    border-top: 1.5px solid rgba(0, 0, 0, 0.1);
-}
+        body.light-theme .chat-message-text {
+            color: var(--light-text-primary);
+        }
 
-#chatInput {
-    flex: 1;
-    padding: 12px 16px;
-    background: linear-gradient(145deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.04) 100%);
-    border: 1.5px solid rgba(255, 255, 255, 0.15);
-    border-radius: 12px;
-    color: var(--text-primary);
-    font-size: 14px;
-    font-family: inherit;
-    resize: none;
-    outline: none;
-    transition: all 0.3s ease;
-    max-height: 100px;
-}
+        #chatInputContainer {
+            padding: 16px 20px;
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+            border-top: 1.5px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            gap: 12px;
+            flex-shrink: 0;
+        }
 
-body.light-theme #chatInput {
-    background: linear-gradient(145deg, rgba(255, 255, 255, 0.9) 0%, rgba(249, 250, 251, 0.9) 100%);
-    border: 1.5px solid rgba(0, 0, 0, 0.1);
-    color: var(--light-text-primary);
-}
+        body.light-theme #chatInputContainer {
+            background: linear-gradient(145deg, rgba(0, 0, 0, 0.02) 0%, rgba(0, 0, 0, 0.01) 100%);
+            border-top: 1.5px solid rgba(0, 0, 0, 0.1);
+        }
 
-#chatInput:focus {
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(75, 94, 170, 0.2);
-}
+        #chatInput {
+            flex: 1;
+            padding: 12px 16px;
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.04) 100%);
+            border: 1.5px solid rgba(255, 255, 255, 0.15);
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-size: 14px;
+            font-family: inherit;
+            resize: none;
+            outline: none;
+            transition: all 0.3s ease;
+            max-height: 100px;
+        }
 
-#sendChatBtn {
-    padding: 12px 20px;
-    background: linear-gradient(145deg, var(--primary) 0%, var(--primary-light) 100%);
-    border: none;
-    border-radius: 12px;
-    color: white;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
+        body.light-theme #chatInput {
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.9) 0%, rgba(249, 250, 251, 0.9) 100%);
+            border: 1.5px solid rgba(0, 0, 0, 0.1);
+            color: var(--light-text-primary);
+        }
 
-#sendChatBtn:hover {
-    background: linear-gradient(145deg, var(--secondary) 0%, var(--secondary-light) 100%);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(75, 94, 170, 0.3);
-}
+        #chatInput:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(75, 94, 170, 0.2);
+        }
 
-#sendChatBtn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
+        #sendChatBtn {
+            padding: 12px 20px;
+            background: linear-gradient(145deg, var(--primary) 0%, var(--primary-light) 100%);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
 
-@keyframes slideInChat {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
+        #sendChatBtn:hover {
+            background: linear-gradient(145deg, var(--secondary) 0%, var(--secondary-light) 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(75, 94, 170, 0.3);
+        }
 
-@media (max-width: 768px) {
-    #chatPanel {
-        width: 100%;
-        max-width: 100%;
-    }
-}
+        #sendChatBtn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
 
-/* ============================================
+        @keyframes slideInChat {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 768px) {
+            #chatPanel {
+                width: 100%;
+                max-width: 100%;
+            }
+        }
+
+        /* ============================================
    SISTEMA DE CONTROL DE CÁMARAS Y VISTAS - DISEÑO MEJORADO
    ============================================ */
 
-/* Overlay oscuro detrás del panel */
-#viewControlOverlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(4px);
-    z-index: 89;
-    opacity: 0;
-    visibility: hidden;
-    transition: all 0.3s ease;
-}
-
-#viewControlOverlay.active {
-    opacity: 1;
-    visibility: visible;
-}
-
-/* Panel de control de vista - Centrado y limpio */
-#viewControlPanel {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%) scale(0.9);
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(30px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    border-radius: 24px;
-    padding: 0;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3), 0 0 1px rgba(0, 0, 0, 0.1);
-    z-index: 90;
-    width: 90%;
-    max-width: 850px;
-    max-height: 85vh;
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    opacity: 0;
-    visibility: hidden;
-    overflow: hidden;
-}
-
-body.light-theme #viewControlPanel {
-    background: rgba(255, 255, 255, 0.98);
-    border-color: rgba(0, 0, 0, 0.08);
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15), 0 0 1px rgba(0, 0, 0, 0.1);
-}
-
-body:not(.light-theme) #viewControlPanel {
-    background: rgba(15, 15, 35, 0.95);
-    border-color: rgba(255, 255, 255, 0.1);
-}
-
-#viewControlPanel.active {
-    opacity: 1;
-    visibility: visible;
-    transform: translate(-50%, -50%) scale(1);
-}
-
-/* Header del panel */
-.view-control-header {
-    padding: 24px 28px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-
-body.light-theme .view-control-header {
-    border-bottom-color: rgba(0, 0, 0, 0.08);
-}
-
-body:not(.light-theme) .view-control-header {
-    border-bottom-color: rgba(255, 255, 255, 0.08);
-}
-
-.view-control-header h3 {
-    font-size: 20px;
-    font-weight: 700;
-    margin: 0;
-    color: #1e293b;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-body:not(.light-theme) .view-control-header h3 {
-    color: var(--text-primary);
-}
-
-.view-control-header h3 i {
-    font-size: 22px;
-    color: #3b82f6;
-}
-
-/* Contenido del panel con scroll suave */
-.view-control-content {
-    padding: 24px 28px;
-    max-height: calc(85vh - 180px);
-    overflow-y: auto;
-    overflow-x: hidden;
-}
-
-.view-control-content::-webkit-scrollbar {
-    width: 6px;
-}
-
-.view-control-content::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.view-control-content::-webkit-scrollbar-thumb {
-    background: rgba(0, 0, 0, 0.2);
-    border-radius: 10px;
-}
-
-body:not(.light-theme) .view-control-content::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.2);
-}
-
-/* Grid de opciones de vista */
-.view-options {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 14px;
-    margin-bottom: 0;
-}
-
-/* Tarjetas de opciones de vista con preview */
-.view-option {
-    display: flex;
-    flex-direction: column;
-    background: #ffffff;
-    border: 2px solid #e2e8f0;
-    border-radius: 16px;
-    cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    overflow: hidden;
-    position: relative;
-}
-
-body:not(.light-theme) .view-option {
-    background: rgba(30, 30, 60, 0.6);
-    border-color: rgba(255, 255, 255, 0.1);
-}
-
-.view-option:hover {
-    border-color: #3b82f6;
-    box-shadow: 0 8px 24px rgba(59, 130, 246, 0.15);
-    transform: translateY(-2px);
-}
-
-body:not(.light-theme) .view-option:hover {
-    box-shadow: 0 8px 24px rgba(59, 130, 246, 0.25);
-}
-
-.view-option.active {
-    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-    border-color: #3b82f6;
-    box-shadow: 0 12px 32px rgba(59, 130, 246, 0.3);
-}
-
-.view-option.active::before {
-    content: '✓';
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    width: 28px;
-    height: 28px;
-    background: rgba(255, 255, 255, 0.25);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-weight: 700;
-    font-size: 16px;
-    z-index: 2;
-}
-
-/* Preview visual del layout */
-.view-option-preview {
-    height: 80px;
-    background: #f1f5f9;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 12px;
-    position: relative;
-}
-
-body:not(.light-theme) .view-option-preview {
-    background: rgba(15, 15, 35, 0.4);
-}
-
-.view-option.active .view-option-preview {
-    background: rgba(255, 255, 255, 0.15);
-}
-
-/* Miniaturas de preview según el tipo */
-.view-option-preview .preview-grid {
-    display: grid;
-    gap: 3px;
-    width: 100%;
-    height: 100%;
-}
-
-.preview-grid.grid-auto {
-    grid-template-columns: repeat(3, 1fr);
-    grid-template-rows: repeat(2, 1fr);
-}
-
-.preview-grid.grid-4 {
-    grid-template-columns: repeat(2, 1fr);
-    grid-template-rows: repeat(2, 1fr);
-}
-
-.preview-grid.grid-9 {
-    grid-template-columns: repeat(3, 1fr);
-    grid-template-rows: repeat(3, 1fr);
-}
-
-.preview-grid.grid-many {
-    grid-template-columns: repeat(5, 1fr);
-    grid-template-rows: repeat(3, 1fr);
-}
-
-.preview-grid.spotlight {
-    grid-template-columns: 2fr 1fr;
-    grid-template-rows: repeat(3, 1fr);
-}
-
-.preview-grid.spotlight .preview-box:first-child {
-    grid-row: 1 / -1;
-}
-
-.preview-grid.sidebar {
-    grid-template-columns: 3fr 1fr;
-    grid-template-rows: repeat(4, 1fr);
-}
-
-.preview-grid.sidebar .preview-box:first-child {
-    grid-row: 1 / -1;
-}
-
-.preview-grid.active-speaker {
-    grid-template-columns: 1fr;
-    grid-template-rows: 1fr;
-}
-
-.preview-box {
-    background: #cbd5e1;
-    border-radius: 3px;
-}
-
-body:not(.light-theme) .preview-box {
-    background: rgba(255, 255, 255, 0.15);
-}
-
-.view-option.active .preview-box {
-    background: rgba(255, 255, 255, 0.4);
-}
-
-/* Información de la opción */
-.view-option-info {
-    padding: 14px 16px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.view-option-icon {
-    font-size: 24px;
-    width: 40px;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: #eff6ff;
-    border-radius: 10px;
-    color: #3b82f6;
-    flex-shrink: 0;
-}
-
-body:not(.light-theme) .view-option-icon {
-    background: rgba(59, 130, 246, 0.15);
-    color: #60a5fa;
-}
-
-.view-option.active .view-option-icon {
-    background: rgba(255, 255, 255, 0.25);
-    color: white;
-}
-
-.view-option-details {
-    flex: 1;
-    min-width: 0;
-}
-
-.view-option-text {
-    font-size: 14px;
-    font-weight: 600;
-    color: #1e293b;
-    margin-bottom: 2px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-body:not(.light-theme) .view-option-text {
-    color: var(--text-primary);
-}
-
-.view-option.active .view-option-text {
-    color: white;
-}
-
-.view-option-desc {
-    font-size: 11px;
-    color: #64748b;
-    line-height: 1.3;
-}
-
-body:not(.light-theme) .view-option-desc {
-    color: var(--text-tertiary);
-}
-
-.view-option.active .view-option-desc {
-    color: rgba(255, 255, 255, 0.85);
-}
-
-/* Control de número de participantes visibles */
-.participants-per-page {
-    margin-top: 24px;
-    padding: 20px;
-    background: #f8fafc;
-    border-radius: 16px;
-    border: 1px solid #e2e8f0;
-}
-
-body:not(.light-theme) .participants-per-page {
-    background: rgba(30, 30, 60, 0.4);
-    border-color: rgba(255, 255, 255, 0.08);
-}
-
-.participants-per-page label {
-    display: block;
-    font-size: 13px;
-    font-weight: 600;
-    color: #475569;
-    margin-bottom: 12px;
-}
-
-body:not(.light-theme) .participants-per-page label {
-    color: var(--text-secondary);
-}
-
-#participantsPerPageSelect {
-    width: 100%;
-    padding: 12px 16px;
-    background: white;
-    border: 2px solid #e2e8f0;
-    border-radius: 12px;
-    color: #1e293b;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-body:not(.light-theme) #participantsPerPageSelect {
-    background: rgba(15, 15, 35, 0.6);
-    border-color: rgba(255, 255, 255, 0.1);
-    color: var(--text-primary);
-}
-
-#participantsPerPageSelect:hover {
-    border-color: #3b82f6;
-}
-
-#participantsPerPageSelect:focus {
-    outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
-}
-
-/* Paginación */
-.pagination-controls {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 14px;
-    padding: 14px 16px;
-    background: white;
-    border-radius: 12px;
-    border: 1px solid #e2e8f0;
-}
-
-body:not(.light-theme) .pagination-controls {
-    background: rgba(15, 15, 35, 0.4);
-    border-color: rgba(255, 255, 255, 0.08);
-}
-
-.pagination-info {
-    font-size: 13px;
-    font-weight: 600;
-    color: #64748b;
-}
-
-body:not(.light-theme) .pagination-info {
-    color: var(--text-secondary);
-}
-
-.pagination-buttons {
-    display: flex;
-    gap: 8px;
-}
-
-.page-btn {
-    width: 36px;
-    height: 36px;
-    background: #f1f5f9;
-    border: none;
-    border-radius: 10px;
-    color: #475569;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.3s ease;
-    font-size: 14px;
-}
-
-body:not(.light-theme) .page-btn {
-    background: rgba(255, 255, 255, 0.08);
-    color: var(--text-primary);
-}
-
-.page-btn:hover:not(:disabled) {
-    background: #3b82f6;
-    color: white;
-    transform: scale(1.08);
-}
-
-.page-btn:disabled {
-    opacity: 0.3;
-    cursor: not-allowed;
-}
-
-/* ============================================ */
-/* SISTEMA NUEVO DE LAYOUTS DE VISTA */
-/* ============================================ */
-
-/* Las clases ahora usan prefijo view- */
-
-/* Vista Grid Auto */
-#videoGrid.view-grid-auto {
-    display: grid;
-    gap: 20px;
-}
-
-#videoGrid.view-grid-auto .video-container {
-    aspect-ratio: 16/9;
-}
-
-/* Vista Grid 2x2 (4 videos) */
-#videoGrid.view-grid-fixed-4 {
-    display: grid;
-    gap: 20px;
-}
-
-#videoGrid.view-grid-fixed-4 .video-container {
-    aspect-ratio: 16/9;
-}
-
-/* Vista Grid 3x3 (9 videos) */
-#videoGrid.view-grid-fixed-9 {
-    display: grid;
-    gap: 16px;
-}
-
-#videoGrid.view-grid-fixed-9 .video-container {
-    aspect-ratio: 16/9;
-}
-
-/* Vista Spotlight */
-#videoGrid.view-spotlight .video-container.spotlight-main {
-    aspect-ratio: 16/9;
-}
-
-#videoGrid.view-spotlight .spotlight-thumbnails .video-container {
-    aspect-ratio: 16/9;
-}
-
-/* Vista Sidebar */
-#videoGrid.view-sidebar .video-container.main-video {
-    aspect-ratio: 16/9;
-}
-
-#videoGrid.view-sidebar .sidebar-videos .video-container {
-    aspect-ratio: 16/9;
-}
-
-/* Vista Grid Many (Compacto) */
-#videoGrid.view-grid-many {
-    display: grid;
-    gap: 8px;
-}
-
-#videoGrid.view-grid-many .video-container {
-    aspect-ratio: 4/3;
-}
-
-/* Vista Active Speaker */
-#videoGrid.view-active-speaker .video-container {
-    aspect-ratio: 16/9;
-}
-
-/* Indicador de hablante activo más prominente */
-.video-container.active-speaker {
-    border: 3px solid var(--success);
-    box-shadow: var(--shadow-xl), var(--glow-success);
-    animation: pulseActiveSpeaker 1.5s ease-in-out infinite;
-}
-
-@keyframes pulseActiveSpeaker {
-    0%, 100% {
-        transform: scale(1);
-        box-shadow: var(--shadow-xl), 0 0 0 0 rgba(16, 185, 129, 0.7);
-    }
-    50% {
-        transform: scale(1.02);
-        box-shadow: var(--shadow-xl), 0 0 0 10px rgba(16, 185, 129, 0);
-    }
-}
-
-/* Pin video */
-.video-container.pinned {
-    border: 3px solid var(--accent);
-    box-shadow: var(--shadow-xl), var(--glow-warning);
-    order: -1;
-}
-
-.pin-indicator {
-    position: absolute;
-    top: 12px;
-    right: 12px;
-    background: var(--accent);
-    color: white;
-    padding: 6px 12px;
-    border-radius: 8px;
-    font-size: 12px;
-    font-weight: 600;
-    z-index: 10;
-    display: none;
-}
-
-.video-container.pinned .pin-indicator {
-    display: block;
-    animation: bounceIn 0.5s ease;
-}
-
-@keyframes bounceIn {
-    0% {
-        transform: scale(0);
-    }
-    50% {
-        transform: scale(1.2);
-    }
-    100% {
-        transform: scale(1);
-    }
-}
-
-/* Botón de pin en hover */
-.pin-btn {
-    position: absolute;
-    top: 12px;
-    right: 12px;
-    background: var(--glass-bg);
-    backdrop-filter: blur(10px);
-    border: 1px solid var(--glass-border);
-    color: var(--text-primary);
-    padding: 8px 12px;
-    border-radius: 8px;
-    font-size: 14px;
-    cursor: pointer;
-    opacity: 0;
-    transition: all 0.3s ease;
-    z-index: 10;
-}
-
-body.light-theme .pin-btn {
-    background: var(--light-bg-card);
-    border-color: rgba(0, 0, 0, 0.1);
-    color: var(--light-text-primary);
-}
-
-.video-container:hover .pin-btn {
-    opacity: 1;
-}
-
-.pin-btn:hover {
-    background: var(--accent);
-    color: white;
-    transform: scale(1.1);
-}
-
-/* Estilos adicionales para prevenir overflow */
-body.view-control-open {
-    overflow: hidden;
-}
-
-#main {
-    overflow-x: hidden;
-    max-width: 100vw;
-}
-
-.close-panel-btn {
-    background: #f1f5f9;
-    border: none;
-    color: #64748b;
-    font-size: 18px;
-    cursor: pointer;
-    width: 36px;
-    height: 36px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 10px;
-    transition: all 0.3s ease;
-}
-
-body:not(.light-theme) .close-panel-btn {
-    background: rgba(255, 255, 255, 0.08);
-    color: var(--text-tertiary);
-}
-
-.close-panel-btn:hover {
-    background: #ef4444;
-    color: white;
-    transform: rotate(90deg) scale(1.1);
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-    #viewControlPanel {
-        width: 95%;
-        max-width: none;
-        max-height: 90vh;
-    }
-
-    .view-control-header {
-        padding: 20px;
-    }
-
-    .view-control-header h3 {
-        font-size: 18px;
-    }
-
-    .view-control-content {
-        padding: 20px;
-        max-height: calc(90vh - 160px);
-    }
-
-    .view-options {
-        grid-template-columns: 1fr;
-        gap: 12px;
-    }
-
-    .view-option-preview {
-        height: 70px;
-    }
-
-    /* Ajustes de layouts para tablet */
-    #videoGrid.grid-fixed-4 .video-container {
-        min-height: 200px;
-        max-height: 300px;
-    }
-
-    #videoGrid.grid-fixed-9 {
-        grid-template-columns: repeat(2, 1fr) !important;
-    }
-
-    #videoGrid.grid-fixed-9 .video-container {
-        min-height: 150px;
-        max-height: 220px;
-    }
-
-    #videoGrid.spotlight-layout .video-container.spotlight-main {
-        min-height: 300px;
-    }
-
-    #videoGrid.spotlight-layout .spotlight-thumbnails .video-container {
-        width: 140px;
-        height: 90px;
-        min-width: 140px;
-    }
-
-    #videoGrid.sidebar-layout {
-        grid-template-columns: 1fr;
-    }
-
-    #videoGrid.sidebar-layout .video-container.main-video {
-        min-height: 300px;
-        max-height: 400px;
-    }
-
-    #videoGrid.sidebar-layout .sidebar-videos {
-        flex-direction: row;
-        overflow-x: auto;
-        overflow-y: hidden;
-        max-height: unset;
-    }
-
-    #videoGrid.sidebar-layout .sidebar-videos .video-container {
-        min-width: 160px;
-        width: 160px;
-        height: 110px;
-        min-height: 110px;
-        max-height: 110px;
-    }
-
-    #videoGrid.grid-many {
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    }
-
-    #videoGrid.active-speaker-only .video-container.speaking,
-    #videoGrid.active-speaker-only .video-container.active-speaker {
-        min-height: 300px;
-        max-height: 500px;
-    }
-}
-
-@media (max-width: 480px) {
-    .view-control-header {
-        padding: 16px;
-    }
-
-    .view-control-content {
-        padding: 16px;
-    }
-
-    .view-option-info {
-        padding: 12px;
-    }
-
-    .view-option-icon {
-        width: 36px;
-        height: 36px;
-        font-size: 20px;
-    }
-
-    .participants-per-page {
-        padding: 16px;
-    }
-
-    /* Ajustes de layouts para móvil */
-    #videoGrid.grid-fixed-4 {
-        grid-template-columns: 1fr !important;
-        grid-template-rows: auto;
-    }
-
-    #videoGrid.grid-fixed-4 .video-container {
-        min-height: 200px;
-        max-height: 250px;
-    }
-
-    #videoGrid.grid-fixed-9 {
-        grid-template-columns: 1fr !important;
-    }
-
-    #videoGrid.grid-fixed-9 .video-container {
-        min-height: 180px;
-        max-height: 200px;
-    }
-
-    #videoGrid.spotlight-layout .video-container.spotlight-main {
-        min-height: 220px;
-        max-height: 350px;
-    }
-
-    #videoGrid.spotlight-layout .spotlight-thumbnails .video-container {
-        width: 120px;
-        height: 80px;
-        min-width: 120px;
-    }
-
-    #videoGrid.sidebar-layout .video-container.main-video {
-        min-height: 220px;
-        max-height: 300px;
-    }
-
-    #videoGrid.sidebar-layout .sidebar-videos .video-container {
-        min-width: 140px;
-        width: 140px;
-        height: 90px;
-        min-height: 90px;
-        max-height: 90px;
-    }
-
-    #videoGrid.grid-many {
-        grid-template-columns: 1fr;
-    }
-
-    #videoGrid.grid-many .video-container {
-        min-height: 180px;
-        max-height: 220px;
-    }
-
-    #videoGrid.active-speaker-only .video-container.speaking,
-    #videoGrid.active-speaker-only .video-container.active-speaker {
-        min-height: 220px;
-        max-height: 350px;
-    }
-}
-
+        /* Overlay oscuro detrás del panel */
+        #viewControlOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            z-index: 89;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        #viewControlOverlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* Panel de control de vista - Centrado y limpio */
+        #viewControlPanel {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.9);
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(30px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 24px;
+            padding: 0;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3), 0 0 1px rgba(0, 0, 0, 0.1);
+            z-index: 90;
+            width: 90%;
+            max-width: 850px;
+            max-height: 85vh;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            opacity: 0;
+            visibility: hidden;
+            overflow: hidden;
+        }
+
+        body.light-theme #viewControlPanel {
+            background: rgba(255, 255, 255, 0.98);
+            border-color: rgba(0, 0, 0, 0.08);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15), 0 0 1px rgba(0, 0, 0, 0.1);
+        }
+
+        body:not(.light-theme) #viewControlPanel {
+            background: rgba(15, 15, 35, 0.95);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        #viewControlPanel.active {
+            opacity: 1;
+            visibility: visible;
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        /* Header del panel */
+        .view-control-header {
+            padding: 24px 28px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        body.light-theme .view-control-header {
+            border-bottom-color: rgba(0, 0, 0, 0.08);
+        }
+
+        body:not(.light-theme) .view-control-header {
+            border-bottom-color: rgba(255, 255, 255, 0.08);
+        }
+
+        .view-control-header h3 {
+            font-size: 20px;
+            font-weight: 700;
+            margin: 0;
+            color: #1e293b;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        body:not(.light-theme) .view-control-header h3 {
+            color: var(--text-primary);
+        }
+
+        .view-control-header h3 i {
+            font-size: 22px;
+            color: #3b82f6;
+        }
+
+        /* Contenido del panel con scroll suave */
+        .view-control-content {
+            padding: 24px 28px;
+            max-height: calc(85vh - 180px);
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        .view-control-content::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .view-control-content::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .view-control-content::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+        }
+
+        body:not(.light-theme) .view-control-content::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Grid de opciones de vista */
+        .view-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 14px;
+            margin-bottom: 0;
+        }
+
+        /* Tarjetas de opciones de vista con preview */
+        .view-option {
+            display: flex;
+            flex-direction: column;
+            background: #ffffff;
+            border: 2px solid #e2e8f0;
+            border-radius: 16px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
+            position: relative;
+        }
+
+        body:not(.light-theme) .view-option {
+            background: rgba(30, 30, 60, 0.6);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .view-option:hover {
+            border-color: #3b82f6;
+            box-shadow: 0 8px 24px rgba(59, 130, 246, 0.15);
+            transform: translateY(-2px);
+        }
+
+        body:not(.light-theme) .view-option:hover {
+            box-shadow: 0 8px 24px rgba(59, 130, 246, 0.25);
+        }
+
+        .view-option.active {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            border-color: #3b82f6;
+            box-shadow: 0 12px 32px rgba(59, 130, 246, 0.3);
+        }
+
+        .view-option.active::before {
+            content: '✓';
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 28px;
+            height: 28px;
+            background: rgba(255, 255, 255, 0.25);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 16px;
+            z-index: 2;
+        }
+
+        /* Preview visual del layout */
+        .view-option-preview {
+            height: 80px;
+            background: #f1f5f9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px;
+            position: relative;
+        }
+
+        body:not(.light-theme) .view-option-preview {
+            background: rgba(15, 15, 35, 0.4);
+        }
+
+        .view-option.active .view-option-preview {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        /* Miniaturas de preview según el tipo */
+        .view-option-preview .preview-grid {
+            display: grid;
+            gap: 3px;
+            width: 100%;
+            height: 100%;
+        }
+
+        .preview-grid.grid-auto {
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(2, 1fr);
+        }
+
+        .preview-grid.grid-4 {
+            grid-template-columns: repeat(2, 1fr);
+            grid-template-rows: repeat(2, 1fr);
+        }
+
+        .preview-grid.grid-9 {
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+        }
+
+        .preview-grid.grid-many {
+            grid-template-columns: repeat(5, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+        }
+
+        .preview-grid.spotlight {
+            grid-template-columns: 2fr 1fr;
+            grid-template-rows: repeat(3, 1fr);
+        }
+
+        .preview-grid.spotlight .preview-box:first-child {
+            grid-row: 1 / -1;
+        }
+
+        .preview-grid.sidebar {
+            grid-template-columns: 3fr 1fr;
+            grid-template-rows: repeat(4, 1fr);
+        }
+
+        .preview-grid.sidebar .preview-box:first-child {
+            grid-row: 1 / -1;
+        }
+
+        .preview-grid.active-speaker {
+            grid-template-columns: 1fr;
+            grid-template-rows: 1fr;
+        }
+
+        .preview-box {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+
+        body:not(.light-theme) .preview-box {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .view-option.active .preview-box {
+            background: rgba(255, 255, 255, 0.4);
+        }
+
+        /* Información de la opción */
+        .view-option-info {
+            padding: 14px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .view-option-icon {
+            font-size: 24px;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #eff6ff;
+            border-radius: 10px;
+            color: #3b82f6;
+            flex-shrink: 0;
+        }
+
+        body:not(.light-theme) .view-option-icon {
+            background: rgba(59, 130, 246, 0.15);
+            color: #60a5fa;
+        }
+
+        .view-option.active .view-option-icon {
+            background: rgba(255, 255, 255, 0.25);
+            color: white;
+        }
+
+        .view-option-details {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .view-option-text {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        body:not(.light-theme) .view-option-text {
+            color: var(--text-primary);
+        }
+
+        .view-option.active .view-option-text {
+            color: white;
+        }
+
+        .view-option-desc {
+            font-size: 11px;
+            color: #64748b;
+            line-height: 1.3;
+        }
+
+        body:not(.light-theme) .view-option-desc {
+            color: var(--text-tertiary);
+        }
+
+        .view-option.active .view-option-desc {
+            color: rgba(255, 255, 255, 0.85);
+        }
+
+        /* Control de número de participantes visibles */
+        .participants-per-page {
+            margin-top: 24px;
+            padding: 20px;
+            background: #f8fafc;
+            border-radius: 16px;
+            border: 1px solid #e2e8f0;
+        }
+
+        body:not(.light-theme) .participants-per-page {
+            background: rgba(30, 30, 60, 0.4);
+            border-color: rgba(255, 255, 255, 0.08);
+        }
+
+        .participants-per-page label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: #475569;
+            margin-bottom: 12px;
+        }
+
+        body:not(.light-theme) .participants-per-page label {
+            color: var(--text-secondary);
+        }
+
+        #participantsPerPageSelect {
+            width: 100%;
+            padding: 12px 16px;
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            color: #1e293b;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        body:not(.light-theme) #participantsPerPageSelect {
+            background: rgba(15, 15, 35, 0.6);
+            border-color: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+        }
+
+        #participantsPerPageSelect:hover {
+            border-color: #3b82f6;
+        }
+
+        #participantsPerPageSelect:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
+        }
+
+        /* Paginación */
+        .pagination-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 14px;
+            padding: 14px 16px;
+            background: white;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+        }
+
+        body:not(.light-theme) .pagination-controls {
+            background: rgba(15, 15, 35, 0.4);
+            border-color: rgba(255, 255, 255, 0.08);
+        }
+
+        .pagination-info {
+            font-size: 13px;
+            font-weight: 600;
+            color: #64748b;
+        }
+
+        body:not(.light-theme) .pagination-info {
+            color: var(--text-secondary);
+        }
+
+        .pagination-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .page-btn {
+            width: 36px;
+            height: 36px;
+            background: #f1f5f9;
+            border: none;
+            border-radius: 10px;
+            color: #475569;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+
+        body:not(.light-theme) .page-btn {
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-primary);
+        }
+
+        .page-btn:hover:not(:disabled) {
+            background: #3b82f6;
+            color: white;
+            transform: scale(1.08);
+        }
+
+        .page-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        /* ============================================ */
+        /* SISTEMA NUEVO DE LAYOUTS DE VISTA */
+        /* ============================================ */
+        /* Estilos adicionales para prevenir overflow */
+        body.view-control-open {
+            overflow: hidden;
+        }
+
+        .close-panel-btn {
+            background: #f1f5f9;
+            border: none;
+            color: #64748b;
+            font-size: 18px;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+
+        body:not(.light-theme) .close-panel-btn {
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-tertiary);
+        }
+
+        .close-panel-btn:hover {
+            background: #ef4444;
+            color: white;
+            transform: rotate(90deg) scale(1.1);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            #viewControlPanel {
+                width: 95%;
+                max-width: none;
+                max-height: 90vh;
+            }
+
+            .view-control-header {
+                padding: 20px;
+            }
+
+            .view-control-header h3 {
+                font-size: 18px;
+            }
+
+            .view-control-content {
+                padding: 20px;
+                max-height: calc(90vh - 160px);
+            }
+
+            .view-options {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+
+            .view-option-preview {
+                height: 70px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .view-control-header {
+                padding: 16px;
+            }
+
+            .view-control-content {
+                padding: 16px;
+            }
+
+            .view-option-info {
+                padding: 12px;
+            }
+
+            .view-option-icon {
+                width: 36px;
+                height: 36px;
+                font-size: 20px;
+            }
+
+            .participants-per-page {
+                padding: 16px;
+            }
+        }
+
+        /* ============================================
+           SISTEMA DE VIDEO ESTILO GOOGLE MEET
+           ============================================ */
+
+        #main {
+            display: flex;
+            width: 100%;
+            height: calc(100vh - 80px);
+            background: var(--bg-primary);
+            overflow: hidden;
+        }
+
+        /* Sección de videos */
+        #videoSection {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 16px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Contenedor de screen share */
+        #screenShareContainer {
+            width: 100%;
+            height: 60%;
+            margin-bottom: 16px;
+            border-radius: var(--border-radius-lg);
+            overflow: hidden;
+            background: #000;
+            position: relative;
+        }
+
+        #screenShareContainer.active {
+            display: block !important;
+        }
+
+        .screen-share-wrapper {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        #screenShareVideo {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            background: #000;
+        }
+
+        .screen-share-info {
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(10px);
+            padding: 8px 16px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: white;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .screen-share-info i {
+            color: var(--primary-color);
+        }
+
+        .stop-screen-share-btn {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            background: var(--danger-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+            z-index: 10;
+        }
+
+        .stop-screen-share-btn:hover {
+            background: var(--danger-hover);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        /* Grid de videos */
+        #videoGrid {
+            flex: 1;
+            display: grid;
+            gap: 12px;
+            grid-auto-rows: 1fr;
+            overflow: auto;
+            padding: 4px;
+            border-radius: var(--border-radius);
+        }
+
+        /* Diseño adaptativo automático según número de videos */
+        #videoGrid:has(.video-container:nth-child(1):last-child) {
+            grid-template-columns: 1fr;
+        }
+
+        #videoGrid:has(.video-container:nth-child(2)) {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        #videoGrid:has(.video-container:nth-child(3)),
+        #videoGrid:has(.video-container:nth-child(4)) {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        #videoGrid:has(.video-container:nth-child(5)),
+        #videoGrid:has(.video-container:nth-child(6)) {
+            grid-template-columns: repeat(3, 1fr);
+        }
+
+        #videoGrid:has(.video-container:nth-child(7)),
+        #videoGrid:has(.video-container:nth-child(8)),
+        #videoGrid:has(.video-container:nth-child(9)) {
+            grid-template-columns: repeat(3, 1fr);
+        }
+
+        #videoGrid:has(.video-container:nth-child(10)) {
+            grid-template-columns: repeat(4, 1fr);
+        }
+
+        /* Scroll suave */
+        #videoGrid::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        #videoGrid::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+            border-radius: 4px;
+        }
+
+        #videoGrid::-webkit-scrollbar-thumb {
+            background: var(--bg-tertiary);
+            border-radius: 4px;
+        }
+
+        #videoGrid::-webkit-scrollbar-thumb:hover {
+            background: var(--border-color);
+        }
+
+        /* Contenedor de video individual */
+        .video-container {
+            position: relative;
+            background: var(--bg-secondary);
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            aspect-ratio: 16/9;
+            min-height: 180px;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .video-container:hover {
+            border-color: var(--border-color);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .video-container.local {
+            border: 2px solid var(--primary-color);
+        }
+
+        .video-container.speaking {
+            border: 3px solid var(--secondary-color);
+            box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.2);
+            animation: pulseSpeaking 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulseSpeaking {
+            0%, 100% {
+                box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.2);
+            }
+            50% {
+                box-shadow: 0 0 0 8px rgba(16, 185, 129, 0.1);
+            }
+        }
+
+        .video-container.pinned {
+            order: -1;
+            border: 3px solid var(--warning-color);
+            box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.2);
+        }
+
+        .video-container video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            background: #000;
+        }
+
+        /* Info del video (nombre y estado) */
+        .video-info {
+            position: absolute;
+            bottom: 12px;
+            left: 12px;
+            right: 12px;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(10px);
+            padding: 8px 12px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: 5;
+        }
+
+        .video-container:hover .video-info {
+            opacity: 1;
+        }
+
+        .video-info .user-name {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: white;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .video-info .user-name i {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+
+        .video-status {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .video-status span {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 11px;
+        }
+
+        .video-status .mic-status.muted {
+            background: var(--danger-color);
+        }
+
+        .video-status .cam-status.off {
+            background: var(--danger-color);
+        }
+
+        /* Botón de pin */
+        .pin-video-btn {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(10px);
+            border: none;
+            color: white;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 10;
+        }
+
+        .video-container:hover .pin-video-btn {
+            opacity: 1;
+        }
+
+        .pin-video-btn:hover {
+            background: var(--warning-color);
+            transform: scale(1.1);
+        }
+
+        .video-container.pinned .pin-video-btn {
+            opacity: 1;
+            background: var(--warning-color);
+        }
+
+        /* Sidebar */
+        #sidebar {
+            width: 350px;
+            background: var(--bg-secondary);
+            border-left: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            transition: width 0.3s ease, opacity 0.3s ease;
+            overflow: hidden;
+        }
+
+        #sidebar.sidebar-collapsed {
+            width: 0;
+            opacity: 0;
+        }
+
+        /* Tabs del sidebar */
+        .sidebar-tabs {
+            display: flex;
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .sidebar-tab {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .sidebar-tab:hover {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+
+        .sidebar-tab.active {
+            color: var(--primary-color);
+            border-bottom-color: var(--primary-color);
+            background: var(--bg-secondary);
+        }
+
+        .sidebar-tab .badge {
+            background: var(--primary-color);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 700;
+            min-width: 20px;
+            text-align: center;
+        }
+
+        .sidebar-tab .chat-badge {
+            background: var(--danger-color);
+            animation: pulse 2s infinite;
+        }
+
+        /* Contenido del sidebar */
+        .sidebar-content {
+            display: none;
+            flex: 1;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .sidebar-content.active {
+            display: flex;
+        }
+
+        /* Header de participantes */
+        .participants-header {
+            padding: 16px;
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .participants-header h3 {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin: 0;
+        }
+
+        .mute-all-btn {
+            background: var(--danger-color);
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.3s ease;
+        }
+
+        .mute-all-btn:hover {
+            background: var(--danger-hover);
+            transform: translateY(-1px);
+        }
+
+        /* Lista de participantes */
+        .participants-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px;
+        }
+
+        .participant-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: var(--bg-primary);
+            border-radius: 8px;
+            margin-bottom: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .participant-item:hover {
+            background: var(--bg-tertiary);
+            transform: translateX(4px);
+        }
+
+        .participant-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+
+        .participant-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .participant-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .participant-role {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .participant-controls {
+            display: flex;
+            gap: 6px;
+        }
+
+        .participant-control-btn {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 13px;
+        }
+
+        .participant-control-btn:hover {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+            transform: scale(1.1);
+        }
+
+        /* Header del chat */
+        .chat-header {
+            padding: 16px;
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .chat-header h3 {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin: 0;
+        }
+
+        /* Mensajes del chat */
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .chat-message {
+            background: var(--bg-primary);
+            padding: 12px;
+            border-radius: 8px;
+            animation: slideInMessage 0.3s ease;
+        }
+
+        @keyframes slideInMessage {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .chat-message.own {
+            background: var(--primary-color);
+            color: white;
+            align-self: flex-end;
+        }
+
+        .chat-message-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 6px;
+            font-size: 12px;
+        }
+
+        .chat-message-author {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .chat-message.own .chat-message-author {
+            color: white;
+        }
+
+        .chat-message-time {
+            color: var(--text-muted);
+            font-size: 11px;
+        }
+
+        .chat-message.own .chat-message-time {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .chat-message-text {
+            color: var(--text-primary);
+            font-size: 14px;
+            line-height: 1.5;
+            word-wrap: break-word;
+        }
+
+        .chat-message.own .chat-message-text {
+            color: white;
+        }
+
+        /* Input del chat */
+        .chat-input-container {
+            padding: 16px;
+            background: var(--bg-tertiary);
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            gap: 12px;
+        }
+
+        #chatInput {
+            flex: 1;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        #chatInput:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        #sendChatBtn {
+            background: var(--primary-color);
+            border: none;
+            color: white;
+            width: 44px;
+            height: 44px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 16px;
+        }
+
+        #sendChatBtn:hover {
+            background: var(--primary-hover);
+            transform: scale(1.05);
+        }
+
+        #sendChatBtn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Responsive - Tablet */
+        @media (max-width: 1024px) {
+            #sidebar {
+                width: 300px;
+            }
+
+            #videoGrid {
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) !important;
+            }
+        }
+
+        /* Responsive - Mobile */
+        @media (max-width: 768px) {
+            #main {
+                flex-direction: column;
+            }
+
+            #sidebar {
+                width: 100%;
+                max-height: 50vh;
+                border-left: none;
+                border-top: 1px solid var(--border-color);
+            }
+
+            #sidebar.sidebar-collapsed {
+                max-height: 0;
+            }
+
+            #videoSection {
+                height: 50vh;
+            }
+
+            #screenShareContainer {
+                height: 50%;
+            }
+
+            #videoGrid {
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)) !important;
+            }
+
+            .video-container {
+                min-height: 120px;
+            }
+
+            .sidebar-tab span:not(.badge) {
+                display: none;
+            }
+        }
+
+        @media (max-width: 480px) {
+            #videoSection {
+                padding: 8px;
+            }
+
+            #videoGrid {
+                gap: 8px;
+                grid-template-columns: 1fr !important;
+            }
+
+            .video-container {
+                min-height: 180px;
+            }
+
+            .sidebar-tabs {
+                padding: 0;
+            }
+
+            .sidebar-tab {
+                padding: 12px;
+                font-size: 12px;
+            }
+
+            .participant-item {
+                padding: 10px;
+                gap: 10px;
+            }
+
+            .participant-avatar {
+                width: 36px;
+                height: 36px;
+                font-size: 14px;
+            }
+
+            .chat-messages {
+                padding: 12px;
+            }
+
+            .chat-input-container {
+                padding: 12px;
+            }
+        }
     </style>
 </head>
 
-<body> <div id="connectionStatus" style="display: none;"> <div class="status-indicator connecting"></div> <span>Conectando...</span> </div>
-
-<div id="header">
-    <div id="roomInfo">
-        <span>Sala: <span id="roomCode"></span></span>
-        <span>Participantes: <span id="participantCount">0</span></span>
+<body>
+    <div id="connectionStatus" style="display: none;">
+        <div class="status-indicator connecting"></div> <span>Conectando...</span>
     </div>
-    <div class="controls">
-        <button class="control-btn active" id="toggleMic" title="Silenciar/Activar Micrófono" aria-label="Silenciar o activar micrófono">
-            <i class="fas fa-microphone"></i>
-        </button>
-        <button class="control-btn active" id="toggleCam" title="Activar/Desactivar Cámara" aria-label="Activar o desactivar cámara">
-            <i class="fas fa-video"></i>
-        </button>
-        <button class="control-btn" id="shareScreen" title="Compartir Pantalla" aria-label="Compartir pantalla">
-            <i class="fas fa-desktop"></i>
-        </button>
-        <button class="control-btn" id="raiseHand" title="Levantar Mano" aria-label="Levantar mano">
-            <i class="fas fa-hand-paper"></i>
-        </button>
-        <button class="control-btn" id="createPollBtn" title="Crear Encuesta" aria-label="Crear encuesta" style="display: none;">
-            <i class="fas fa-poll"></i>
-        </button>
-        <button class="control-btn" id="participantsToggle" title="Mostrar Participantes" aria-label="Mostrar u ocultar participantes">
-            <i class="fas fa-users"></i>
-        </button>
-        <button class="control-btn" id="chatToggle" title="Mostrar Chat" aria-label="Mostrar u ocultar chat">
-            <i class="fas fa-comments"></i>
-        </button>
-        <button class="control-btn" id="viewControlToggle" title="Control de Vista" aria-label="Abrir control de vista de cámaras">
-            <i class="fas fa-th-large"></i>
-        </button>
-        <button class="control-btn" id="leaveBtn" title="Salir de la Sala" aria-label="Salir de la sala">
-            <i class="fas fa-sign-out-alt"></i>
-        </button>
-        <button class="control-btn" id="themeToggle" title="Cambiar Tema" aria-label="Cambiar entre tema claro y oscuro">
-            <i class="fas fa-moon"></i>
-        </button>
-        <div class="more-menu">
-            <button class="control-btn" title="Más Opciones" aria-label="Más opciones">
-                <i class="fas fa-ellipsis-v"></i>
+
+    <div id="header">
+        <div class="header-left">
+            <div class="logo">
+                <i class="fas fa-video"></i>
+                <span>VideoMeet</span>
+            </div>
+            <div class="room-details">
+                <div class="room-code-badge">
+                    <i class="fas fa-door-open"></i>
+                    <span>Sala: <strong id="roomCode"></strong></span>
+                </div>
+                <div class="participants-badge">
+                    <i class="fas fa-users"></i>
+                    <span><strong id="participantCount">0</strong> participantes</span>
+                </div>
+            </div>
+        </div>
+        <div class="controls">
+            <button class="control-btn active" id="toggleMic" title="Silenciar/Activar Micrófono"
+                aria-label="Silenciar o activar micrófono">
+                <i class="fas fa-microphone"></i>
             </button>
-            <div class="more-menu-content">
-                <button class="control-btn" id="mobileCreatePollBtn" title="Crear Encuesta" aria-label="Crear encuesta">
-                    <i class="fas fa-poll"></i>
+            <button class="control-btn active" id="toggleCam" title="Activar/Desactivar Cámara"
+                aria-label="Activar o desactivar cámara">
+                <i class="fas fa-video"></i>
+            </button>
+            <button class="control-btn" id="shareScreen" title="Compartir Pantalla" aria-label="Compartir pantalla">
+                <i class="fas fa-desktop"></i>
+            </button>
+            <button class="control-btn" id="raiseHand" title="Levantar Mano" aria-label="Levantar mano">
+                <i class="fas fa-hand-paper"></i>
+            </button>
+            <button class="control-btn" id="createPollBtn" title="Crear Encuesta" aria-label="Crear encuesta"
+                style="display: none;">
+                <i class="fas fa-poll"></i>
+            </button>
+            <button class="control-btn" id="participantsToggle" title="Mostrar Participantes"
+                aria-label="Mostrar u ocultar participantes">
+                <i class="fas fa-users"></i>
+            </button>
+            <button class="control-btn" id="chatToggle" title="Mostrar Chat" aria-label="Mostrar u ocultar chat">
+                <i class="fas fa-comments"></i>
+            </button>
+            <button class="control-btn" id="viewControlToggle" title="Control de Vista"
+                aria-label="Abrir control de vista de cámaras">
+                <i class="fas fa-th-large"></i>
+            </button>
+            <button class="control-btn" id="leaveBtn" title="Salir de la Sala" aria-label="Salir de la sala">
+                <i class="fas fa-sign-out-alt"></i>
+            </button>
+            <button class="control-btn" id="themeToggle" title="Cambiar Tema"
+                aria-label="Cambiar entre tema claro y oscuro">
+                <i class="fas fa-moon"></i>
+            </button>
+            <div class="more-menu">
+                <button class="control-btn" title="Más Opciones" aria-label="Más opciones">
+                    <i class="fas fa-ellipsis-v"></i>
                 </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Overlay del panel de control -->
-<div id="viewControlOverlay"></div>
-
-<!-- Panel de Control de Vista Mejorado -->
-<div id="viewControlPanel">
-    <div class="view-control-header">
-        <h3><i class="fas fa-th-large"></i> Control de Vista</h3>
-        <button class="close-panel-btn" id="closeViewControl" title="Cerrar">
-            <i class="fas fa-times"></i>
-        </button>
-    </div>
-    
-    <div class="view-control-content">
-        <div class="view-options">
-            <div class="view-option active" data-view="grid-auto">
-                <div class="view-option-preview">
-                    <div class="preview-grid grid-auto">
-                        <div class="preview-box"></div>
-                        <div class="preview-box"></div>
-                        <div class="preview-box"></div>
-                        <div class="preview-box"></div>
-                        <div class="preview-box"></div>
-                        <div class="preview-box"></div>
-                    </div>
-                </div>
-                <div class="view-option-info">
-                    <div class="view-option-icon"><i class="fas fa-th"></i></div>
-                    <div class="view-option-details">
-                        <div class="view-option-text">Cuadrícula Automática</div>
-                        <div class="view-option-desc">Se adapta al número de participantes</div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="view-option" data-view="grid-fixed-4">
-                <div class="view-option-preview">
-                    <div class="preview-grid grid-4">
-                        <div class="preview-box"></div>
-                        <div class="preview-box"></div>
-                        <div class="preview-box"></div>
-                        <div class="preview-box"></div>
-                    </div>
-                </div>
-                <div class="view-option-info">
-                    <div class="view-option-icon"><i class="fas fa-grip"></i></div>
-                    <div class="view-option-details">
-                        <div class="view-option-text">Cuadrícula 2x2</div>
-                        <div class="view-option-desc">Máximo 4 participantes</div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="view-option" data-view="grid-fixed-9">
-                <div class="view-option-preview">
-                    <div class="preview-grid grid-9">
-                        <div class="preview-box"></div>
-                        <div class="preview-box"></div>
-                        <div class="preview-box"></div>
-                        <div class="preview-box"></div>
-                        <div class="preview-box"></div>
-                        <div class="preview-box"></div>
-                        <div class="preview-box"></div>
-                        <div class="preview-box"></div>
-                        <div class="preview-box"></div>
-                    </div>
-                </div>
-                <div class="view-option-info">
-                    <div class="view-option-icon"><i class="fas fa-th-large"></i></div>
-                    <div class="view-option-details">
-                        <div class="view-option-text">Cuadrícula 3x3</div>
-                        <div class="view-option-desc">Máximo 9 participantes</div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="view-option" data-view="grid-many">
-                <div class="view-option-preview">
-                    <div class="preview-grid grid-many">
-                        <div class="preview-box"></div>
-                        <div class="preview-box"></div>
-                        <div class="preview-box"></div>
-                        <div class="preview-box"></div>
-                        <div class="preview-box"></div>
-                        <div class="preview-box"></div>
-                        <div class="preview-box"></div>
-                        <div class="preview-box"></div>
-                        <div class="preview-box"></div>
-                        <div class="preview-box"></div>
-                        <div class="preview-box"></div>
-                        <div class="preview-box"></div>
-                        <div class="preview-box"></div>
-                        <div class="preview-box"></div>
-                        <div class="preview-box"></div>
-                    </div>
-                </div>
-                <div class="view-option-info">
-                    <div class="view-option-icon"><i class="fas fa-border-all"></i></div>
-                    <div class="view-option-details">
-                        <div class="view-option-text">Vista Compacta</div>
-                        <div class="view-option-desc">Muchos participantes pequeños</div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="view-option" data-view="spotlight">
-                <div class="view-option-preview">
-                    <div class="preview-grid spotlight">
-                        <div class="preview-box"></div>
-                        <div class="preview-box"></div>
-                        <div class="preview-box"></div>
-                        <div class="preview-box"></div>
-                    </div>
-                </div>
-                <div class="view-option-info">
-                    <div class="view-option-icon"><i class="fas fa-user-circle"></i></div>
-                    <div class="view-option-details">
-                        <div class="view-option-text">Enfoque Principal</div>
-                        <div class="view-option-desc">Uno grande, otros pequeños</div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="view-option" data-view="sidebar">
-                <div class="view-option-preview">
-                    <div class="preview-grid sidebar">
-                        <div class="preview-box"></div>
-                        <div class="preview-box"></div>
-                        <div class="preview-box"></div>
-                        <div class="preview-box"></div>
-                        <div class="preview-box"></div>
-                    </div>
-                </div>
-                <div class="view-option-info">
-                    <div class="view-option-icon"><i class="fas fa-columns"></i></div>
-                    <div class="view-option-details">
-                        <div class="view-option-text">Vista Lateral</div>
-                        <div class="view-option-desc">Principal + barra lateral</div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="view-option" data-view="active-speaker">
-                <div class="view-option-preview">
-                    <div class="preview-grid active-speaker">
-                        <div class="preview-box"></div>
-                    </div>
-                </div>
-                <div class="view-option-info">
-                    <div class="view-option-icon"><i class="fas fa-volume-up"></i></div>
-                    <div class="view-option-details">
-                        <div class="view-option-text">Solo Hablante Activo</div>
-                        <div class="view-option-desc">Muestra solo quien habla</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="participants-per-page">
-            <label for="participantsPerPageSelect">
-                <i class="fas fa-users"></i> Participantes por página
-            </label>
-            <select id="participantsPerPageSelect">
-                <option value="4">4 participantes</option>
-                <option value="6">6 participantes</option>
-                <option value="9" selected>9 participantes</option>
-                <option value="12">12 participantes</option>
-                <option value="16">16 participantes</option>
-                <option value="25">25 participantes</option>
-                <option value="all">Todos</option>
-            </select>
-            
-            <div class="pagination-controls" id="paginationControls" style="display: none;">
-                <div class="pagination-info">
-                    Página <span id="currentPage">1</span> de <span id="totalPages">1</span>
-                </div>
-                <div class="pagination-buttons">
-                    <button class="page-btn" id="prevPageBtn" disabled>
-                        <i class="fas fa-chevron-left"></i>
-                    </button>
-                    <button class="page-btn" id="nextPageBtn">
-                        <i class="fas fa-chevron-right"></i>
+                <div class="more-menu-content">
+                    <button class="control-btn" id="mobileCreatePollBtn" title="Crear Encuesta"
+                        aria-label="Crear encuesta">
+                        <i class="fas fa-poll"></i>
                     </button>
                 </div>
             </div>
         </div>
     </div>
-</div>
 
-<div id="main">
-    <div id="videos">
-        <div id="screenShareContainer"></div>
-        <div id="videoGrid">
-            <div class="video-container local">
-                <video id="localVideo" autoplay playsinline muted></video>
-                <div class="video-info">
-                    <span class="user-name" id="localUserName">Tú</span>
-                </div>
-                <div class="pin-indicator">📌 Fijado</div>
-                <button class="pin-btn" data-peer="local">
-                    <i class="fas fa-thumbtack"></i> Fijar
-                </button>
-            </div>
-        </div>
-    </div>
+    <!-- Overlay del panel de control -->
+    <div id="viewControlOverlay"></div>
 
-    <div id="participants">
-        <h3>Participantes</h3>
-        <ul id="participantList"></ul>
-    </div>
-
-    <div id="chatPanel">
-        <div id="chatPanel-header">
-            <h4><i class="fas fa-comments"></i> Chat</h4>
-            <button id="closeChatPanel" title="Cerrar Chat" aria-label="Cerrar panel de chat">×</button>
-        </div>
-        <div id="chatMessages"></div>
-        <div id="chatInputContainer">
-            <textarea id="chatInput" placeholder="Escribe un mensaje..." rows="1"></textarea>
-            <button id="sendChatBtn" title="Enviar Mensaje" aria-label="Enviar mensaje">
-                <i class="fas fa-paper-plane"></i>
-            </button>
-        </div>
-    </div>
-</div>
-
-<div id="handPanel">
-    <div id="handPanel-header">
-        <h4>Manos Levantadas <span id="handCount">0</span></h4>
-        <div>
-            <button id="lowerAllBtn" title="Bajar Todas las Manos" aria-label="Bajar todas las manos">Bajar Todas</button>
-            <button id="closeHandPanel" title="Cerrar Panel" aria-label="Cerrar panel de manos">×</button>
-        </div>
-    </div>
-    <ul id="handList">
-        <li style="color: var(--text-tertiary); font-style: italic; text-align: center; padding: 20px;">Nadie ha levantado la mano.</li>
-    </ul>
-</div>
-
-<div id="notificationsContainer">
-    <div id="notificationsMiniModal" class="mini-modal" style="display: none;">
-        <div class="mini-modal-content">
-            <span class="mini-modal-title">Solicitudes de Unión</span>
-            <span class="request-count" id="joinRequestCount">0</span>
-            <div class="modal-actions">
-                <button class="minimize-btn" title="Minimizar notificaciones" onclick="toggleNotificationsModal()">
-                    <svg class="minimize-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="4" y1="12" x2="20" y2="12" />
-                    </svg>
-                </button>
-                <button class="close-btn" title="Cerrar notificaciones" onclick="closeNotificationsModal()">
-                    <svg class="close-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="18" y1="6" x2="6" y2="18" />
-                        <line x1="6" y1="6" x2="18" y2="18" />
-                    </svg>
-                </button>
-            </div>
-        </div>
-        <div id="notificationsList" class="notifications-list" style="display: none;"></div>
-    </div>
-</div>
-
-<div id="errorPanel"></div>
-
-<div id="pollCreationModal" class="modal">
-    <div class="modal-content" draggable="true">
-        <div class="modal-header">
-            <h3>Crear Nueva Votación</h3>
-            <div>
-                <button class="minimize-modal" title="Minimizar" aria-label="Minimizar modal de creación de votación">
-                    <i class="fas fa-minus"></i>
-                </button>
-                <button class="close-modal" id="closePollCreationModal" aria-label="Cerrar modal de creación de votación">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-        </div>
-        <div class="form-group">
-            <label for="pollQuestionInput">Pregunta de la Votación:</label>
-            <input type="text" id="pollQuestionInput" placeholder="Ej. ¿Cuál es su color favorito?" required aria-required="true">
-        </div>
-        <div class="form-group">
-            <label>Opciones:</label>
-            <div id="pollOptionsContainer" class="poll-options-container">
-                <div class="option-input">
-                    <input type="text" class="poll-option-input" placeholder="Opción 1" required aria-required="true">
-                    <button class="remove-option-btn" aria-label="Eliminar opción">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div class="option-input">
-                    <input type="text" class="poll-option-input" placeholder="Opción 2" required aria-required="true">
-                    <button class="remove-option-btn" aria-label="Eliminar opción">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-            </div>
-            <button id="addOptionBtn" aria-label="Añadir nueva opción">
-                <i class="fas fa-plus"></i> Añadir Opción
-            </button>
-        </div>
-        <div class="form-group">
-            <label for="pollDurationInput">Duración de la Votación (segundos):</label>
-            <input type="number" id="pollDurationInput" value="60" min="10" max="600" required aria-required="true">
-        </div>
-        <button id="startPollBtn" aria-label="Iniciar votación">
-            <i class="fas fa-play"></i> Iniciar Votación
-        </button>
-        <div class="minimized-view">
-            <span>Creando encuesta...</span>
-            <button class="restore-modal" title="Restaurar" aria-label="Restaurar modal de creación de votación">
-                <i class="fas fa-expand"></i>
-            </button>
-        </div>
-    </div>
-</div>
-
-<div id="pollPanel">
-    <div class="poll-header">
-        <h4 id="currentPollTitle">Votación Activa</h4>
-        <span id="pollTimerDisplay" class="poll-timer"></span>
-        <div>
-            <button class="minimize-btn" title="Minimizar" aria-label="Minimizar panel de votación">
-                <i class="fas fa-minus"></i>
-            </button>
-            <button class="close-poll-btn" title="Cerrar" aria-label="Cerrar panel de votación">
+    <!-- Panel de Control de Vista Mejorado -->
+    <div id="viewControlPanel">
+        <div class="view-control-header">
+            <h3><i class="fas fa-th-large"></i> Control de Vista</h3>
+            <button class="close-panel-btn" id="closeViewControl" title="Cerrar">
                 <i class="fas fa-times"></i>
             </button>
         </div>
+
+        <div class="view-control-content">
+            <div class="view-options">
+                <div class="view-option active" data-view="grid-auto">
+                    <div class="view-option-preview">
+                        <div class="preview-grid grid-auto">
+                            <div class="preview-box"></div>
+                            <div class="preview-box"></div>
+                            <div class="preview-box"></div>
+                            <div class="preview-box"></div>
+                            <div class="preview-box"></div>
+                            <div class="preview-box"></div>
+                        </div>
+                    </div>
+                    <div class="view-option-info">
+                        <div class="view-option-icon"><i class="fas fa-th"></i></div>
+                        <div class="view-option-details">
+                            <div class="view-option-text">Cuadrícula Automática</div>
+                            <div class="view-option-desc">Se adapta al número de participantes</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="view-option" data-view="grid-fixed-4">
+                    <div class="view-option-preview">
+                        <div class="preview-grid grid-4">
+                            <div class="preview-box"></div>
+                            <div class="preview-box"></div>
+                            <div class="preview-box"></div>
+                            <div class="preview-box"></div>
+                        </div>
+                    </div>
+                    <div class="view-option-info">
+                        <div class="view-option-icon"><i class="fas fa-grip"></i></div>
+                        <div class="view-option-details">
+                            <div class="view-option-text">Cuadrícula 2x2</div>
+                            <div class="view-option-desc">Máximo 4 participantes</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="view-option" data-view="grid-fixed-9">
+                    <div class="view-option-preview">
+                        <div class="preview-grid grid-9">
+                            <div class="preview-box"></div>
+                            <div class="preview-box"></div>
+                            <div class="preview-box"></div>
+                            <div class="preview-box"></div>
+                            <div class="preview-box"></div>
+                            <div class="preview-box"></div>
+                            <div class="preview-box"></div>
+                            <div class="preview-box"></div>
+                            <div class="preview-box"></div>
+                        </div>
+                    </div>
+                    <div class="view-option-info">
+                        <div class="view-option-icon"><i class="fas fa-th-large"></i></div>
+                        <div class="view-option-details">
+                            <div class="view-option-text">Cuadrícula 3x3</div>
+                            <div class="view-option-desc">Máximo 9 participantes</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="view-option" data-view="grid-many">
+                    <div class="view-option-preview">
+                        <div class="preview-grid grid-many">
+                            <div class="preview-box"></div>
+                            <div class="preview-box"></div>
+                            <div class="preview-box"></div>
+                            <div class="preview-box"></div>
+                            <div class="preview-box"></div>
+                            <div class="preview-box"></div>
+                            <div class="preview-box"></div>
+                            <div class="preview-box"></div>
+                            <div class="preview-box"></div>
+                            <div class="preview-box"></div>
+                            <div class="preview-box"></div>
+                            <div class="preview-box"></div>
+                            <div class="preview-box"></div>
+                            <div class="preview-box"></div>
+                            <div class="preview-box"></div>
+                        </div>
+                    </div>
+                    <div class="view-option-info">
+                        <div class="view-option-icon"><i class="fas fa-border-all"></i></div>
+                        <div class="view-option-details">
+                            <div class="view-option-text">Vista Compacta</div>
+                            <div class="view-option-desc">Muchos participantes pequeños</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="view-option" data-view="spotlight">
+                    <div class="view-option-preview">
+                        <div class="preview-grid spotlight">
+                            <div class="preview-box"></div>
+                            <div class="preview-box"></div>
+                            <div class="preview-box"></div>
+                            <div class="preview-box"></div>
+                        </div>
+                    </div>
+                    <div class="view-option-info">
+                        <div class="view-option-icon"><i class="fas fa-user-circle"></i></div>
+                        <div class="view-option-details">
+                            <div class="view-option-text">Enfoque Principal</div>
+                            <div class="view-option-desc">Uno grande, otros pequeños</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="view-option" data-view="sidebar">
+                    <div class="view-option-preview">
+                        <div class="preview-grid sidebar">
+                            <div class="preview-box"></div>
+                            <div class="preview-box"></div>
+                            <div class="preview-box"></div>
+                            <div class="preview-box"></div>
+                            <div class="preview-box"></div>
+                        </div>
+                    </div>
+                    <div class="view-option-info">
+                        <div class="view-option-icon"><i class="fas fa-columns"></i></div>
+                        <div class="view-option-details">
+                            <div class="view-option-text">Vista Lateral</div>
+                            <div class="view-option-desc">Principal + barra lateral</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="view-option" data-view="active-speaker">
+                    <div class="view-option-preview">
+                        <div class="preview-grid active-speaker">
+                            <div class="preview-box"></div>
+                        </div>
+                    </div>
+                    <div class="view-option-info">
+                        <div class="view-option-icon"><i class="fas fa-volume-up"></i></div>
+                        <div class="view-option-details">
+                            <div class="view-option-text">Solo Hablante Activo</div>
+                            <div class="view-option-desc">Muestra solo quien habla</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="participants-per-page">
+                <label for="participantsPerPageSelect">
+                    <i class="fas fa-users"></i> Participantes por página
+                </label>
+                <select id="participantsPerPageSelect">
+                    <option value="4">4 participantes</option>
+                    <option value="6">6 participantes</option>
+                    <option value="9" selected>9 participantes</option>
+                    <option value="12">12 participantes</option>
+                    <option value="16">16 participantes</option>
+                    <option value="25">25 participantes</option>
+                    <option value="all">Todos</option>
+                </select>
+
+                <div class="pagination-controls" id="paginationControls" style="display: none;">
+                    <div class="pagination-info">
+                        Página <span id="currentPage">1</span> de <span id="totalPages">1</span>
+                    </div>
+                    <div class="pagination-buttons">
+                        <button class="page-btn" id="prevPageBtn" disabled>
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                        <button class="page-btn" id="nextPageBtn">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-    <div class="poll-content">
-        <p class="poll-question" id="pollQuestionDisplay"></p>
-        <div class="poll-options" id="pollOptionsDisplay"></div>
-        <div class="poll-actions">
-            <button id="submitVoteBtn" aria-label="Enviar voto">
-                <i class="fas fa-check"></i> Votar
-            </button>
-            <button id="skipVoteBtn" aria-label="Saltar votación">
-                <i class="fas fa-forward"></i> Saltar
+
+    <!-- ==================== SECCIÓN PRINCIPAL - SISTEMA DE VIDEO ESTILO GOOGLE MEET ==================== -->
+    <div id="main">
+        <!-- Contenedor principal de videos -->
+        <div id="videoSection">
+            <!-- Contenedor para compartir pantalla (se muestra solo cuando hay screen share) -->
+            <div id="screenShareContainer" style="display: none;">
+                <div class="screen-share-wrapper">
+                    <video id="screenShareVideo" autoplay playsinline></video>
+                    <div class="screen-share-info">
+                        <i class="fas fa-desktop"></i>
+                        <span id="screenShareUsername">Compartiendo pantalla</span>
+                    </div>
+                    <button id="stopScreenShareBtn" class="stop-screen-share-btn" style="display: none;">
+                        <i class="fas fa-times"></i> Dejar de compartir
+                    </button>
+                </div>
+            </div>
+
+            <!-- Grid de videos principal -->
+            <div id="videoGrid">
+                <!-- Video local (cámara propia) -->
+                <div class="video-container local" id="localVideoContainer">
+                    <video id="localVideo" autoplay muted playsinline></video>
+                    <div class="video-info">
+                        <div class="user-name">
+                            <i class="fas fa-user"></i>
+                            <span id="localUserName">Tú</span>
+                        </div>
+                        <div class="video-status">
+                            <span class="mic-status" id="localMicStatus">
+                                <i class="fas fa-microphone"></i>
+                            </span>
+                            <span class="cam-status" id="localCamStatus">
+                                <i class="fas fa-video"></i>
+                            </span>
+                        </div>
+                    </div>
+                    <button class="pin-video-btn" data-peer-id="local" title="Fijar video">
+                        <i class="fas fa-thumbtack"></i>
+                    </button>
+                </div>
+                <!-- Los videos remotos se añadirán dinámicamente aquí -->
+            </div>
+        </div>
+
+        <!-- Panel lateral - Participantes y Chat -->
+        <aside id="sidebar" class="sidebar-collapsed">
+            <!-- Tabs para cambiar entre participantes y chat -->
+            <div class="sidebar-tabs">
+                <button class="sidebar-tab active" data-tab="participants">
+                    <i class="fas fa-users"></i>
+                    <span>Participantes</span>
+                    <span class="badge" id="sidebarParticipantCount">0</span>
+                </button>
+                <button class="sidebar-tab" data-tab="chat">
+                    <i class="fas fa-comments"></i>
+                    <span>Chat</span>
+                    <span class="badge chat-badge" id="sidebarChatBadge" style="display: none;">0</span>
+                </button>
+            </div>
+
+            <!-- Contenido: Participantes -->
+            <div class="sidebar-content active" id="participantsContent">
+                <div class="participants-header">
+                    <h3>Participantes (<span id="sidebarParticipantCountText">0</span>)</h3>
+                    <button id="muteAllBtn" class="mute-all-btn" style="display: none;" title="Silenciar a todos">
+                        <i class="fas fa-microphone-slash"></i>
+                    </button>
+                </div>
+                <div class="participants-list" id="participantsList">
+                    <!-- Los participantes se añaden dinámicamente -->
+                </div>
+            </div>
+
+            <!-- Contenido: Chat -->
+            <div class="sidebar-content" id="chatContent">
+                <div class="chat-header">
+                    <h3>Chat de la sala</h3>
+                </div>
+                <div class="chat-messages" id="chatMessages">
+                    <!-- Los mensajes se añaden dinámicamente -->
+                </div>
+                <div class="chat-input-container">
+                    <input type="text" id="chatInput" placeholder="Escribe un mensaje..." />
+                    <button id="sendChatBtn">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+        </aside>
+    </div>
+    
+
+    <!-- Panel de "Tiene la palabra" -->
+    <div id="speakingPanel">
+        <div class="speaking-header">
+            <div class="speaking-icon">🎤</div>
+            <div class="speaking-info">
+                <h3>Tiene la palabra</h3>
+                <p id="speakingPersonName">Usuario</p>
+            </div>
+            <div style="margin-left: auto; opacity: 0.6; font-size: 20px;">⋮⋮</div>
+        </div>
+        <div class="speaking-timer">
+            <div class="timer-display" id="timerDisplay">1:00</div>
+            <div class="timer-label">Tiempo restante</div>
+            <div class="timer-progress">
+                <div class="timer-progress-bar" id="timerProgressBar" style="width: 100%;"></div>
+            </div>
+        </div>
+        <div class="speaking-actions" id="speakingActions">
+            <button class="speaking-btn end-word-btn" id="endWordBtn">
+                <i class="fas fa-times"></i> Quitar la palabra
             </button>
         </div>
     </div>
-    <div class="minimized-text">Votación Activa 📊</div>
-</div>
 
-<div id="pollResultsPanel" class="modal">
-    <div class="modal-content" draggable="true">
-        <div class="poll-results-header">
-            <h3 id="resultsPanelTitle">Resultados de Votación</h3>
-            <span id="pollResultsTimer" class="poll-timer" style="display: none;"></span>
+    <div id="handPanel">
+        <div id="handPanel-header">
+            <h4>Manos Levantadas <span id="handCount">0</span></h4>
             <div>
-                <button class="minimize-btn" id="minimizePollResultsBtn" title="Minimizar" aria-label="Minimizar panel de resultados">
+                <button id="lowerAllBtn" title="Bajar Todas las Manos" aria-label="Bajar todas las manos">Bajar
+                    Todas</button>
+                <button id="closeHandPanel" title="Cerrar Panel" aria-label="Cerrar panel de manos">×</button>
+            </div>
+        </div>
+        <ul id="handList">
+            <li style="color: var(--text-tertiary); font-style: italic; text-align: center; padding: 20px;">Nadie ha
+                levantado la mano.</li>
+        </ul>
+    </div>
+
+    <div id="notificationsContainer">
+        <div id="notificationsMiniModal" class="mini-modal" style="display: none;">
+            <div class="mini-modal-content">
+                <span class="mini-modal-title">Solicitudes de Unión</span>
+                <span class="request-count" id="joinRequestCount">0</span>
+                <div class="modal-actions">
+                    <button class="minimize-btn" title="Minimizar notificaciones" onclick="toggleNotificationsModal()">
+                        <svg class="minimize-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <line x1="4" y1="12" x2="20" y2="12" />
+                        </svg>
+                    </button>
+                    <button class="close-btn" title="Cerrar notificaciones" onclick="closeNotificationsModal()">
+                        <svg class="close-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18" />
+                            <line x1="6" y1="6" x2="18" y2="18" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <div id="notificationsList" class="notifications-list" style="display: none;"></div>
+        </div>
+    </div>
+
+    <div id="errorPanel"></div>
+
+    <div id="pollCreationModal" class="modal">
+        <div class="modal-content" draggable="true">
+            <div class="modal-header">
+                <h3>Crear Nueva Votación</h3>
+                <div>
+                    <button class="minimize-modal" title="Minimizar"
+                        aria-label="Minimizar modal de creación de votación">
+                        <i class="fas fa-minus"></i>
+                    </button>
+                    <button class="close-modal" id="closePollCreationModal"
+                        aria-label="Cerrar modal de creación de votación">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="pollQuestionInput">Pregunta de la Votación:</label>
+                <input type="text" id="pollQuestionInput" placeholder="Ej. ¿Cuál es su color favorito?" required
+                    aria-required="true">
+            </div>
+            <div class="form-group">
+                <label>Opciones:</label>
+                <div id="pollOptionsContainer" class="poll-options-container">
+                    <div class="option-input">
+                        <input type="text" class="poll-option-input" placeholder="Opción 1" required
+                            aria-required="true">
+                        <button class="remove-option-btn" aria-label="Eliminar opción">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="option-input">
+                        <input type="text" class="poll-option-input" placeholder="Opción 2" required
+                            aria-required="true">
+                        <button class="remove-option-btn" aria-label="Eliminar opción">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+                <button id="addOptionBtn" aria-label="Añadir nueva opción">
+                    <i class="fas fa-plus"></i> Añadir Opción
+                </button>
+            </div>
+            <div class="form-group">
+                <label for="pollDurationInput">Duración de la Votación (segundos):</label>
+                <input type="number" id="pollDurationInput" value="60" min="10" max="600" required aria-required="true">
+            </div>
+            <button id="startPollBtn" aria-label="Iniciar votación">
+                <i class="fas fa-play"></i> Iniciar Votación
+            </button>
+            <div class="minimized-view">
+                <span>Creando encuesta...</span>
+                <button class="restore-modal" title="Restaurar" aria-label="Restaurar modal de creación de votación">
+                    <i class="fas fa-expand"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="pollPanel">
+        <div class="poll-header">
+            <h4 id="currentPollTitle">Votación Activa</h4>
+            <span id="pollTimerDisplay" class="poll-timer"></span>
+            <div>
+                <button class="minimize-btn" title="Minimizar" aria-label="Minimizar panel de votación">
                     <i class="fas fa-minus"></i>
                 </button>
-                <button class="close-modal" id="closePollResultsPanel" aria-label="Cerrar panel de resultados">
+                <button class="close-poll-btn" title="Cerrar" aria-label="Cerrar panel de votación">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
         </div>
-        <p id="resultsPollQuestion" style="font-weight: 600; margin-bottom: 1rem;"></p>
-        <canvas id="pollResultsChart" width="400" height="350"></canvas>
-        <ul id="votesList"></ul>
-        <button id="endPollBtn" style="display: none;" aria-label="Finalizar votación">
-            <i class="fas fa-stop"></i> Finalizar Votación
-        </button>
-        <button id="closeResultsBtn" aria-label="Cerrar resultados">
-            <i class="fas fa-times"></i> Cerrar Resultados
-        </button>
-        <div class="minimized-results-text">Resultados de Votación 📊</div>
+        <div class="poll-content">
+            <p class="poll-question" id="pollQuestionDisplay"></p>
+            <div class="poll-options" id="pollOptionsDisplay"></div>
+            <div class="poll-actions">
+                <button id="submitVoteBtn" aria-label="Enviar voto">
+                    <i class="fas fa-check"></i> Votar
+                </button>
+                <button id="skipVoteBtn" aria-label="Saltar votación">
+                    <i class="fas fa-forward"></i> Saltar
+                </button>
+            </div>
+        </div>
+        <div class="minimized-text">Votación Activa 📊</div>
     </div>
-</div>
 
-<script>
-let isNotificationsModalMinimized = false;
+    <div id="pollResultsPanel" class="modal">
+        <div class="modal-content" draggable="true">
+            <div class="poll-results-header">
+                <h3 id="resultsPanelTitle">Resultados de Votación</h3>
+                <span id="pollResultsTimer" class="poll-timer" style="display: none;"></span>
+                <div>
+                    <button class="minimize-btn" id="minimizePollResultsBtn" title="Minimizar"
+                        aria-label="Minimizar panel de resultados">
+                        <i class="fas fa-minus"></i>
+                    </button>
+                    <button class="close-modal" id="closePollResultsPanel" aria-label="Cerrar panel de resultados">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+            <p id="resultsPollQuestion" style="font-weight: 600; margin-bottom: 1rem;"></p>
+            <canvas id="pollResultsChart" width="400" height="350"></canvas>
+            <ul id="votesList"></ul>
+            <button id="endPollBtn" style="display: none;" aria-label="Finalizar votación">
+                <i class="fas fa-stop"></i> Finalizar Votación
+            </button>
+            <button id="closeResultsBtn" aria-label="Cerrar resultados">
+                <i class="fas fa-times"></i> Cerrar Resultados
+            </button>
+            <div class="minimized-results-text">Resultados de Votación 📊</div>
+        </div>
+    </div>
 
-function showNotificationsModal(count) {
-    const miniModal = document.getElementById('notificationsMiniModal');
-    const countSpan = document.getElementById('joinRequestCount');
-    const notificationsList = document.getElementById('notificationsList');
-    if (miniModal && countSpan && notificationsList) {
-        countSpan.textContent = count || 0;
-        miniModal.style.display = 'flex';
-        notificationsList.style.display = isNotificationsModalMinimized ? 'none' : 'block';
-        debugLog(`Mini modal mostrado con ${count} solicitudes, minimizado: ${isNotificationsModalMinimized}`);
-    } else {
-        console.error('Error: #notificationsMiniModal, #joinRequestCount o #notificationsList no encontrado.');
-        showError('Error al mostrar notificaciones.', 3000);
-    }
-}
+    <script>
+        let isNotificationsModalMinimized = false;
 
-function hideNotificationsModal() {
-    const miniModal = document.getElementById('notificationsMiniModal');
-    if (miniModal) {
-        miniModal.style.display = 'none';
-        isNotificationsModalMinimized = false;
-        debugLog('Mini modal oculto.');
-    } else {
-        console.error('Error: #notificationsMiniModal no encontrado.');
-    }
-}
+        function showNotificationsModal(count) {
+            const miniModal = document.getElementById('notificationsMiniModal');
+            const countSpan = document.getElementById('joinRequestCount');
+            const notificationsList = document.getElementById('notificationsList');
+            if (miniModal && countSpan && notificationsList) {
+                countSpan.textContent = count || 0;
+                miniModal.style.display = 'flex';
+                notificationsList.style.display = isNotificationsModalMinimized ? 'none' : 'block';
+                debugLog(`Mini modal mostrado con ${count} solicitudes, minimizado: ${isNotificationsModalMinimized}`);
+            } else {
+                console.error('Error: #notificationsMiniModal, #joinRequestCount o #notificationsList no encontrado.');
+                showError('Error al mostrar notificaciones.', 3000);
+            }
+        }
 
-function minimizeNotificationsModal() {
-    const notificationsList = document.getElementById('notificationsList');
-    if (notificationsList) {
-        isNotificationsModalMinimized = true;
-        notificationsList.style.display = 'none';
-        debugLog('Mini modal minimizado.');
-    } else {
-        console.error('Error: #notificationsList no encontrado.');
-        showError('No se pudo minimizar notificaciones.', 3000);
-    }
-}
+        function hideNotificationsModal() {
+            const miniModal = document.getElementById('notificationsMiniModal');
+            if (miniModal) {
+                miniModal.style.display = 'none';
+                isNotificationsModalMinimized = false;
+                debugLog('Mini modal oculto.');
+            } else {
+                console.error('Error: #notificationsMiniModal no encontrado.');
+            }
+        }
 
-function toggleNotificationsModal() {
-    const notificationsList = document.getElementById('notificationsList');
-    if (notificationsList) {
-        isNotificationsModalMinimized = !isNotificationsModalMinimized;
-        notificationsList.style.display = isNotificationsModalMinimized ? 'none' : 'block';
-        debugLog(`Mini modal toggled, minimizado: ${isNotificationsModalMinimized}`);
-    } else {
-        console.error('Error: #notificationsList no encontrado.');
-        showError('No se pudo expandir notificaciones.', 3000);
-    }
-}
+        function minimizeNotificationsModal() {
+            const notificationsList = document.getElementById('notificationsList');
+            if (notificationsList) {
+                isNotificationsModalMinimized = true;
+                notificationsList.style.display = 'none';
+                debugLog('Mini modal minimizado.');
+            } else {
+                console.error('Error: #notificationsList no encontrado.');
+                showError('No se pudo minimizar notificaciones.', 3000);
+            }
+        }
 
-function closeNotificationsModal() {
-    const notificationsList = document.getElementById('notificationsList');
-    const miniModal = document.getElementById('notificationsMiniModal');
-    if (notificationsList && miniModal) {
-        notificationsList.innerHTML = ''; // Limpiar solicitudes
-        miniModal.style.display = 'none';
-        isNotificationsModalMinimized = false;
-        debugLog('Mini modal cerrado.');
-    } else {
-        console.error('Error: #notificationsList o #notificationsMiniModal no encontrado.');
-        showError('No se pudo cerrar notificaciones.', 3000);
-    }
-}
+        function toggleNotificationsModal() {
+            const notificationsList = document.getElementById('notificationsList');
+            if (notificationsList) {
+                isNotificationsModalMinimized = !isNotificationsModalMinimized;
+                notificationsList.style.display = isNotificationsModalMinimized ? 'none' : 'block';
+                debugLog(`Mini modal toggled, minimizado: ${isNotificationsModalMinimized}`);
+            } else {
+                console.error('Error: #notificationsList no encontrado.');
+                showError('No se pudo expandir notificaciones.', 3000);
+            }
+        }
 
-
-
-
-
+        function closeNotificationsModal() {
+            const notificationsList = document.getElementById('notificationsList');
+            const miniModal = document.getElementById('notificationsMiniModal');
+            if (notificationsList && miniModal) {
+                notificationsList.innerHTML = ''; // Limpiar solicitudes
+                miniModal.style.display = 'none';
+                isNotificationsModalMinimized = false;
+                debugLog('Mini modal cerrado.');
+            } else {
+                console.error('Error: #notificationsList o #notificationsMiniModal no encontrado.');
+                showError('No se pudo cerrar notificaciones.', 3000);
+            }
+        }
 
 
 
@@ -4513,16 +5358,21 @@ function closeNotificationsModal() {
 
 
 
-    // Ripple effect for buttons
-    document.querySelectorAll('.control-btn').forEach(btn => {
-        btn.addEventListener('click', function (e) {
-            const ripple = document.createElement('div');
-            const rect = this.getBoundingClientRect();
-            const size = Math.max(rect.width, rect.height);
-            const x = e.clientX - rect.left - size / 2;
-            const y = e.clientY - rect.top - size / 2;
 
-            ripple.style.cssText = `
+
+
+
+
+        // Ripple effect for buttons
+        document.querySelectorAll('.control-btn').forEach(btn => {
+            btn.addEventListener('click', function (e) {
+                const ripple = document.createElement('div');
+                const rect = this.getBoundingClientRect();
+                const size = Math.max(rect.width, rect.height);
+                const x = e.clientX - rect.left - size / 2;
+                const y = e.clientY - rect.top - size / 2;
+
+                ripple.style.cssText = `
                 position: absolute;
                 border-radius: 50%;
                 background: rgba(255, 255, 255, 0.4);
@@ -4535,13 +5385,13 @@ function closeNotificationsModal() {
                 pointer-events: none;
             `;
 
-            this.appendChild(ripple);
-            setTimeout(() => ripple.remove(), 600);
+                this.appendChild(ripple);
+                setTimeout(() => ripple.remove(), 600);
+            });
         });
-    });
 
-    const style = document.createElement('style');
-    style.textContent = `
+        const style = document.createElement('style');
+        style.textContent = `
         @keyframes ripple {
             to {
                 transform: scale(2);
@@ -4549,466 +5399,564 @@ function closeNotificationsModal() {
             }
         }
     `;
-    document.head.appendChild(style);
+        document.head.appendChild(style);
 
-    // Theme toggle
-    document.getElementById('themeToggle').addEventListener('click', () => {
-        document.body.classList.toggle('light-theme');
-        const icon = document.getElementById('themeToggle').querySelector('i');
-        icon.classList.toggle('fa-moon');
-        icon.classList.toggle('fa-sun');
-    });
+        // Theme toggle
+        document.getElementById('themeToggle').addEventListener('click', () => {
+            document.body.classList.toggle('light-theme');
+            const icon = document.getElementById('themeToggle').querySelector('i');
+            icon.classList.toggle('fa-moon');
+            icon.classList.toggle('fa-sun');
+        });
 
-    // Mobile menu toggle
-    document.querySelector('.more-menu .control-btn').addEventListener('click', () => {
-        const menuContent = document.querySelector('.more-menu-content');
-        menuContent.classList.toggle('active');
-    });
+        // Mobile menu toggle
+        document.querySelector('.more-menu .control-btn').addEventListener('click', () => {
+            const menuContent = document.querySelector('.more-menu-content');
+            menuContent.classList.toggle('active');
+        });
 
-    // Modal drag functionality
-    function makeDraggable(element) {
-        let isDragging = false;
-        let currentX, currentY, initialX, initialY, xOffset = 0, yOffset = 0;
+        // Modal drag functionality
+        function makeDraggable(element) {
+            let isDragging = false;
+            let currentX, currentY, initialX, initialY, xOffset = 0, yOffset = 0;
 
-        element.addEventListener('mousedown', startDragging);
-        element.addEventListener('touchstart', startDragging, { passive: false });
+            element.addEventListener('mousedown', startDragging);
+            element.addEventListener('touchstart', startDragging, { passive: false });
 
-        function startDragging(e) {
-            if (e.target.closest('.modal-header') || e.target.closest('.poll-results-header')) {
-                initialX = e.clientX ? e.clientX - xOffset : e.touches[0].clientX - xOffset;
-                initialY = e.clientY ? e.clientY - yOffset : e.touches[0].clientY - yOffset;
-                isDragging = true;
+            function startDragging(e) {
+                if (e.target.closest('.modal-header') || e.target.closest('.poll-results-header')) {
+                    initialX = e.clientX ? e.clientX - xOffset : e.touches[0].clientX - xOffset;
+                    initialY = e.clientY ? e.clientY - yOffset : e.touches[0].clientY - yOffset;
+                    isDragging = true;
 
-                document.addEventListener('mousemove', drag);
-                document.addEventListener('mouseup', stopDragging);
-                document.addEventListener('touchmove', drag, { passive: false });
-                document.addEventListener('touchend', stopDragging);
+                    document.addEventListener('mousemove', drag);
+                    document.addEventListener('mouseup', stopDragging);
+                    document.addEventListener('touchmove', drag, { passive: false });
+                    document.addEventListener('touchend', stopDragging);
+                }
+            }
+
+            function drag(e) {
+                if (isDragging) {
+                    e.preventDefault();
+                    currentX = e.clientX ? e.clientX - initialX : e.touches[0].clientX - initialX;
+                    currentY = e.clientY ? e.clientY - initialY : e.touches[0].clientY - initialY;
+                    xOffset = currentX;
+                    yOffset = currentY;
+                    element.style.transform = `translate(${currentX}px, ${currentY}px)`;
+                }
+            }
+
+            function stopDragging() {
+                isDragging = false;
+                document.removeEventListener('mousemove', drag);
+                document.removeEventListener('mouseup', stopDragging);
+                document.removeEventListener('touchmove', drag);
+                document.removeEventListener('touchend', stopDragging);
             }
         }
 
-        function drag(e) {
-            if (isDragging) {
-                e.preventDefault();
-                currentX = e.clientX ? e.clientX - initialX : e.touches[0].clientX - initialX;
-                currentY = e.clientY ? e.clientY - initialY : e.touches[0].clientY - initialY;
-                xOffset = currentX;
-                yOffset = currentY;
-                element.style.transform = `translate(${currentX}px, ${currentY}px)`;
-            }
-        }
+        document.querySelectorAll('.modal-content').forEach(makeDraggable);
 
-        function stopDragging() {
-            isDragging = false;
-            document.removeEventListener('mousemove', drag);
-            document.removeEventListener('mouseup', stopDragging);
-            document.removeEventListener('touchmove', drag);
-            document.removeEventListener('touchend', stopDragging);
-        }
-    }
+        // ============================================
+        // PANEL TOGGLES - Participantes y Chat
+        // ============================================
 
-    document.querySelectorAll('.modal-content').forEach(makeDraggable);
-
-    // ============================================
-    // PANEL TOGGLES - Participantes y Chat
-    // ============================================
-    
-    // Participants panel toggle
-    document.getElementById('participantsToggle').addEventListener('click', () => {
-        const participants = document.getElementById('participants');
-        participants.classList.toggle('visible');
-        const toggleBtn = document.getElementById('participantsToggle');
-        toggleBtn.classList.toggle('active');
-    });
-
-    // ✅ Chat panel toggle
-    const chatToggleBtn = document.getElementById('chatToggle');
-    if (chatToggleBtn && !chatToggleBtn.hasAttribute('data-listener-attached')) {
-        chatToggleBtn.setAttribute('data-listener-attached', 'true');
-        chatToggleBtn.addEventListener('click', () => {
-            const chatPanel = document.getElementById('chatPanel');
-            if (chatPanel) {
-                chatPanel.classList.toggle('visible');
-                chatToggleBtn.classList.toggle('active');
+        // Sidebar toggle (nuevo sistema)
+        document.getElementById('participantsToggle').addEventListener('click', () => {
+            const sidebar = document.getElementById('sidebar');
+            const toggleBtn = document.getElementById('participantsToggle');
+            const chatToggleBtn = document.getElementById('chatToggle');
+            
+            if (sidebar) {
+                const isCollapsed = sidebar.classList.contains('sidebar-collapsed');
+                const participantsTab = document.querySelector('.sidebar-tab[data-tab="participants"]');
+                const isParticipantsActive = participantsTab && participantsTab.classList.contains('active');
                 
-                // Remover notificación al abrir el chat
-                if (chatPanel.classList.contains('visible')) {
-                    chatToggleBtn.classList.remove('has-notification');
+                // Si está colapsado O participantes no está activo, abrir y activar participantes
+                if (isCollapsed || !isParticipantsActive) {
+                    // Abrir sidebar
+                    sidebar.classList.remove('sidebar-collapsed');
+                    toggleBtn.classList.add('active');
+                    if (chatToggleBtn) chatToggleBtn.classList.remove('active');
+                    
+                    const participantsContent = document.getElementById('participantsContent');
+                    
+                    if (participantsTab && participantsContent) {
+                        // Activar tab de participantes
+                        document.querySelectorAll('.sidebar-tab').forEach(tab => tab.classList.remove('active'));
+                        document.querySelectorAll('.sidebar-content').forEach(content => content.classList.remove('active'));
+                        
+                        participantsTab.classList.add('active');
+                        participantsContent.classList.add('active');
+                    }
+                    
+                    console.log('[SIDEBAR] Abierto - Participantes activos');
+                } else {
+                    // Si ya está abierto con participantes activos, cerrar
+                    sidebar.classList.add('sidebar-collapsed');
+                    toggleBtn.classList.remove('active');
+                    console.log('[SIDEBAR] Cerrado');
+                }
+            }
+        });
+
+        // Tabs del sidebar (cambiar entre participantes y chat)
+        document.querySelectorAll('.sidebar-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                const targetTab = tab.getAttribute('data-tab');
+                const participantsToggleBtn = document.getElementById('participantsToggle');
+                const chatToggleBtn = document.getElementById('chatToggle');
+                
+                // Remover active de todos los tabs y contenidos
+                document.querySelectorAll('.sidebar-tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.sidebar-content').forEach(c => c.classList.remove('active'));
+                
+                // Activar tab y contenido correspondiente
+                tab.classList.add('active');
+                
+                if (targetTab === 'participants') {
+                    document.getElementById('participantsContent').classList.add('active');
+                    // Actualizar estados de botones
+                    if (participantsToggleBtn) participantsToggleBtn.classList.add('active');
+                    if (chatToggleBtn) chatToggleBtn.classList.remove('active');
+                } else if (targetTab === 'chat') {
+                    const chatContent = document.getElementById('chatContent');
+                    chatContent.classList.add('active');
+                    
+                    // Actualizar estados de botones
+                    if (chatToggleBtn) chatToggleBtn.classList.add('active');
+                    if (participantsToggleBtn) participantsToggleBtn.classList.remove('active');
+                    
+                    // Remover badge de notificaciones
+                    const chatBadge = document.getElementById('sidebarChatBadge');
+                    if (chatBadge) {
+                        chatBadge.style.display = 'none';
+                        chatBadge.textContent = '0';
+                    }
                 }
                 
-                console.log('[CHAT] Panel toggled:', chatPanel.classList.contains('visible') ? 'abierto' : 'cerrado');
-            }
+                console.log('[SIDEBAR] Tab cambiado a:', targetTab);
+            });
         });
-    }
 
-    // ✅ Botón de cerrar chat
-    const closeChatPanelBtn = document.getElementById('closeChatPanel');
-    if (closeChatPanelBtn && !closeChatPanelBtn.hasAttribute('data-listener-attached')) {
-        closeChatPanelBtn.setAttribute('data-listener-attached', 'true');
-        closeChatPanelBtn.addEventListener('click', () => {
-            const chatPanel = document.getElementById('chatPanel');
-            const chatToggle = document.getElementById('chatToggle');
-            if (chatPanel) {
-                chatPanel.classList.remove('visible');
-            }
-            if (chatToggle) {
-                chatToggle.classList.remove('active');
-            }
-            console.log('[CHAT] Panel cerrado');
-        });
-    }
+        // ✅ Chat panel toggle (mantener compatibilidad con chatToggle si existe)
+        const chatToggleBtn = document.getElementById('chatToggle');
+        if (chatToggleBtn && !chatToggleBtn.hasAttribute('data-listener-attached')) {
+            chatToggleBtn.setAttribute('data-listener-attached', 'true');
+            chatToggleBtn.addEventListener('click', () => {
+                const sidebar = document.getElementById('sidebar');
+                const chatTab = document.querySelector('.sidebar-tab[data-tab="chat"]');
+                const participantsToggleBtn = document.getElementById('participantsToggle');
+                
+                if (sidebar && chatTab) {
+                    const isCollapsed = sidebar.classList.contains('sidebar-collapsed');
+                    const isChatActive = chatTab.classList.contains('active');
+                    
+                    // Si está colapsado O chat no está activo, abrir y activar chat
+                    if (isCollapsed || !isChatActive) {
+                        // Abrir sidebar
+                        sidebar.classList.remove('sidebar-collapsed');
+                        
+                        // Activar tab de chat
+                        document.querySelectorAll('.sidebar-tab').forEach(t => t.classList.remove('active'));
+                        document.querySelectorAll('.sidebar-content').forEach(c => c.classList.remove('active'));
+                        
+                        chatTab.classList.add('active');
+                        document.getElementById('chatContent').classList.add('active');
+                        
+                        chatToggleBtn.classList.add('active');
+                        if (participantsToggleBtn) participantsToggleBtn.classList.remove('active');
+                        chatToggleBtn.classList.remove('has-notification');
+                        
+                        // Remover badge
+                        const chatBadge = document.getElementById('sidebarChatBadge');
+                        if (chatBadge) {
+                            chatBadge.style.display = 'none';
+                            chatBadge.textContent = '0';
+                        }
+                        
+                        console.log('[CHAT] Panel abierto desde toggle');
+                    } else {
+                        // Si ya está abierto con chat activo, cerrar
+                        sidebar.classList.add('sidebar-collapsed');
+                        chatToggleBtn.classList.remove('active');
+                        if (participantsToggleBtn) participantsToggleBtn.classList.remove('active');
+                        console.log('[CHAT] Panel cerrado desde toggle');
+                    }
+                }
+            });
+        }
 
-    // ============================================
-    // CHAT - Event Listeners para mensajes
-    // ============================================
-    
-    // ✅ Botón de enviar mensaje
-    const sendChatBtn = document.getElementById('sendChatBtn');
-    if (sendChatBtn && !sendChatBtn.hasAttribute('data-listener-attached')) {
-        sendChatBtn.setAttribute('data-listener-attached', 'true');
-        sendChatBtn.addEventListener('click', () => {
-            if (typeof sendChatMessage === 'function') {
-                sendChatMessage();
-                console.log('[CHAT] Mensaje enviado desde botón');
-            } else {
-                console.error('[CHAT] ❌ Función sendChatMessage no encontrada');
-            }
-        });
-    }
+        // ✅ Botón de cerrar chat
+        const closeChatPanelBtn = document.getElementById('closeChatPanel');
+        if (closeChatPanelBtn && !closeChatPanelBtn.hasAttribute('data-listener-attached')) {
+            closeChatPanelBtn.setAttribute('data-listener-attached', 'true');
+            closeChatPanelBtn.addEventListener('click', () => {
+                const chatPanel = document.getElementById('chatPanel');
+                const chatToggle = document.getElementById('chatToggle');
+                if (chatPanel) {
+                    chatPanel.classList.remove('visible');
+                }
+                if (chatToggle) {
+                    chatToggle.classList.remove('active');
+                }
+                console.log('[CHAT] Panel cerrado');
+            });
+        }
 
-    // ✅ Enviar mensaje con Enter
-    const chatInput = document.getElementById('chatInput');
-    if (chatInput && !chatInput.hasAttribute('data-listener-attached')) {
-        chatInput.setAttribute('data-listener-attached', 'true');
-        chatInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
+        // ============================================
+        // CHAT - Event Listeners para mensajes
+        // ============================================
+
+        // ✅ Botón de enviar mensaje
+        const sendChatBtn = document.getElementById('sendChatBtn');
+        if (sendChatBtn && !sendChatBtn.hasAttribute('data-listener-attached')) {
+            sendChatBtn.setAttribute('data-listener-attached', 'true');
+            sendChatBtn.addEventListener('click', () => {
                 if (typeof sendChatMessage === 'function') {
                     sendChatMessage();
-                    console.log('[CHAT] Mensaje enviado con Enter');
+                    console.log('[CHAT] Mensaje enviado desde botón');
                 } else {
                     console.error('[CHAT] ❌ Función sendChatMessage no encontrada');
                 }
-            }
-        });
-        
-        // Auto-resize del textarea
-        chatInput.addEventListener('input', function() {
-            this.style.height = 'auto';
-            this.style.height = Math.min(this.scrollHeight, 120) + 'px';
-        });
-    }
-
-    // ============================================
-    // POLL CREATION MODAL - Event Listeners Únicos
-    // ============================================
-    
-    // ✅ Función para abrir modal de creación de encuesta
-    function openPollCreationModalUI() {
-        const modal = document.getElementById('pollCreationModal');
-        if (modal) {
-            modal.style.display = 'flex';
-            modal.classList.remove('minimized');
-            const modalContent = modal.querySelector('.modal-content');
-            if (modalContent) {
-                modalContent.style.transform = 'translate(0, 0)';
-            }
-            console.log('[POLL] Modal de creación abierto');
+            });
         }
-    }
-    
-    // ✅ Función para cerrar modal de creación de encuesta
-    function closePollCreationModalUI() {
-        const modal = document.getElementById('pollCreationModal');
-        if (modal) {
-            modal.style.display = 'none';
-            modal.classList.remove('minimized');
-            const modalContent = modal.querySelector('.modal-content');
-            if (modalContent) {
-                modalContent.style.transform = 'translate(0, 0)';
-            }
-            // Limpiar el formulario al cerrar
-            if (typeof clearPollCreationForm === 'function') {
-                clearPollCreationForm();
-            }
-            console.log('[POLL] Modal de creación cerrado');
+
+        // ✅ Enviar mensaje con Enter
+        const chatInput = document.getElementById('chatInput');
+        if (chatInput && !chatInput.hasAttribute('data-listener-attached')) {
+            chatInput.setAttribute('data-listener-attached', 'true');
+            chatInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    if (typeof sendChatMessage === 'function') {
+                        sendChatMessage();
+                        console.log('[CHAT] Mensaje enviado con Enter');
+                    } else {
+                        console.error('[CHAT] ❌ Función sendChatMessage no encontrada');
+                    }
+                }
+            });
+
+            // Auto-resize del textarea
+            chatInput.addEventListener('input', function () {
+                this.style.height = 'auto';
+                this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+            });
         }
-    }
-    
-    // ✅ Botón de crear encuesta (desktop)
-    const createPollBtn = document.getElementById('createPollBtn');
-    if (createPollBtn && !createPollBtn.hasAttribute('data-listener-attached')) {
-        createPollBtn.setAttribute('data-listener-attached', 'true');
-        createPollBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            openPollCreationModalUI();
-        });
-    }
 
-    // ✅ Botón de crear encuesta (mobile)
-    const mobileCreatePollBtn = document.getElementById('mobileCreatePollBtn');
-    if (mobileCreatePollBtn && !mobileCreatePollBtn.hasAttribute('data-listener-attached')) {
-        mobileCreatePollBtn.setAttribute('data-listener-attached', 'true');
-        mobileCreatePollBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            openPollCreationModalUI();
-            const moreMenu = document.querySelector('.more-menu-content');
-            if (moreMenu) moreMenu.classList.remove('active');
-        });
-    }
+        // ============================================
+        // POLL CREATION MODAL - Event Listeners Únicos
+        // ============================================
 
-    // ✅ Minimizar modal
-    const minimizePollCreationBtn = document.querySelector('#pollCreationModal .minimize-modal');
-    if (minimizePollCreationBtn && !minimizePollCreationBtn.hasAttribute('data-listener-attached')) {
-        minimizePollCreationBtn.setAttribute('data-listener-attached', 'true');
-        minimizePollCreationBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
+        // ✅ Función para abrir modal de creación de encuesta
+        function openPollCreationModalUI() {
             const modal = document.getElementById('pollCreationModal');
             if (modal) {
-                modal.classList.add('minimized');
-                console.log('[POLL] Modal minimizado');
-            }
-        });
-    }
-
-    // ✅ Restaurar modal (botón)
-    const restorePollCreationBtn = document.querySelector('#pollCreationModal .restore-modal');
-    if (restorePollCreationBtn && !restorePollCreationBtn.hasAttribute('data-listener-attached')) {
-        restorePollCreationBtn.setAttribute('data-listener-attached', 'true');
-        restorePollCreationBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            const modal = document.getElementById('pollCreationModal');
-            if (modal) {
+                modal.style.display = 'flex';
                 modal.classList.remove('minimized');
                 const modalContent = modal.querySelector('.modal-content');
                 if (modalContent) {
                     modalContent.style.transform = 'translate(0, 0)';
                 }
-                console.log('[POLL] Modal restaurado');
+                console.log('[POLL] Modal de creación abierto');
             }
-        });
-    }
+        }
 
-    // ✅ Click en el modal minimizado para restaurarlo
-    const pollCreationModal = document.getElementById('pollCreationModal');
-    if (pollCreationModal && !pollCreationModal.hasAttribute('data-click-listener-attached')) {
-        pollCreationModal.setAttribute('data-click-listener-attached', 'true');
-        pollCreationModal.addEventListener('click', (e) => {
-            const modal = e.currentTarget;
-            // Solo restaurar si está minimizado y se hace clic en el modal content (no en botones)
-            if (modal.classList.contains('minimized') && 
-                !e.target.closest('.minimize-modal') && 
-                !e.target.closest('.close-modal') &&
-                e.target.closest('.modal-content')) {
+        // ✅ Función para cerrar modal de creación de encuesta
+        function closePollCreationModalUI() {
+            const modal = document.getElementById('pollCreationModal');
+            if (modal) {
+                modal.style.display = 'none';
+                modal.classList.remove('minimized');
+                const modalContent = modal.querySelector('.modal-content');
+                if (modalContent) {
+                    modalContent.style.transform = 'translate(0, 0)';
+                }
+                // Limpiar el formulario al cerrar
+                if (typeof clearPollCreationForm === 'function') {
+                    clearPollCreationForm();
+                }
+                console.log('[POLL] Modal de creación cerrado');
+            }
+        }
+
+        // ✅ Botón de crear encuesta (desktop)
+        const createPollBtn = document.getElementById('createPollBtn');
+        if (createPollBtn && !createPollBtn.hasAttribute('data-listener-attached')) {
+            createPollBtn.setAttribute('data-listener-attached', 'true');
+            createPollBtn.addEventListener('click', (e) => {
+                e.preventDefault();
                 e.stopPropagation();
-                modal.classList.remove('minimized');
-                const modalContent = modal.querySelector('.modal-content');
-                if (modalContent) {
-                    modalContent.style.transform = 'translate(0, 0)';
+                openPollCreationModalUI();
+            });
+        }
+
+        // ✅ Botón de crear encuesta (mobile)
+        const mobileCreatePollBtn = document.getElementById('mobileCreatePollBtn');
+        if (mobileCreatePollBtn && !mobileCreatePollBtn.hasAttribute('data-listener-attached')) {
+            mobileCreatePollBtn.setAttribute('data-listener-attached', 'true');
+            mobileCreatePollBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                openPollCreationModalUI();
+                const moreMenu = document.querySelector('.more-menu-content');
+                if (moreMenu) moreMenu.classList.remove('active');
+            });
+        }
+
+        // ✅ Minimizar modal
+        const minimizePollCreationBtn = document.querySelector('#pollCreationModal .minimize-modal');
+        if (minimizePollCreationBtn && !minimizePollCreationBtn.hasAttribute('data-listener-attached')) {
+            minimizePollCreationBtn.setAttribute('data-listener-attached', 'true');
+            minimizePollCreationBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const modal = document.getElementById('pollCreationModal');
+                if (modal) {
+                    modal.classList.add('minimized');
+                    console.log('[POLL] Modal minimizado');
                 }
-                console.log('[POLL] Modal restaurado por click');
-            }
-        });
-    }
+            });
+        }
 
-    // ✅ Cerrar modal (botón X)
-    const closePollCreationModalBtn = document.getElementById('closePollCreationModal');
-    if (closePollCreationModalBtn && !closePollCreationModalBtn.hasAttribute('data-listener-attached')) {
-        closePollCreationModalBtn.setAttribute('data-listener-attached', 'true');
-        closePollCreationModalBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            closePollCreationModalUI();
-        });
-    }
+        // ✅ Restaurar modal (botón)
+        const restorePollCreationBtn = document.querySelector('#pollCreationModal .restore-modal');
+        if (restorePollCreationBtn && !restorePollCreationBtn.hasAttribute('data-listener-attached')) {
+            restorePollCreationBtn.setAttribute('data-listener-attached', 'true');
+            restorePollCreationBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const modal = document.getElementById('pollCreationModal');
+                if (modal) {
+                    modal.classList.remove('minimized');
+                    const modalContent = modal.querySelector('.modal-content');
+                    if (modalContent) {
+                        modalContent.style.transform = 'translate(0, 0)';
+                    }
+                    console.log('[POLL] Modal restaurado');
+                }
+            });
+        }
 
-    // ============================================
-    // POLL PANEL - Event Listeners Únicos
-    // ============================================
-    
-    const pollPanel = document.getElementById('pollPanel');
-    const pollPanelMinimizeBtn = document.querySelector('#pollPanel .minimize-btn');
-    const pollPanelCloseBtn = document.querySelector('#pollPanel .close-poll-btn');
-    
-    if (pollPanelMinimizeBtn && !pollPanelMinimizeBtn.hasAttribute('data-listener-attached')) {
-        pollPanelMinimizeBtn.setAttribute('data-listener-attached', 'true');
-        pollPanelMinimizeBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            if (pollPanel) {
-                pollPanel.classList.add('minimized');
-                console.log('[POLL PANEL] Panel minimizado');
-            }
-        });
-    }
+        // ✅ Click en el modal minimizado para restaurarlo
+        const pollCreationModal = document.getElementById('pollCreationModal');
+        if (pollCreationModal && !pollCreationModal.hasAttribute('data-click-listener-attached')) {
+            pollCreationModal.setAttribute('data-click-listener-attached', 'true');
+            pollCreationModal.addEventListener('click', (e) => {
+                const modal = e.currentTarget;
+                // Solo restaurar si está minimizado y se hace clic en el modal content (no en botones)
+                if (modal.classList.contains('minimized') &&
+                    !e.target.closest('.minimize-modal') &&
+                    !e.target.closest('.close-modal') &&
+                    e.target.closest('.modal-content')) {
+                    e.stopPropagation();
+                    modal.classList.remove('minimized');
+                    const modalContent = modal.querySelector('.modal-content');
+                    if (modalContent) {
+                        modalContent.style.transform = 'translate(0, 0)';
+                    }
+                    console.log('[POLL] Modal restaurado por click');
+                }
+            });
+        }
 
-    if (pollPanelCloseBtn && !pollPanelCloseBtn.hasAttribute('data-listener-attached')) {
-        pollPanelCloseBtn.setAttribute('data-listener-attached', 'true');
-        pollPanelCloseBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            if (pollPanel) {
-                pollPanel.style.display = 'none';
-                pollPanel.classList.remove('minimized');
-                console.log('[POLL PANEL] Panel cerrado');
-            }
-        });
-    }
+        // ✅ Cerrar modal (botón X)
+        const closePollCreationModalBtn = document.getElementById('closePollCreationModal');
+        if (closePollCreationModalBtn && !closePollCreationModalBtn.hasAttribute('data-listener-attached')) {
+            closePollCreationModalBtn.setAttribute('data-listener-attached', 'true');
+            closePollCreationModalBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                closePollCreationModalUI();
+            });
+        }
 
-    if (pollPanel && !pollPanel.hasAttribute('data-click-listener-attached')) {
-        pollPanel.setAttribute('data-click-listener-attached', 'true');
-        pollPanel.addEventListener('click', (e) => {
-            // Solo restaurar si está minimizado y se hace clic en el panel mismo (no en botones internos)
-            if (pollPanel.classList.contains('minimized')) {
-                // Verificar que no se hizo clic en botones
-                if (!e.target.closest('button') && 
-                    !e.target.closest('.poll-actions') &&
-                    !e.target.closest('input')) {
+        // ============================================
+        // POLL PANEL - Event Listeners Únicos
+        // ============================================
+
+        const pollPanel = document.getElementById('pollPanel');
+        const pollPanelMinimizeBtn = document.querySelector('#pollPanel .minimize-btn');
+        const pollPanelCloseBtn = document.querySelector('#pollPanel .close-poll-btn');
+
+        if (pollPanelMinimizeBtn && !pollPanelMinimizeBtn.hasAttribute('data-listener-attached')) {
+            pollPanelMinimizeBtn.setAttribute('data-listener-attached', 'true');
+            pollPanelMinimizeBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (pollPanel) {
+                    pollPanel.classList.add('minimized');
+                    console.log('[POLL PANEL] Panel minimizado');
+                }
+            });
+        }
+
+        if (pollPanelCloseBtn && !pollPanelCloseBtn.hasAttribute('data-listener-attached')) {
+            pollPanelCloseBtn.setAttribute('data-listener-attached', 'true');
+            pollPanelCloseBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (pollPanel) {
+                    pollPanel.style.display = 'none';
                     pollPanel.classList.remove('minimized');
-                    console.log('[POLL PANEL] Panel restaurado');
+                    console.log('[POLL PANEL] Panel cerrado');
                 }
-            }
-        });
-    }
+            });
+        }
 
-    // ============================================
-    // POLL RESULTS PANEL - Event Listeners Únicos
-    // ============================================
-    
-    const pollResultsPanel = document.getElementById('pollResultsPanel');
-    const minimizePollResultsBtn = document.getElementById('minimizePollResultsBtn');
-    const closePollResultsPanel = document.getElementById('closePollResultsPanel');
-    const closeResultsBtn = document.getElementById('closeResultsBtn');
-    
-    if (minimizePollResultsBtn && !minimizePollResultsBtn.hasAttribute('data-listener-attached')) {
-        minimizePollResultsBtn.setAttribute('data-listener-attached', 'true');
-        minimizePollResultsBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            if (pollResultsPanel) {
-                pollResultsPanel.classList.add('minimized');
-                console.log('[POLL RESULTS] Panel de resultados minimizado');
-            }
-        });
-    }
+        if (pollPanel && !pollPanel.hasAttribute('data-click-listener-attached')) {
+            pollPanel.setAttribute('data-click-listener-attached', 'true');
+            pollPanel.addEventListener('click', (e) => {
+                // Solo restaurar si está minimizado y se hace clic en el panel mismo (no en botones internos)
+                if (pollPanel.classList.contains('minimized')) {
+                    // Verificar que no se hizo clic en botones
+                    if (!e.target.closest('button') &&
+                        !e.target.closest('.poll-actions') &&
+                        !e.target.closest('input')) {
+                        pollPanel.classList.remove('minimized');
+                        console.log('[POLL PANEL] Panel restaurado');
+                    }
+                }
+            });
+        }
 
-    // Click en el panel de resultados minimizado para restaurarlo
-    if (pollResultsPanel && !pollResultsPanel.hasAttribute('data-click-listener-attached')) {
-        pollResultsPanel.setAttribute('data-click-listener-attached', 'true');
-        pollResultsPanel.addEventListener('click', (e) => {
-            // Solo restaurar si está minimizado y NO se hizo clic en botones del header
-            if (pollResultsPanel.classList.contains('minimized') && 
-                !e.target.closest('.minimize-btn') && 
-                !e.target.closest('.close-modal') &&
-                e.target.closest('.modal-content')) {
+        // ============================================
+        // POLL RESULTS PANEL - Event Listeners Únicos
+        // ============================================
+
+        const pollResultsPanel = document.getElementById('pollResultsPanel');
+        const minimizePollResultsBtn = document.getElementById('minimizePollResultsBtn');
+        const closePollResultsPanel = document.getElementById('closePollResultsPanel');
+        const closeResultsBtn = document.getElementById('closeResultsBtn');
+
+        if (minimizePollResultsBtn && !minimizePollResultsBtn.hasAttribute('data-listener-attached')) {
+            minimizePollResultsBtn.setAttribute('data-listener-attached', 'true');
+            minimizePollResultsBtn.addEventListener('click', (e) => {
+                e.preventDefault();
                 e.stopPropagation();
-                pollResultsPanel.classList.remove('minimized');
-                const modalContent = pollResultsPanel.querySelector('.modal-content');
-                if (modalContent) {
-                    modalContent.style.transform = 'translate(0, 0)';
+                if (pollResultsPanel) {
+                    pollResultsPanel.classList.add('minimized');
+                    console.log('[POLL RESULTS] Panel de resultados minimizado');
                 }
-                console.log('[POLL RESULTS] Panel de resultados restaurado');
-            }
-        });
-    }
-
-    if (closePollResultsPanel && !closePollResultsPanel.hasAttribute('data-listener-attached')) {
-        closePollResultsPanel.setAttribute('data-listener-attached', 'true');
-        closePollResultsPanel.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            if (pollResultsPanel) {
-                pollResultsPanel.style.display = 'none';
-                pollResultsPanel.classList.remove('minimized');
-                const modalContent = pollResultsPanel.querySelector('.modal-content');
-                if (modalContent) {
-                    modalContent.style.transform = 'translate(0, 0)';
-                }
-                console.log('[POLL RESULTS] Panel cerrado (botón X)');
-            }
-        });
-    }
-
-    if (closeResultsBtn && !closeResultsBtn.hasAttribute('data-listener-attached')) {
-        closeResultsBtn.setAttribute('data-listener-attached', 'true');
-        closeResultsBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            if (pollResultsPanel) {
-                pollResultsPanel.style.display = 'none';
-                pollResultsPanel.classList.remove('minimized');
-                const modalContent = pollResultsPanel.querySelector('.modal-content');
-                if (modalContent) {
-                    modalContent.style.transform = 'translate(0, 0)';
-                }
-                console.log('[POLL RESULTS] Panel cerrado (botón Cerrar)');
-            }
-        });
-    }
-
-    // Event listeners de teclado REMOVIDOS para evitar interferencias al escribir
-    // Anteriormente manejaba: M (mic), C (cam), H (mano), V (vista)
-
-    // ============================================
-    // SISTEMA DE CONTROL DE VISTA DE CÁMARAS
-    // Manejado completamente por viewControl.js (archivo separado)
-    // ============================================
-    
-    // Todo el código de control de vistas se movió a viewControl.js para mejor mantenimiento
-    // viewControl.js se carga automáticamente y maneja:
-    // - Panel de control de vista
-    // - Cambio entre 7 modos de vista (grid-auto, grid-fixed-4, grid-fixed-9, grid-many, spotlight, sidebar, active-speaker)
-    // - Paginación de participantes
-    // - Detección de hablante activo
-    // - Sistema de pin/fijar videos
-    
-    debugLog('✅ Sistema de control de vista delegado a viewControl.js');
-    
-    // ============================================
-    // FIN DEL CÓDIGO INLINE - Todo manejado por viewControl.js
-    // ============================================
-
-</script>
-
-<!-- Bypass ngrok warning - CORREGIDO -->
-<script>
-(function() {
-    const originalFetch = window.fetch;
-    window.fetch = function (resource, options = {}) {
-        if (!options.headers) {
-            options.headers = {};
+            });
         }
-        options.headers['ngrok-skip-browser-warning'] = 'true';
-        return originalFetch(resource, options);
-    };
 
-    const originalXHROpen = XMLHttpRequest.prototype.open;
-    const originalXHRSend = XMLHttpRequest.prototype.send;
-
-    XMLHttpRequest.prototype.open = function(method, url, async, user, password) {
-        this._method = method;
-        this._url = url;
-        return originalXHROpen.call(this, method, url, async, user, password);
-    };
-
-    XMLHttpRequest.prototype.send = function(body) {
-        try {
-            this.setRequestHeader('ngrok-skip-browser-warning', 'true');
-        } catch (e) {
-            // Ignorar si no se puede establecer el header
+        // Click en el panel de resultados minimizado para restaurarlo
+        if (pollResultsPanel && !pollResultsPanel.hasAttribute('data-click-listener-attached')) {
+            pollResultsPanel.setAttribute('data-click-listener-attached', 'true');
+            pollResultsPanel.addEventListener('click', (e) => {
+                // Solo restaurar si está minimizado y NO se hizo clic en botones del header
+                if (pollResultsPanel.classList.contains('minimized') &&
+                    !e.target.closest('.minimize-btn') &&
+                    !e.target.closest('.close-modal') &&
+                    e.target.closest('.modal-content')) {
+                    e.stopPropagation();
+                    pollResultsPanel.classList.remove('minimized');
+                    const modalContent = pollResultsPanel.querySelector('.modal-content');
+                    if (modalContent) {
+                        modalContent.style.transform = 'translate(0, 0)';
+                    }
+                    console.log('[POLL RESULTS] Panel de resultados restaurado');
+                }
+            });
         }
-        return originalXHRSend.call(this, body);
-    };
-})();
-</script>
 
-<!-- Sistema de Control de Vistas - Totalmente Independiente -->
-<script src="viewControl.js"></script>
+        if (closePollResultsPanel && !closePollResultsPanel.hasAttribute('data-listener-attached')) {
+            closePollResultsPanel.setAttribute('data-listener-attached', 'true');
+            closePollResultsPanel.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (pollResultsPanel) {
+                    pollResultsPanel.style.display = 'none';
+                    pollResultsPanel.classList.remove('minimized');
+                    const modalContent = pollResultsPanel.querySelector('.modal-content');
+                    if (modalContent) {
+                        modalContent.style.transform = 'translate(0, 0)';
+                    }
+                    console.log('[POLL RESULTS] Panel cerrado (botón X)');
+                }
+            });
+        }
 
-<script src="script.js"></script>
+        if (closeResultsBtn && !closeResultsBtn.hasAttribute('data-listener-attached')) {
+            closeResultsBtn.setAttribute('data-listener-attached', 'true');
+            closeResultsBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (pollResultsPanel) {
+                    pollResultsPanel.style.display = 'none';
+                    pollResultsPanel.classList.remove('minimized');
+                    const modalContent = pollResultsPanel.querySelector('.modal-content');
+                    if (modalContent) {
+                        modalContent.style.transform = 'translate(0, 0)';
+                    }
+                    console.log('[POLL RESULTS] Panel cerrado (botón Cerrar)');
+                }
+            });
+        }
+
+        // Event listeners de teclado REMOVIDOS para evitar interferencias al escribir
+        // Anteriormente manejaba: M (mic), C (cam), H (mano), V (vista)
+
+        // ============================================
+        // SISTEMA DE CONTROL DE VISTA DE CÁMARAS
+        // Manejado completamente por viewControl.js (archivo separado)
+        // ============================================
+
+        // Todo el código de control de vistas se movió a viewControl.js para mejor mantenimiento
+        // viewControl.js se carga automáticamente y maneja:
+        // - Panel de control de vista
+        // - Cambio entre 7 modos de vista (grid-auto, grid-fixed-4, grid-fixed-9, grid-many, spotlight, sidebar, active-speaker)
+        // - Paginación de participantes
+        // - Detección de hablante activo
+        // - Sistema de pin/fijar videos
+
+        debugLog('✅ Sistema de control de vista delegado a viewControl.js');
+
+        // ============================================
+        // FIN DEL CÓDIGO INLINE - Todo manejado por viewControl.js
+        // ============================================
+
+    </script>
+
+    <!-- Bypass ngrok warning - CORREGIDO -->
+    <script>
+        (function () {
+            const originalFetch = window.fetch;
+            window.fetch = function (resource, options = {}) {
+                if (!options.headers) {
+                    options.headers = {};
+                }
+                options.headers['ngrok-skip-browser-warning'] = 'true';
+                return originalFetch(resource, options);
+            };
+
+            const originalXHROpen = XMLHttpRequest.prototype.open;
+            const originalXHRSend = XMLHttpRequest.prototype.send;
+
+            XMLHttpRequest.prototype.open = function (method, url, async, user, password) {
+                this._method = method;
+                this._url = url;
+                return originalXHROpen.call(this, method, url, async, user, password);
+            };
+
+            XMLHttpRequest.prototype.send = function (body) {
+                try {
+                    this.setRequestHeader('ngrok-skip-browser-warning', 'true');
+                } catch (e) {
+                    // Ignorar si no se puede establecer el header
+                }
+                return originalXHRSend.call(this, body);
+            };
+        })();
+    </script>
+
+    <!-- Sistema de Control de Vistas - Totalmente Independiente -->
+    <script src="viewControl.js"></script>
+
+    <script src="script.js"></script>
 </body>
 
 </html>
