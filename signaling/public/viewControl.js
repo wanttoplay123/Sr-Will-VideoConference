@@ -620,10 +620,11 @@ function applySidebarLayout(videoGrid, allVideos) {
 
         const otherVideos = allVideos.filter(v => v !== mainVideo);
 
-        // Configurar grid 5x5 para sidebar mejorado
+        // Configurar grid para sidebar con 4 filas × 4 columnas
+        // Columna 1 = video principal (3fr), Columnas 2-4 = participantes (1fr cada una)
         videoGrid.style.display = 'grid';
-        videoGrid.style.gridTemplateColumns = 'repeat(5, 1fr)';
-        videoGrid.style.gridTemplateRows = 'repeat(5, 1fr)';
+        videoGrid.style.gridTemplateColumns = '3fr 1fr 1fr 1fr';
+        videoGrid.style.gridTemplateRows = 'repeat(4, 1fr)';
         videoGrid.style.gap = '8px';
         videoGrid.style.width = '100%';
         videoGrid.style.height = '100%';
@@ -631,41 +632,40 @@ function applySidebarLayout(videoGrid, allVideos) {
         videoGrid.style.overflow = 'hidden';
         videoGrid.style.boxSizing = 'border-box';
 
-        // Video principal: ocupa área grande (1/1 -> 4/3)
+        // Video principal: ocupa toda la columna izquierda (columna 1, filas 1-4)
         mainVideo.classList.add('main-video');
         mainVideo.style.display = 'block';
-        mainVideo.style.gridArea = '1 / 1 / 4 / 3';
+        mainVideo.style.gridColumn = '1 / 2';
+        mainVideo.style.gridRow = '1 / 5';
         mainVideo.style.width = '100%';
         mainVideo.style.height = '100%';
-        mainVideo.style.objectFit = 'cover';
+        mainVideo.style.objectFit = 'contain';
         mainVideo.style.borderRadius = '12px';
+        mainVideo.style.backgroundColor = '#000';
 
-        // Configurar miniaturas en el lado derecho (máximo 6 visibles)
-        const thumbnails = otherVideos.slice(0, 6);
-        const gridAreas = [
-            '1 / 3 / 2 / 4',  // div2
-            '1 / 4 / 2 / 5',  // div3
-            '1 / 5 / 2 / 6',  // div4
-            '2 / 3 / 3 / 4',  // div5
-            '2 / 4 / 3 / 5',  // div6
-            '2 / 5 / 3 / 6'   // div7
-        ];
+        // Configurar miniaturas en grid 4×3 (máximo 12 visibles)
+        const thumbnails = otherVideos.slice(0, 12);
 
         thumbnails.forEach((video, index) => {
+            // Calcular posición en el grid 4×3
+            const row = Math.floor(index / 3) + 1; // Fila (1-4)
+            const col = (index % 3) + 2; // Columna (2-4)
+
             video.style.display = 'block';
-            video.style.gridArea = gridAreas[index];
+            video.style.gridColumn = `${col} / ${col + 1}`;
+            video.style.gridRow = `${row} / ${row + 1}`;
             video.style.width = '100%';
             video.style.height = '100%';
             video.style.objectFit = 'cover';
             video.style.borderRadius = '8px';
         });
 
-        // Ocultar videos adicionales
-        otherVideos.slice(6).forEach(video => {
+        // Ocultar videos adicionales (más de 12)
+        otherVideos.slice(12).forEach(video => {
             video.style.display = 'none';
         });
 
-        viewLog(`✅ Sidebar: 1 principal + ${thumbnails.length} miniaturas`);
+        viewLog(`✅ Sidebar: 1 principal + ${thumbnails.length} miniaturas (grid 4×3)`);
     } catch (e) {
         console.error('❌ Error en applySidebarLayout:', e);
         applyGridAutoLayout(videoGrid, allVideos);
@@ -712,10 +712,6 @@ function applyActiveSpeakerLayout(videoGrid, allVideos) {
 
     viewLog(`✅ Active Speaker: ${activeVideo ? '1 video visible' : 'ninguno'}`);
 }
-
-// ============================================
-// PAGINACIÓN
-// ============================================
 
 function updatePagination() {
     const videoGrid = document.getElementById('videoGrid');

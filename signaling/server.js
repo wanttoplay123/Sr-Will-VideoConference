@@ -297,7 +297,7 @@ wss.on('connection', (ws) => {
                 }
               });
               console.log(`[SERVER] 🔇 ${msg.target} muted automatically when word taken in room '${room}'.`);
-              
+
               // 📢 SEGUNDO: Notificar que se quitó la palabra
               roomClients.forEach(client => {
                 if (client.readyState === 1) {
@@ -773,7 +773,8 @@ wss.on('connection', (ws) => {
                 if (client.readyState === 1 && client !== ws) {
                   client.send(JSON.stringify({
                     type: msg.type,
-                    userId: userName
+                    userId: userName,
+                    streamId: msg.streamId  // ✅ CRÍTICO: Incluir streamId
                   }));
                 }
               });

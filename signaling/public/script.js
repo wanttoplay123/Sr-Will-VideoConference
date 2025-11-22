@@ -1,5 +1,5 @@
 // Bypass ngrok warning page - CORREGIDO
-(function() {
+(function () {
     const originalFetch = window.fetch;
     window.fetch = function (resource, options = {}) {
         if (!options.headers) {
@@ -13,13 +13,13 @@
     const originalXHROpen = XMLHttpRequest.prototype.open;
     const originalXHRSend = XMLHttpRequest.prototype.send;
 
-    XMLHttpRequest.prototype.open = function(method, url, async, user, password) {
+    XMLHttpRequest.prototype.open = function (method, url, async, user, password) {
         this._method = method;
         this._url = url;
         return originalXHROpen.call(this, method, url, async, user, password);
     };
 
-    XMLHttpRequest.prototype.send = function(body) {
+    XMLHttpRequest.prototype.send = function (body) {
         // Solo agregamos el header si no es una petición misma-origen simple
         try {
             this.setRequestHeader('ngrok-skip-browser-warning', 'true');
@@ -37,24 +37,24 @@ const iceServers = [
     { urls: 'stun:stun2.l.google.com:19302' },
     { urls: 'stun:stun3.l.google.com:19302' },
     { urls: 'stun:stun4.l.google.com:19302' },
-    
+
     // Servidores STUN adicionales
     { urls: 'stun:stun.services.mozilla.com' },
     { urls: 'stun:stun.stunprotocol.org:3478' },
     { urls: 'stun:stun.voip.blackberry.com:3478' },
-    
+
     // Servidores TURN públicos (para cuando STUN no es suficiente)
-    { 
+    {
         urls: 'turn:openrelay.metered.ca:80',
         username: 'openrelayproject',
         credential: 'openrelayproject'
     },
-    { 
+    {
         urls: 'turn:openrelay.metered.ca:443',
         username: 'openrelayproject',
         credential: 'openrelayproject'
     },
-    { 
+    {
         urls: 'turn:openrelay.metered.ca:443?transport=tcp',
         username: 'openrelayproject',
         credential: 'openrelayproject'
@@ -165,19 +165,12 @@ let isMicActive = true;
 let isCamActive = true;
 let localStream = null;
 let peerConnections = {};
-let ws = null;
-let intentionalDisconnect = false;
-let reconnectionAttempts = 0;
-// ============ SISTEMA DE COMPARTIR PANTALLA (NUEVO) ============
+// ============ SISTEMA DE COMPARTIR PANTALLA ============
 let isScreenSharing = false;
 let localScreenStream = null;
-let remoteScreenStreams = {}; // Mapa: userId -> streamId
-// ===============================================================
-
-// Referencias a elementos del DOM
-let videosContainer = null;
-let participantList = null;
-let participantCount = null;
+let remoteScreenStreams = {}; // Map<userId, streamId>
+let pendingStreams = {}; // Map<streamId, {userId, stream}>
+// =======================================================
 
 const raisedHands = new Set();
 const userRoles = {
@@ -280,7 +273,7 @@ function giveWordToParticipant(participantName, duration = 60) {
     console.log('[GIVE-WORD-FUNC] 📢 Función llamada');
     console.log('[GIVE-WORD-FUNC] participantName:', participantName);
     console.log('[GIVE-WORD-FUNC] duration:', duration);
-    
+
     // Si ya hay alguien con la palabra, quitársela primero
     if (currentSpeaker) {
         console.log('[GIVE-WORD-FUNC] ⚠️ Ya hay alguien con la palabra:', currentSpeaker.name);
@@ -320,7 +313,7 @@ function giveWordToParticipant(participantName, duration = 60) {
         updateTimerDisplay();
         speakingPanel.classList.remove('closing');
         speakingPanel.classList.add('visible');
-        
+
         // ✅ FORZAR VISIBILIDAD TOTAL con estilos inline importantes
         speakingPanel.style.cssText = 'display: block !important; opacity: 1 !important; visibility: visible !important; z-index: 10000 !important;';
         console.log('[GIVE-WORD-FUNC] ✅ Panel mostrado localmente');
@@ -348,13 +341,13 @@ function giveWordToParticipant(participantName, duration = 60) {
         console.log('[GIVE-WORD-FUNC] 📤 Enviando mensaje al servidor:', message);
         ws.send(JSON.stringify(message));
         console.log('[GIVE-WORD-FUNC] ✅ Mensaje enviado al servidor');
-        
+
         // También activar el micrófono del participante
-        ws.send(JSON.stringify({ 
-            type: 'mute-participant', 
-            room: roomCode, 
-            target: participantName, 
-            micActive: true 
+        ws.send(JSON.stringify({
+            type: 'mute-participant',
+            room: roomCode,
+            target: participantName,
+            micActive: true
         }));
         console.log('[GIVE-WORD-FUNC] ✅ Solicitud de activación de micrófono enviada');
     } else {
@@ -369,7 +362,7 @@ function giveWordToParticipant(participantName, duration = 60) {
 
 function handleTimeExpired(participantName) {
     console.log('[TIME-EXPIRED] ⏰ Tiempo expirado para:', participantName);
-    
+
     // 🔇 PASO 1: Silenciar inmediatamente al participante
     if (ws && ws.readyState === WebSocket.OPEN) {
         console.log('[TIME-EXPIRED] 📤 Enviando mute-participant (micActive: false)');
@@ -380,7 +373,7 @@ function handleTimeExpired(participantName) {
             micActive: false
         }));
     }
-    
+
     // 📢 PASO 2: Quitar la palabra
     if (ws && ws.readyState === WebSocket.OPEN) {
         console.log('[TIME-EXPIRED] 📤 Enviando take-word');
@@ -390,15 +383,15 @@ function handleTimeExpired(participantName) {
             target: participantName
         }));
     }
-    
+
     // PASO 3: Limpiar estado local
     if (speakingTimerInterval) {
         clearInterval(speakingTimerInterval);
         speakingTimerInterval = null;
     }
-    
+
     currentSpeaker = null;
-    
+
     // PASO 4: Ocultar panel
     const speakingPanel = document.getElementById('speakingPanel');
     if (speakingPanel) {
@@ -411,7 +404,7 @@ function handleTimeExpired(participantName) {
             yOffset = 0;
         }, 400);
     }
-    
+
     showError(`⏰ Tiempo agotado: ${participantName} fue silenciado`, 3000);
     console.log('[TIME-EXPIRED] ✅ Proceso completado');
 }
@@ -419,7 +412,7 @@ function handleTimeExpired(participantName) {
 function takeWordFromParticipant() {
     console.log('[TAKE-WORD-FUNC] 📢 Función llamada');
     console.log('[TAKE-WORD-FUNC] currentSpeaker:', currentSpeaker);
-    
+
     if (!currentSpeaker) {
         console.log('[TAKE-WORD-FUNC] ❌ No hay nadie con la palabra, abortando');
         return;
@@ -502,13 +495,13 @@ function updateTimerDisplay() {
 function addChatMessage(authorName, message, timestamp, isOwn = false) {
     const chatMessages = document.getElementById('chatMessages');
     if (!chatMessages) return;
-    
+
     const messageDiv = document.createElement('div');
     messageDiv.className = 'chat-message' + (isOwn ? ' own' : '');
-    
+
     const time = new Date(timestamp);
     const timeString = time.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-    
+
     messageDiv.innerHTML = `
         <div class="chat-message-header">
             <span class="chat-message-author">${authorName}</span>
@@ -516,7 +509,7 @@ function addChatMessage(authorName, message, timestamp, isOwn = false) {
         </div>
         <div class="chat-message-text">${escapeHtml(message)}</div>
     `;
-    
+
     chatMessages.appendChild(messageDiv);
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
@@ -530,7 +523,7 @@ function escapeHtml(text) {
 function sendChatMessage() {
     const chatInput = document.getElementById('chatInput');
     if (!chatInput) return;
-    
+
     const message = chatInput.value.trim();
     if (message && ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({
@@ -550,7 +543,7 @@ function updateModeratorUI() {
     const mobileCreatePollBtn = document.getElementById('mobileCreatePollBtn');
     const handPanel = document.getElementById('handPanel');
     const joinRequestsPanel = document.getElementById('joinRequestsPanel');
-    
+
     if (createPollBtn) {
         createPollBtn.style.display = isModerator ? 'flex' : 'none';
         // Agregar clase para que se muestre en móvil si es moderador
@@ -747,19 +740,19 @@ function handleFloorEnded(name) {
 // Función para actualizar el contador de participantes
 function updateParticipantCount() {
     const count = document.querySelectorAll('.participant-item').length;
-    
+
     // Actualizar contador en el navbar
     const navbarCount = document.getElementById('participantCount');
     if (navbarCount) {
         navbarCount.textContent = count;
     }
-    
+
     // Actualizar contador en el sidebar
     const sidebarCount = document.getElementById('sidebarParticipantCountText');
     if (sidebarCount) {
         sidebarCount.textContent = count;
     }
-    
+
     debugLog(`📊 Contador actualizado: ${count} participantes`);
 }
 
@@ -771,7 +764,7 @@ function addParticipant(name, isLocal) {
         updateParticipantList(); // Solo actualizar la lista existente
         return;
     }
-    
+
     const participantItem = document.createElement('li');
     participantItem.className = 'participant-item';
     participantItem.id = `participant-${name}`;
@@ -820,9 +813,9 @@ function addParticipant(name, isLocal) {
     muteBtn.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        
+
         const targetName = muteBtn.getAttribute('data-participant-name');
-        
+
         if (!isModerator) {
             showError('Solo los moderadores pueden silenciar participantes.', 3000);
             debugLog('Intento de silenciamiento fallido: No es moderador.');
@@ -847,9 +840,9 @@ function addParticipant(name, isLocal) {
     kickBtn.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        
+
         const targetName = kickBtn.getAttribute('data-participant-name');
-        
+
         if (!isModerator) {
             showError('Solo los moderadores pueden expulsar participantes.', 3000);
             debugLog('Intento de expulsión fallido: No es moderador.');
@@ -870,19 +863,19 @@ function addParticipant(name, isLocal) {
     assignModeratorBtn.setAttribute('data-participant-name', name); // ✅ Guardar referencia al nombre
 
     assignModeratorBtn.style.display = isModerator && !isLocal && userRoles[name] !== 'Organizador de la Reunión' ? 'inline' : 'none';
-    
+
     // ✅ Usar addEventListener en lugar de onclick para mejor control
     assignModeratorBtn.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        
+
         const targetName = assignModeratorBtn.getAttribute('data-participant-name');
-        
+
         if (!isModerator) {
             showError('Solo los moderadores pueden asignar roles.', 3000);
             return;
         }
-        
+
         if (ws && ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({ type: 'assign-moderator', room: roomCode, target: targetName }));
             debugLog(`Solicitando asignar rol de moderador a ${targetName}`);
@@ -904,19 +897,19 @@ function addParticipant(name, isLocal) {
     revokeModeratorBtn.setAttribute('data-participant-name', name); // ✅ Guardar referencia al nombre
 
     revokeModeratorBtn.style.display = isModerator && !isLocal && userRoles[name] === 'Moderador' ? 'inline' : 'none';
-    
+
     // ✅ Usar addEventListener en lugar de onclick para mejor control
     revokeModeratorBtn.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        
+
         const targetName = revokeModeratorBtn.getAttribute('data-participant-name');
-        
+
         if (!isModerator) {
             showError('Solo los moderadores pueden quitar roles.', 3000);
             return;
         }
-        
+
         if (ws && ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({ type: 'revoke-moderator', room: roomCode, target: targetName }));
             debugLog(`Solicitando quitar rol de moderador a ${targetName}`);
@@ -941,7 +934,7 @@ function updateParticipantList() {
     const muteAllBtn = document.getElementById('muteAllBtn');
     if (muteAllBtn) {
         muteAllBtn.style.display = isModerator ? 'flex' : 'none';
-        
+
         // Configurar el evento click si no está ya configurado
         if (!muteAllBtn.onclick) {
             muteAllBtn.onclick = () => {
@@ -980,12 +973,12 @@ function updateParticipantList() {
 
         // Mostrar u ocultar estado mic/cam solo si yo soy moderador
         const statusElement = item.querySelector('.participant-status');
-        
+
         // ✅ VALIDAR que el nombre no esté vacío antes de usar querySelector
         if (name && name.trim()) {
             const micStatus = item.querySelector(`#mic-status-${name}`);
             const camStatus = item.querySelector(`#cam-status-${name}`);
-            
+
             if (statusElement) {
                 statusElement.style.display = isModerator && name !== userName ? 'flex' : 'none';
             }
@@ -1042,16 +1035,16 @@ function addVideoElement(userId, stream) {
     console.log(`  - ID: ${stream.id}`);
     console.log(`  - Active: ${stream.active}`);
     console.log(`  - Tracks:`, stream.getTracks().map(t => `${t.kind} (enabled=${t.enabled}, readyState=${t.readyState})`));
-    
+
     // ✅ SIEMPRE agregar videos a #videoGrid (donde está el sistema de vistas)
     const videoGrid = document.getElementById('videoGrid');
     if (!videoGrid) {
         console.error('❌ ERROR CRÍTICO: No se puede encontrar el contenedor #videoGrid');
         return;
     }
-    
+
     console.log(`✅ videoGrid encontrado. Videos actuales:`, videoGrid.querySelectorAll('.video-container').length);
-    
+
     let videoContainer = document.getElementById(`video-container-${userId}`);
     let videoElement = null;
 
@@ -1106,11 +1099,11 @@ function addVideoElement(userId, stream) {
         videoElement.style.height = '100%';
         videoElement.style.objectFit = 'cover';
         debugLog(`🔗 Stream asignado a elemento de video para ${userId}`);
-        
+
         // 🔊 IMPORTANTE: Los videos REMOTOS NO deben estar en muted para escuchar audio
         videoElement.muted = false; // ✅ Asegurar que NO está silenciado
         videoElement.volume = 1.0;  // ✅ Volumen al máximo
-        
+
         videoElement.play().then(() => {
             console.log(`✅✅✅ VIDEO Y AUDIO REPRODUCIENDO PARA ${userId} ✅✅✅`);
             debugLog(`▶️ Video y audio reproduciendo para ${userId}`);
@@ -1123,7 +1116,7 @@ function addVideoElement(userId, stream) {
 
         // 🔊 Forzar salida de audio al altavoz
         forceSpeakerOutput(videoElement);
-        
+
         // Verificar estado después de 1 segundo
         setTimeout(() => {
             debugLog(`📊 Estado de video para ${userId} después de 1s:`);
@@ -1155,7 +1148,7 @@ function addVideoElement(userId, stream) {
  */
 function createScreenSharePreview(userId, stream) {
     console.log(`[SCREEN-SHARE] 📺 Creando preview para ${userId}`);
-    
+
     const videoGrid = document.getElementById('videoGrid');
     if (!videoGrid) {
         console.error('[SCREEN-SHARE] ❌ #videoGrid no encontrado');
@@ -1172,7 +1165,7 @@ function createScreenSharePreview(userId, stream) {
     // Crear contenedor principal
     const previewContainer = document.createElement('div');
     previewContainer.id = `screen-preview-${userId}`;
-    previewContainer.className = 'video-container screen-share-preview';
+    previewContainer.className = 'video-container screen-share screen-share-preview';
     previewContainer.dataset.userId = userId;
 
     // Crear elemento de video
@@ -1188,7 +1181,7 @@ function createScreenSharePreview(userId, stream) {
 
     // Asignar stream
     video.srcObject = stream;
-    
+
     // Intentar reproducir
     video.play()
         .then(() => {
@@ -1216,42 +1209,39 @@ function createScreenSharePreview(userId, stream) {
     // Insertar al principio del grid
     videoGrid.insertBefore(previewContainer, videoGrid.firstChild);
 
-    // Activar layout de grid para screen-share
-    activateScreenShareLayout(videoGrid);
+    // Activar layout de grid para screen-share usando el sistema centralizado
+    if (typeof setViewMode === 'function') {
+        setViewMode('sidebar');
+    } else {
+        console.warn('setViewMode no está disponible');
+    }
 
     // NOTA: No ocultamos la cámara del presentador, para que se vea en pequeño
     console.log(`[SCREEN-SHARE] ✅ Preview creado exitosamente para ${userId}`);
 }
 
 /**
- * Activa el layout especial cuando hay pantalla compartida
+ * Maneja la recepción de un stream de pantalla remota
+ * Esta función era la pieza faltante que conectaba el evento ontrack con la UI
  */
-function activateScreenShareLayout(videoGrid) {
-    videoGrid.classList.add('parent');
-    
-    // Asignar clase div1 al preview de pantalla (área grande)
-    const screenPreview = videoGrid.querySelector('.screen-share-preview');
-    if (screenPreview) {
-        screenPreview.classList.add('div1');
+function handleRemoteScreenShare(userId, stream) {
+    console.log(`[SCREEN-SHARE] 🚀 handleRemoteScreenShare llamado para ${userId}`);
+    console.log(`[SCREEN-SHARE] 🆔 Stream ID: ${stream.id}`);
+
+    // Usar la función existente para crear la UI
+    createScreenSharePreview(userId, stream);
+
+    // Forzar actualización del layout
+    if (typeof setViewMode === 'function') {
+        console.log('[SCREEN-SHARE] 📐 Forzando vista sidebar');
+        setViewMode('sidebar');
     }
-
-    // Asignar div2-div11 a las cámaras restantes
-    const cameraContainers = Array.from(videoGrid.querySelectorAll('.video-container:not(.screen-share-preview)'))
-        .filter(c => c.style.display !== 'none');
-    
-    cameraContainers.forEach((container, index) => {
-        // Limpiar clases div previas
-        for (let i = 1; i <= 11; i++) {
-            container.classList.remove(`div${i}`);
-        }
-        // Asignar nueva posición (div2 a div11 = máximo 10 cámaras)
-        if (index < 10) {
-            container.classList.add(`div${index + 2}`);
-        }
-    });
-
-    console.log('[SCREEN-SHARE] 📐 Layout activado: grid 5×5');
 }
+
+/**
+ * REMOVIDO: activateScreenShareLayout
+ * Se reemplaza por el sistema centralizado en viewControl.js
+ */
 
 /**
  * Crea un placeholder para la pantalla compartida antes de que llegue el stream.
@@ -1290,7 +1280,12 @@ function ensureScreenPreviewPlaceholder(userId) {
 
     // Insertar primero
     videoGrid.insertBefore(previewContainer, videoGrid.firstChild);
-    activateScreenShareLayout(videoGrid);
+
+    if (typeof setViewMode === 'function') {
+        setViewMode('sidebar');
+    } else if (window.ViewControl && typeof window.ViewControl.setViewMode === 'function') {
+        window.ViewControl.setViewMode('sidebar');
+    }
 }
 
 /**
@@ -1298,10 +1293,10 @@ function ensureScreenPreviewPlaceholder(userId) {
  */
 function removeScreenSharePreview(userId) {
     console.log(`[SCREEN-SHARE] 🗑️ Eliminando preview de ${userId}`);
-    
+
     const videoGrid = document.getElementById('videoGrid');
     const preview = document.getElementById(`screen-preview-${userId}`);
-    
+
     if (preview) {
         // Detener tracks del stream
         const video = preview.querySelector('video');
@@ -1315,15 +1310,11 @@ function removeScreenSharePreview(userId) {
     }
 
     // Restaurar layout normal
-    if (videoGrid) {
-        videoGrid.classList.remove('parent');
-        
-        // Limpiar clases de grid de todos los contenedores
-        videoGrid.querySelectorAll('.video-container').forEach(container => {
-            for (let i = 1; i <= 11; i++) {
-                container.classList.remove(`div${i}`);
-            }
-        });
+    // Restaurar layout normal usando el sistema centralizado
+    if (typeof setViewMode === 'function') {
+        setViewMode('grid-auto');
+    } else if (window.ViewControl && typeof window.ViewControl.setViewMode === 'function') {
+        window.ViewControl.setViewMode('grid-auto');
     }
 
     console.log('[SCREEN-SHARE] ✅ Preview eliminado y layout restaurado');
@@ -1394,7 +1385,7 @@ async function initMedia() {
 
         document.getElementById('toggleMic')?.classList.toggle('active', isMicActive);
         document.getElementById('toggleCam')?.classList.toggle('active', isCamActive);
-        
+
         console.log(`✅ Micrófono inicial: ${isMicActive ? 'ACTIVADO' : 'DESACTIVADO'}`);
         console.log(`✅ Cámara inicial: ${isCamActive ? 'ACTIVADA' : 'DESACTIVADA'}`);
 
@@ -1418,7 +1409,7 @@ async function initMedia() {
                         if (newAudioTrack) {
                             // Remover cualquier pista antigua marcada como ended
                             localStream.getAudioTracks().forEach(t => {
-                                try { if (t.readyState === 'ended') localStream.removeTrack(t); } catch(e){}
+                                try { if (t.readyState === 'ended') localStream.removeTrack(t); } catch (e) { }
                             });
                             localStream.addTrack(newAudioTrack);
                             for (const userId in peerConnections) {
@@ -1483,24 +1474,24 @@ function initWebSocket() {
                 updateConnectionStatus('connected');
                 reconnectionAttempts = 0; // Reiniciar contador de intentos
                 intentionalDisconnect = false; // Permitir reconexión automática en caso de pérdida
-                
+
                 // Enviar mensaje de unión a la sala
-                ws.send(JSON.stringify({ 
-                    type: 'join', 
-                    room: roomCode, 
-                    name: userName, 
-                    moderator: isModerator, 
-                    micActive: isMicActive, 
-                    camActive: isCamActive 
+                ws.send(JSON.stringify({
+                    type: 'join',
+                    room: roomCode,
+                    name: userName,
+                    moderator: isModerator,
+                    micActive: isMicActive,
+                    camActive: isCamActive
                 }));
-                
+
                 debugLog(`WebSocket abierto. Enviando 'join' para sala ${roomCode}.`);
-                
+
                 // Si ya hay un localStream activo, asegurarse de que esté configurado
                 if (localStream) {
                     debugLog('LocalStream ya existe, manteniendo conexión con pares existentes');
                 }
-                
+
                 // Enviar candidatos pendientes de todas las conexiones
                 for (const [userId, pc] of Object.entries(peerConnections)) {
                     if (pc && pc.pendingCandidates && pc.pendingCandidates.length > 0) {
@@ -1557,61 +1548,73 @@ function initWebSocket() {
                             requestItem.remove();
                             debugLog(`Solicitud de unión para ${msg.userId} eliminada de la UI.`);
 
-                            // Opcional: Ocultar el panel si la lista está vacía
-                            const joinRequestsList = document.getElementById('joinRequestsList');
-                            if (joinRequestsList && joinRequestsList.children.length === 0) {
-                                const joinRequestsPanel = document.getElementById('joinRequestsPanel');
-                                if (joinRequestsPanel) {
-                                    joinRequestsPanel.style.display = 'none';
+                            // Actualizar el contador del mini modal
+                            const notificationsList = document.getElementById('notificationsList');
+                            if (notificationsList) {
+                                const count = notificationsList.children.length;
+                                const countSpan = document.getElementById('joinRequestCount');
+                                if (countSpan) {
+                                    countSpan.textContent = count;
+                                }
+
+                                // Ocultar el modal si no quedan solicitudes
+                                if (count === 0) {
+                                    hideNotificationsModal();
                                 }
                             }
                         }
                         break;
 
-case 'join-request':
-    if (isModerator) {
-        const notificationsList = document.getElementById('notificationsList');
-        if (notificationsList) {
-            const li = document.createElement('li');
-            li.id = `join-request-${msg.userId}`;
-            li.className = 'notification-item';
-            li.innerHTML = `
+                    case 'join-request':
+                        if (isModerator) {
+                            const notificationsList = document.getElementById('notificationsList');
+                            if (notificationsList) {
+                                const li = document.createElement('li');
+                                li.id = `join-request-${msg.userId}`;
+                                li.className = 'notification-item';
+                                li.innerHTML = `
                 <span>${msg.userId} desea unirse.</span>
                 <button class="accept-btn">Aceptar</button>
                 <button class="reject-btn">Rechazar</button>
             `;
-            const acceptBtn = li.querySelector('.accept-btn');
-            const rejectBtn = li.querySelector('.reject-btn');
-            acceptBtn.onclick = () => {
-                ws.send(JSON.stringify({ type: 'approve-join', userId: msg.userId }));
-                li.remove();
-                const count = notificationsList.children.length;
-                if (count === 0) {
-                    hideNotificationsModal();
-                } else {
-                    showNotificationsModal(count);
-                }
-                debugLog(`Solicitud de ${msg.userId} aceptada.`);
-            };
-            rejectBtn.onclick = () => {
-                ws.send(JSON.stringify({ type: 'reject-join', userId: msg.userId }));
-                li.remove();
-                const count = notificationsList.children.length;
-                if (count === 0) {
-                    hideNotificationsModal();
-                } else {
-                    showNotificationsModal(count);
-                }
-                debugLog(`Solicitud de ${msg.userId} rechazada.`);
-            };
-            notificationsList.appendChild(li);
-            showNotificationsModal(notificationsList.children.length);
-        } else {
-            console.error('Error: #notificationsList no encontrado.');
-            showError('Error al mostrar solicitudes de unión.', 3000);
-        }
-    }
-    break;
+                                const acceptBtn = li.querySelector('.accept-btn');
+                                const rejectBtn = li.querySelector('.reject-btn');
+                                acceptBtn.onclick = () => {
+                                    ws.send(JSON.stringify({ type: 'approve-join', userId: msg.userId }));
+                                    li.remove();
+                                    const count = notificationsList.children.length;
+                                    if (count === 0) {
+                                        hideNotificationsModal();
+                                    }
+
+                                    debugLog(`Solicitud de ${msg.userId} aceptada.`);
+                                };
+                                rejectBtn.onclick = () => {
+                                    ws.send(JSON.stringify({ type: 'reject-join', userId: msg.userId }));
+                                    li.remove();
+                                    const count = notificationsList.children.length;
+
+                                    // Siempre actualizar el contador primero
+                                    const countSpan = document.getElementById('joinRequestCount');
+                                    if (countSpan) {
+                                        countSpan.textContent = count;
+                                    }
+
+                                    // Ocultar modal si no hay más solicitudes
+                                    if (count === 0) {
+                                        hideNotificationsModal();
+                                    }
+
+                                    debugLog(`Solicitud de ${msg.userId} rechazada.`);
+                                };
+                                notificationsList.appendChild(li);
+                                showNotificationsModal(notificationsList.children.length);
+                            } else {
+                                console.error('Error: #notificationsList no encontrado.');
+                                showError('Error al mostrar solicitudes de unión.', 3000);
+                            }
+                        }
+                        break;
 
                     case 'new-peer':
                         debugLog(`Nuevo par detectado: ${msg.userId}`);
@@ -1676,17 +1679,17 @@ case 'join-request':
                                     speakingTimerInterval = null;
                                 }
                             }
-                            
+
                             currentSpeaker = {
                                 name: msg.target,
                                 timeLeft: msg.duration,
                                 totalTime: msg.duration
                             };
-                            
+
                             const speakingPanel = document.getElementById('speakingPanel');
                             const speakingPersonName = document.getElementById('speakingPersonName');
                             const speakingActions = document.getElementById('speakingActions');
-                            
+
                             console.log('[GIVE-WORD] Elementos DOM:', {
                                 panel: !!speakingPanel,
                                 name: !!speakingPersonName,
@@ -1694,7 +1697,7 @@ case 'join-request':
                                 isModerator: isModerator,
                                 userName: userName
                             });
-                            
+
                             if (speakingPanel && speakingPersonName) {
                                 // ✅ ASEGURAR que el panel esté en el body para evitar problemas de z-index/overflow
                                 if (speakingPanel.parentNode !== document.body) {
@@ -1705,18 +1708,18 @@ case 'join-request':
                                 // ✅ Actualizar contenido del panel
                                 speakingPersonName.textContent = msg.target;
                                 updateTimerDisplay();
-                                
+
                                 // ✅ FORZAR VISIBILIDAD TOTAL - Remover clases anteriores y aplicar estilos directamente
                                 speakingPanel.classList.remove('closing');
                                 speakingPanel.classList.add('visible');
                                 speakingPanel.style.cssText = 'display: block !important; opacity: 1 !important; visibility: visible !important; z-index: 10000 !important;';
-                                
+
                                 console.log('[GIVE-WORD] ✅✅✅ PANEL MOSTRADO PARA TODOS LOS PARTICIPANTES ✅✅✅');
                                 console.log('[GIVE-WORD] Classes:', speakingPanel.className);
                                 console.log('[GIVE-WORD] Display:', window.getComputedStyle(speakingPanel).display);
                                 console.log('[GIVE-WORD] Opacity:', window.getComputedStyle(speakingPanel).opacity);
                                 console.log('[GIVE-WORD] Z-index:', window.getComputedStyle(speakingPanel).zIndex);
-                                
+
                                 // ✅ TODOS pueden ver el panel, pero SOLO los moderadores ven los botones de control
                                 if (speakingActions) {
                                     speakingActions.style.display = isModerator ? 'flex' : 'none';
@@ -1725,22 +1728,22 @@ case 'join-request':
                             } else {
                                 console.error('[GIVE-WORD] ❌ ERROR: No se encontró el panel o el nombre!');
                             }
-                            
+
                             // Iniciar temporizador sincronizado
                             if (speakingTimerInterval) {
                                 clearInterval(speakingTimerInterval);
                             }
-                            
+
                             speakingTimerInterval = setInterval(() => {
                                 if (currentSpeaker && currentSpeaker.timeLeft > 0) {
                                     currentSpeaker.timeLeft--;
                                     updateTimerDisplay();
-                                    
+
                                     // Cuando el tiempo se acaba
                                     if (currentSpeaker.timeLeft <= 0) {
                                         console.log('[GIVE-WORD] ⏰ Tiempo agotado en este cliente');
                                         const targetName = currentSpeaker.name;
-                                        
+
                                         // 📢 SOLO EL MODERADOR ejecuta el cierre automático
                                         if (isModerator) {
                                             console.log('[GIVE-WORD] 🔴 Moderador detectó expiración, ejecutando handleTimeExpired()');
@@ -1757,7 +1760,7 @@ case 'join-request':
                                     }
                                 }
                             }, 1000);
-                            
+
                             // Mostrar notificación a todos
                             showError(`🎤 ${msg.target} tiene la palabra (${msg.duration}s)`, 3000);
                             debugLog(`📢 ${msg.target} tiene la palabra por ${msg.duration} segundos`);
@@ -1767,17 +1770,17 @@ case 'join-request':
                     case 'take-word':
                         // Recibir notificación de que se quitó la palabra
                         console.log('[TAKE-WORD] 🔇 Mensaje recibido:', msg);
-                        
+
                         if (currentSpeaker || msg.target) {
                             const participantName = currentSpeaker?.name || msg.target;
-                            
+
                             // Detener temporizador
                             if (speakingTimerInterval) {
                                 clearInterval(speakingTimerInterval);
                                 speakingTimerInterval = null;
                                 console.log('[TAKE-WORD] ⏰ Temporizador detenido');
                             }
-                            
+
                             // ✅ Ocultar panel con animación PARA TODOS LOS PARTICIPANTES
                             const speakingPanel = document.getElementById('speakingPanel');
                             if (speakingPanel && speakingPanel.classList.contains('visible')) {
@@ -1792,13 +1795,13 @@ case 'join-request':
                                 }, 400);
                                 console.log('[TAKE-WORD] ✅ Panel ocultado para todos los participantes');
                             }
-                            
+
                             // ✅ Limpiar el speaker actual
                             currentSpeaker = null;
-                            
+
                             showError(`🔇 Se quitó la palabra a ${participantName}`, 2000);
                             console.log(`[TAKE-WORD] ✅ Palabra quitada a ${participantName}`);
-                            
+
                             // NOTA: El silenciamiento del micrófono se maneja en el mensaje 'mute-participant' que el servidor envía
                         }
                         break;
@@ -1810,17 +1813,17 @@ case 'join-request':
                             console.log('[CHAT] Procesando mensaje. Author:', msg.author, 'isOwn:', isOwn, 'userName:', userName);
                             // Mostrar todos los mensajes que vienen del servidor
                             addChatMessage(msg.author, msg.message, msg.timestamp, isOwn);
-                            
+
                             // Mostrar notificación si el mensaje es de otro usuario y el chat está cerrado
                             if (!isOwn) {
                                 const chatPanel = document.getElementById('chatPanel');
                                 const isChatOpen = chatPanel && chatPanel.classList.contains('visible');
-                                
+
                                 if (!isChatOpen) {
                                     // Mostrar notificación emergente
                                     showError(`💬 ${msg.author}: ${msg.message.substring(0, 50)}${msg.message.length > 50 ? '...' : ''}`, 4000);
                                 }
-                                
+
                                 // Agregar indicador visual en el botón de chat
                                 const chatToggleBtn = document.getElementById('chatToggle');
                                 if (chatToggleBtn && !isChatOpen) {
@@ -1851,6 +1854,16 @@ case 'join-request':
 
                     case 'screen-share-started':
                         console.log(`[SCREEN-SHARE] 📡 Notificación recibida de ${msg.userId}`);
+                        console.log(`[SCREEN-SHARE] 📦 Mensaje completo:`, msg);
+                        console.log(`[SCREEN-SHARE] 🆔 streamId recibido:`, msg.streamId);
+
+                        // ✅ FORZAR VISTA SIDEBAR INMEDIATAMENTE PARA TODOS
+                        if (typeof setViewMode === 'function') {
+                            setViewMode('sidebar');
+                        } else if (window.ViewControl && typeof window.ViewControl.setViewMode === 'function') {
+                            window.ViewControl.setViewMode('sidebar');
+                        }
+
                         if (msg.streamId) {
                             remoteScreenStreams[msg.userId] = msg.streamId;
                             console.log(`[SCREEN-SHARE] ID registrado: ${msg.streamId}`);
@@ -1858,11 +1871,51 @@ case 'join-request':
                             // Crear un placeholder de preview para reservar el área principal
                             ensureScreenPreviewPlaceholder(msg.userId);
 
-                            // Verificar si el video ya llegó y se asignó incorrectamente a la cámara
-                            const existingVideo = document.getElementById(`video-${msg.userId}`);
-                            if (existingVideo && existingVideo.srcObject && existingVideo.srcObject.id === msg.streamId) {
-                                console.log('[SCREEN-SHARE] ⚠️ Rectificando video asignado a cámara...');
-                                handleRemoteScreenShare(msg.userId, existingVideo.srcObject);
+                            // 1. Verificar si el stream estaba esperando en pendingStreams
+                            if (pendingStreams[msg.streamId]) {
+                                console.log(`[SCREEN-SHARE] 🔄 Recuperando stream pendiente para ${msg.userId} (por ID exacto)`);
+                                const pending = pendingStreams[msg.streamId];
+                                handleRemoteScreenShare(pending.userId, pending.stream);
+                                delete pendingStreams[msg.streamId];
+                            } else {
+                                // Búsqueda flexible: buscar cualquier stream pendiente de este usuario
+                                console.log(`[SCREEN-SHARE] 🔍 Buscando streams pendientes por usuario ${msg.userId}...`);
+                                const pendingKey = Object.keys(pendingStreams).find(key => pendingStreams[key].userId === msg.userId);
+                                if (pendingKey) {
+                                    console.log(`[SCREEN-SHARE] 🔄 Recuperando stream pendiente para ${msg.userId} (por coincidencia de usuario)`);
+                                    const pending = pendingStreams[pendingKey];
+                                    handleRemoteScreenShare(pending.userId, pending.stream);
+                                    delete pendingStreams[pendingKey];
+                                }
+                            }
+
+                            // 2. Verificar si el video ya llegó y se asignó incorrectamente a la cámara
+                            const existingVideoContainer = document.getElementById(`video-container-${msg.userId}`);
+                            if (existingVideoContainer) {
+                                const videoEl = existingVideoContainer.querySelector('video');
+                                if (videoEl && videoEl.srcObject && videoEl.srcObject.id === msg.streamId) {
+                                    console.log('[SCREEN-SHARE] ⚠️ Rectificando video asignado a cámara...');
+
+                                    // Mover a screen share
+                                    handleRemoteScreenShare(msg.userId, videoEl.srcObject);
+
+                                    // Limpiar el container de cámara que tiene el stream incorrecto
+                                    videoEl.srcObject = null;
+                                }
+                            }
+                        } else {
+                            // ⚠️ FALLBACK CRÍTICO: Si el servidor no envía streamId (versión vieja), asumimos que comparte
+                            console.warn(`[SCREEN-SHARE] ⚠️ streamId no recibido. Activando modo compatibilidad para ${msg.userId}`);
+                            remoteScreenStreams[msg.userId] = 'unknown'; // Marcar como activo
+                            ensureScreenPreviewPlaceholder(msg.userId);
+
+                            // Buscar cualquier stream pendiente de este usuario
+                            const pendingKey = Object.keys(pendingStreams).find(key => pendingStreams[key].userId === msg.userId);
+                            if (pendingKey) {
+                                console.log(`[SCREEN-SHARE] 🔄 Fallback: Recuperando stream pendiente para ${msg.userId}`);
+                                const pending = pendingStreams[pendingKey];
+                                handleRemoteScreenShare(pending.userId, pending.stream);
+                                delete pendingStreams[pendingKey];
                             }
                         }
                         break;
@@ -1932,7 +1985,7 @@ case 'join-request':
 
                     case 'moderator-assigned':
                         console.log('[MODERATOR] Mensaje recibido:', msg);
-                        
+
                         if (msg.name && msg.role) {
                             userRoles[msg.name] = msg.role;
 
@@ -1955,7 +2008,7 @@ case 'join-request':
 
                     case 'moderator-revoked':
                         console.log('[MODERATOR] Mensaje de revocación recibido:', msg);
-                        
+
                         if (msg.name && msg.role) {
                             userRoles[msg.name] = msg.role;
 
@@ -1978,25 +2031,25 @@ case 'join-request':
 
                     case 'mute-participant':
                         console.log('[MUTE-PARTICIPANT] 🔇 Mensaje recibido:', msg);
-                        
+
                         if (msg.target === userName) {
                             // ✅ Si es admin de la sala, ignorar orden de silencio
                             if (isRoomAdmin) {
                                 console.log('[ADMIN] Ignorando orden de silencio (el admin no puede ser silenciado)');
                                 return;
                             }
-                            
+
                             // 🎤 APLICAR EL CAMBIO DE ESTADO DEL MICRÓFONO
                             isMicActive = msg.micActive;
                             console.log(`[MUTE-PARTICIPANT] Cambiando estado de micrófono a: ${isMicActive}`);
-                            
+
                             if (localStream) {
                                 localStream.getAudioTracks().forEach(track => {
                                     track.enabled = isMicActive;
                                     console.log(`[MUTE-PARTICIPANT] Track ${track.id} enabled=${track.enabled}`);
                                 });
                             }
-                            
+
                             const toggleMicBtn = document.getElementById('toggleMic');
                             if (toggleMicBtn) {
                                 // ✅ CORREGIDO: active = micrófono ENCENDIDO (verde)
@@ -2009,22 +2062,22 @@ case 'join-request':
                                 }
                                 console.log(`[MUTE-PARTICIPANT] Botón actualizado: active=${toggleMicBtn.classList.contains('active')}`);
                             }
-                            
+
                             showError(isMicActive ? 'Tu micrófono ha sido activado por un moderador.' : 'Tu micrófono ha sido silenciado por un moderador.', 3000);
                             console.log(`[MUTE-PARTICIPANT] ✅ Micrófono ${isMicActive ? 'ACTIVADO' : 'SILENCIADO'} para ${userName}`);
                         }
-                        
+
                         // 📊 Actualizar estado en la lista de participantes
                         participantStates[msg.target] = participantStates[msg.target] || {};
                         participantStates[msg.target].micActive = msg.micActive;
                         updateParticipantList();
-                        
+
                         // 🔄 Actualizar el título del botón de silenciar
                         const muteBtn = document.querySelector(`#participant-${msg.target} .mute-btn`);
                         if (muteBtn) {
                             muteBtn.title = msg.micActive ? 'Silenciar' : 'Activar Micrófono';
                         }
-                        
+
                         console.log(`[MUTE-PARTICIPANT] ✅ Estado actualizado para ${msg.target}: micActive=${msg.micActive}`);
                         break;
 
@@ -2088,26 +2141,26 @@ case 'join-request':
                 if (!intentionalDisconnect) {
                     // Mostrar mensaje de reconexión
                     showError('Conexión perdida. Reconectando...', 0);
-                    
+
                     let retryAttempts = 0;
                     const maxRetries = 10;
                     let retryDelay = 2000;
                     const maxDelay = 30000;
-                    
+
                     const reconnect = () => {
                         if (retryAttempts >= maxRetries) {
                             showError('No se pudo reconectar después de varios intentos. Por favor, recarga la página.', 0);
                             return;
                         }
-                        
+
                         if (ws.readyState !== WebSocket.OPEN && ws.readyState !== WebSocket.CONNECTING) {
                             retryAttempts++;
                             debugLog(`Intento de reconexión ${retryAttempts}/${maxRetries}`);
                             showError(`Reconectando... (${retryAttempts}/${maxRetries})`, 0);
-                            
+
                             // Intentar reconectar
                             initWebSocket();
-                            
+
                             retryDelay = Math.min(retryDelay * 1.5, maxDelay);
                             setTimeout(reconnect, retryDelay);
                         } else if (ws.readyState === WebSocket.OPEN) {
@@ -2116,7 +2169,7 @@ case 'join-request':
                             debugLog('Reconexión exitosa al servidor WebSocket');
                         }
                     };
-                    
+
                     setTimeout(reconnect, retryDelay);
                 } else {
                     debugLog("Desconexión intencional, no se intentará reconectar.");
@@ -2157,7 +2210,7 @@ function createPeerConnection(userId) {
                 console.error(`❌ Error agregando track ${track.kind} a ${userId}:`, e);
             }
         });
-        
+
         // Verificar que los senders están configurados correctamente
         const senders = pc.getSenders();
         debugLog(`Total de senders para ${userId}: ${senders.length}`);
@@ -2175,22 +2228,22 @@ function createPeerConnection(userId) {
 
     // Buffer para ICE candidates pendientes
     pc.pendingCandidates = [];
-    
+
     pc.onicecandidate = event => {
         if (event.candidate) {
             const candidateType = event.candidate.candidate.includes('typ relay') ? 'TURN/RELAY' :
-                                 event.candidate.candidate.includes('typ srflx') ? 'STUN/SRFLX' :
-                                 event.candidate.candidate.includes('typ host') ? 'HOST' : 'UNKNOWN';
-            
+                event.candidate.candidate.includes('typ srflx') ? 'STUN/SRFLX' :
+                    event.candidate.candidate.includes('typ host') ? 'HOST' : 'UNKNOWN';
+
             debugLog(`🔷 Candidato ICE generado para ${userId}:`);
             debugLog(`   Tipo: ${candidateType}`);
             debugLog(`   Candidato: ${event.candidate.candidate}`);
-            
+
             // Preferir candidatos relay (TURN) para conexiones entre diferentes redes
             if (candidateType === 'TURN/RELAY') {
                 debugLog(`   ⭐ Candidato RELAY (mejor para redes diferentes)`);
             }
-            
+
             if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify({
                     type: 'signal',
@@ -2207,7 +2260,7 @@ function createPeerConnection(userId) {
             debugLog(`✅ Recolección de candidatos ICE completada para ${userId}`);
         }
     };
-    
+
     pc.onicegatheringstatechange = () => {
         debugLog(`Estado de recolección ICE para ${userId}: ${pc.iceGatheringState}`);
     };
@@ -2215,32 +2268,60 @@ function createPeerConnection(userId) {
     pc.ontrack = event => {
         const stream = event.streams[0];
         const track = event.track;
-        
+
         console.log(`[WEBRTC] 📥 Track recibido de ${userId}: ${track.kind} (${track.label})`);
         console.log(`[WEBRTC] 🆔 Stream ID: ${stream.id}`);
+        console.log(`[WEBRTC] 🔍 remoteScreenStreams[${userId}]:`, remoteScreenStreams[userId]);
+        console.log(`[WEBRTC] 🔍 ¿Es pantalla compartida?:`, remoteScreenStreams[userId] === stream.id);
 
         // Verificar si este stream corresponde a una pantalla compartida conocida
         if (remoteScreenStreams[userId] === stream.id) {
             console.log(`[WEBRTC] 🖥️ Confirmado: Es stream de PANTALLA de ${userId}`);
             handleRemoteScreenShare(userId, stream);
         } else {
-            // Si no coincide con el ID de pantalla, asumimos que es cámara/micrófono
-            console.log(`[WEBRTC] 📷 Asumiendo: Es stream de CÁMARA/AUDIO de ${userId}`);
-            addVideoElement(userId, stream);
-            
-            // Asegurar que el audio esté habilitado
-            if (track.kind === 'audio') {
-                track.enabled = true;
+            // Si no coincide con el ID de pantalla, podría ser cámara O una pantalla que llegó antes del mensaje
+
+            // Verificar si YA existe un video de cámara activo para este usuario
+            const existingCameraContainer = document.getElementById(`video-container-${userId}`);
+            const existingVideo = existingCameraContainer ? existingCameraContainer.querySelector('video') : null;
+
+            console.log(`[WEBRTC] 🔍 existingCameraContainer:`, !!existingCameraContainer);
+            console.log(`[WEBRTC] 🔍 existingVideo:`, !!existingVideo);
+            console.log(`[WEBRTC] 🔍 existingVideo.srcObject:`, existingVideo?.srcObject?.id);
+
+            // Si ya tiene un video de cámara Y el stream ID es diferente, probablemente el nuevo es la pantalla
+            // y aún no llegó el mensaje de señalización.
+            if (existingVideo && existingVideo.srcObject && existingVideo.srcObject.id !== stream.id) {
+
+                // Verificar si YA sabemos que este usuario está compartiendo pantalla (aunque el ID no coincida exacto)
+                if (remoteScreenStreams[userId]) {
+                    console.log(`[WEBRTC] 🔄 Stream adicional recibido y usuario ${userId} está compartiendo pantalla. Asumiendo PANTALLA.`);
+                    handleRemoteScreenShare(userId, stream);
+                } else {
+                    console.log(`[WEBRTC] ⏳ Stream recibido pero ya hay cámara activa. Guardando en buffer: ${stream.id}`);
+                    pendingStreams[stream.id] = { userId, stream };
+                    console.log(`[WEBRTC] 📦 pendingStreams ahora tiene:`, Object.keys(pendingStreams));
+                }
+            } else {
+                // Si no hay cámara previa, o es el mismo stream (reemplazo), asumimos cámara por defecto
+                // (Si luego resulta ser pantalla, el evento screen-share-started lo corregirá)
+                console.log(`[WEBRTC] 📷 Asumiendo: Es stream de CÁMARA/AUDIO de ${userId}`);
+                addVideoElement(userId, stream);
+
+                // Asegurar que el audio esté habilitado
+                if (track.kind === 'audio') {
+                    track.enabled = true;
+                }
             }
         }
     };
 
     pc.oniceconnectionstatechange = () => {
         debugLog(`Estado de conexión ICE para ${userId}: ${pc.iceConnectionState}`);
-        
+
         if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
             debugLog(`✅ Conexión ICE establecida con ${userId}`);
-            
+
             // Verificar qué tipo de candidato se está usando
             pc.getStats().then(stats => {
                 stats.forEach(report => {
@@ -2248,13 +2329,13 @@ function createPeerConnection(userId) {
                         debugLog(`🎯 Par de candidatos activo para ${userId}:`);
                         debugLog(`   - Estado: ${report.state}`);
                         debugLog(`   - Prioridad: ${report.priority}`);
-                        
+
                         // Obtener información del candidato local
                         stats.forEach(r => {
                             if (r.id === report.localCandidateId) {
                                 const type = r.candidateType === 'relay' ? 'TURN/RELAY ⭐' :
-                                           r.candidateType === 'srflx' ? 'STUN/SRFLX' :
-                                           r.candidateType === 'host' ? 'HOST (local)' : r.candidateType;
+                                    r.candidateType === 'srflx' ? 'STUN/SRFLX' :
+                                        r.candidateType === 'host' ? 'HOST (local)' : r.candidateType;
                                 debugLog(`   - Candidato Local: ${type}`);
                                 if (r.candidateType === 'relay') {
                                     debugLog(`   ✅ Usando TURN - Funciona para redes diferentes`);
@@ -2264,15 +2345,15 @@ function createPeerConnection(userId) {
                             }
                             if (r.id === report.remoteCandidateId) {
                                 const type = r.candidateType === 'relay' ? 'TURN/RELAY ⭐' :
-                                           r.candidateType === 'srflx' ? 'STUN/SRFLX' :
-                                           r.candidateType === 'host' ? 'HOST (local)' : r.candidateType;
+                                    r.candidateType === 'srflx' ? 'STUN/SRFLX' :
+                                        r.candidateType === 'host' ? 'HOST (local)' : r.candidateType;
                                 debugLog(`   - Candidato Remoto: ${type}`);
                             }
                         });
                     }
                 });
             }).catch(err => console.error('Error obteniendo estadísticas:', err));
-            
+
             // Limpiar cualquier timeout de reconexión pendiente
             if (pc.reconnectTimeout) {
                 clearTimeout(pc.reconnectTimeout);
@@ -2280,7 +2361,7 @@ function createPeerConnection(userId) {
             }
             // Reiniciar contador de intentos de reconexión
             pc.reconnectAttempts = 0;
-            
+
             // Enviar candidatos pendientes si hay
             if (pc.pendingCandidates && pc.pendingCandidates.length > 0 && ws && ws.readyState === WebSocket.OPEN) {
                 debugLog(`Enviando ${pc.pendingCandidates.length} candidatos ICE pendientes para ${userId}`);
@@ -2362,12 +2443,12 @@ async function handleSignal(senderId, payload) {
             }
         } else if (payload.candidate) {
             const candidateType = payload.candidate.candidate.includes('typ relay') ? 'TURN/RELAY' :
-                                 payload.candidate.candidate.includes('typ srflx') ? 'STUN/SRFLX' :
-                                 payload.candidate.candidate.includes('typ host') ? 'HOST' : 'UNKNOWN';
-            
+                payload.candidate.candidate.includes('typ srflx') ? 'STUN/SRFLX' :
+                    payload.candidate.candidate.includes('typ host') ? 'HOST' : 'UNKNOWN';
+
             debugLog(`🔶 Candidato ICE recibido de ${senderId}:`);
             debugLog(`   Tipo: ${candidateType}`);
-            
+
             try {
                 await pc.addIceCandidate(new RTCIceCandidate(payload.candidate));
                 debugLog(`   ✅ Candidato agregado exitosamente`);
@@ -2430,19 +2511,19 @@ async function restartPeerConnection(userId) {
             }
         })();
 
-        const timeoutPromise = new Promise((_, reject) => 
+        const timeoutPromise = new Promise((_, reject) =>
             setTimeout(() => reject(new Error('Timeout en reinicio de conexión')), 15000)
         );
 
         await Promise.race([restartPromise, timeoutPromise]);
-        
+
     } catch (e) {
         console.error(`Error reiniciando PeerConnection para ${userId}:`, e);
         debugLog(`Intento fallido de reinicio para ${userId}, recreando conexión...`);
-        
+
         // Si falla el reinicio, eliminar y recrear la conexión
         removePeerConnection(userId);
-        
+
         // Esperar un poco antes de recrear
         setTimeout(() => {
             if (!peerConnections[userId]) {
@@ -2480,7 +2561,7 @@ function removePeerConnection(userId) {
 
 document.getElementById('toggleMic')?.addEventListener('click', () => {
     isMicActive = !isMicActive;
-    
+
     // 🎤 Actualizar tracks de audio locales
     if (localStream) {
         const audioTracks = localStream.getAudioTracks();
@@ -2489,7 +2570,7 @@ document.getElementById('toggleMic')?.addEventListener('click', () => {
             track.enabled = isMicActive;
             console.log(`  - Track ${track.id}: enabled=${track.enabled}, readyState=${track.readyState}, muted=${track.muted}`);
         });
-        
+
         // 🔊 Verificar que los senders tienen el audio
         Object.keys(peerConnections).forEach(userId => {
             const pc = peerConnections[userId];
@@ -2501,7 +2582,7 @@ document.getElementById('toggleMic')?.addEventListener('click', () => {
             }
         });
     }
-    
+
     document.getElementById('toggleMic').classList.toggle('active', isMicActive);
     participantStates[userName].micActive = isMicActive;
     showError(isMicActive ? 'Micrófono Activado' : 'Micrófono Silenciado', 2000);
@@ -2561,7 +2642,7 @@ async function startScreenSharing() {
 
         // 1. Mostrar preview local
         createScreenSharePreview(userName, localScreenStream);
-        
+
         // Silenciar el video local de pantalla para evitar eco/feedback
         const myVideo = document.getElementById(`screen-video-${userName}`);
         if (myVideo) {
@@ -2583,21 +2664,35 @@ async function startScreenSharing() {
         const videoTrack = localScreenStream.getVideoTracks()[0];
         const audioTrack = localScreenStream.getAudioTracks()[0];
 
+        console.log('[SCREEN-SHARE] 📹 Video track:', videoTrack);
+        console.log('[SCREEN-SHARE] 🔊 Audio track:', audioTrack);
+        console.log('[SCREEN-SHARE] 🔗 Conexiones peer activas:', Object.keys(peerConnections));
+
         for (const peerId in peerConnections) {
             const pc = peerConnections[peerId];
+            console.log(`[SCREEN-SHARE] 📤 Agregando tracks a ${peerId}...`);
+
             if (videoTrack) {
                 try {
-                    pc.addTrack(videoTrack, localScreenStream);
-                } catch (e) { console.warn(`Error adding video track to ${peerId}`, e); }
+                    const sender = pc.addTrack(videoTrack, localScreenStream);
+                    console.log(`[SCREEN-SHARE] ✅ Video track agregado a ${peerId}:`, sender);
+                } catch (e) {
+                    console.error(`[SCREEN-SHARE] ❌ Error adding video track to ${peerId}:`, e);
+                }
             }
             if (audioTrack) {
                 try {
-                    pc.addTrack(audioTrack, localScreenStream);
-                } catch (e) { console.warn(`Error adding audio track to ${peerId}`, e); }
+                    const sender = pc.addTrack(audioTrack, localScreenStream);
+                    console.log(`[SCREEN-SHARE] ✅ Audio track agregado a ${peerId}:`, sender);
+                } catch (e) {
+                    console.error(`[SCREEN-SHARE] ❌ Error adding audio track to ${peerId}:`, e);
+                }
             }
-            
+
             // Renegociar
+            console.log(`[SCREEN-SHARE] 🔄 Renegociando con ${peerId}...`);
             await renegotiate(peerId, pc);
+            console.log(`[SCREEN-SHARE] ✅ Renegociación completada con ${peerId}`);
         }
 
         // 4. Manejar parada desde el navegador
@@ -2619,17 +2714,17 @@ async function startScreenSharing() {
 
 async function stopScreenSharing() {
     console.log('[SCREEN-SHARE] 🛑 Deteniendo...');
-    
+
     if (!localScreenStream) return;
 
     // 1. Detener tracks
     localScreenStream.getTracks().forEach(t => t.stop());
-    
+
     // 2. Remover tracks de las conexiones
     for (const peerId in peerConnections) {
         const pc = peerConnections[peerId];
         const senders = pc.getSenders();
-        
+
         for (const sender of senders) {
             if (sender.track && sender.track.kind === 'video' && sender.track.label === localScreenStream.getVideoTracks()[0]?.label) {
                 pc.removeTrack(sender);
@@ -2637,7 +2732,7 @@ async function stopScreenSharing() {
             // Nota: Audio de pantalla es más difícil de distinguir si no guardamos referencia, 
             // pero por ahora nos enfocamos en video.
         }
-        
+
         // Renegociar
         await renegotiate(peerId, pc);
     }
@@ -2648,6 +2743,11 @@ async function stopScreenSharing() {
     localScreenStream = null;
     document.getElementById('shareScreen')?.classList.remove('active');
 
+    // Restaurar vista normal
+    if (typeof setViewMode === 'function') {
+        setViewMode('grid-auto');
+    }
+
     // 4. Notificar servidor
     if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({
@@ -2656,15 +2756,26 @@ async function stopScreenSharing() {
             userId: userName
         }));
     }
-    
+
     showError('Pantalla compartida detenida', 2000);
 }
 
 async function renegotiate(peerId, pc) {
-    if (pc.signalingState !== 'stable') return;
+    console.log(`[RENEGOTIATE] 🔄 Iniciando renegociación con ${peerId}`);
+    console.log(`[RENEGOTIATE] 📊 Estado de señalización: ${pc.signalingState}`);
+
+    if (pc.signalingState !== 'stable') {
+        console.warn(`[RENEGOTIATE] ⚠️ No se puede renegociar, estado: ${pc.signalingState}`);
+        return;
+    }
+
     try {
         const offer = await pc.createOffer();
+        console.log(`[RENEGOTIATE] ✅ Oferta creada para ${peerId}`);
+
         await pc.setLocalDescription(offer);
+        console.log(`[RENEGOTIATE] ✅ Descripción local establecida para ${peerId}`);
+
         if (ws && ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({
                 type: 'signal',
@@ -2672,9 +2783,12 @@ async function renegotiate(peerId, pc) {
                 target: peerId,
                 payload: { sdp: pc.localDescription }
             }));
+            console.log(`[RENEGOTIATE] ✅ Oferta enviada al servidor para ${peerId}`);
+        } else {
+            console.error(`[RENEGOTIATE] ❌ WebSocket no está abierto, no se puede enviar oferta`);
         }
     } catch (e) {
-        console.error(`Error renegociando con ${peerId}:`, e);
+        console.error(`[RENEGOTIATE] ❌ Error renegociando con ${peerId}:`, e);
     }
 }
 
@@ -2686,11 +2800,15 @@ function handleRemoteScreenShare(userId, stream) {
         const videoEl = preview.querySelector('video');
         if (videoEl && videoEl.srcObject !== stream) {
             videoEl.srcObject = stream;
-            try { videoEl.play().catch(() => {}); } catch (e) {}
+            try { videoEl.play().catch(() => { }); } catch (e) { }
         }
 
         // Asegurar layout
-        activateScreenShareLayout(document.getElementById('videoGrid'));
+        if (typeof setViewMode === 'function') {
+            setViewMode('sidebar');
+        } else if (window.ViewControl && typeof window.ViewControl.setViewMode === 'function') {
+            window.ViewControl.setViewMode('sidebar');
+        }
         return;
     }
 
@@ -2749,10 +2867,10 @@ document.getElementById('addOptionBtn')?.addEventListener('click', addPollOption
 function clearPollCreationForm() {
     document.getElementById('pollQuestionInput').value = '';
     document.getElementById('pollDurationInput').value = '60';
-    
+
     const container = document.getElementById('pollOptionsContainer');
     container.innerHTML = '';
-    
+
     // Recrear las dos opciones por defecto
     for (let i = 1; i <= 2; i++) {
         const optionDiv = document.createElement('div');
@@ -2765,7 +2883,7 @@ function clearPollCreationForm() {
         `;
         container.appendChild(optionDiv);
     }
-    
+
     // Re-adjuntar eventos a los botones de eliminar
     document.querySelectorAll('.remove-option-btn').forEach(btn => {
         btn.addEventListener('click', function () {
@@ -2778,7 +2896,7 @@ function clearPollCreationForm() {
             }
         });
     });
-    
+
     debugLog('Formulario de creación de encuesta limpiado.');
 }
 
@@ -2937,7 +3055,7 @@ function startPollTimer(durationSeconds) {
 
     updateTimer();
     intervalId = setInterval(updateTimer, 1000);
-    
+
     // ✅ Guardar referencia también en currentPoll si existe
     if (currentPoll) {
         currentPoll.timerInterval = intervalId;
@@ -3122,11 +3240,11 @@ function displayPollResults(results, question, options, votes) {
                 backdrop-filter: blur(12px);
                 transition: all 0.3s ease;
             `;
-            
+
             const voterName = document.createElement('span');
             voterName.textContent = vote.voter;
             voterName.style.cssText = 'font-weight: 600; color: var(--text-primary);';
-            
+
             const voteOption = document.createElement('span');
             voteOption.textContent = vote.optionText;
             voteOption.style.cssText = `
@@ -3137,11 +3255,11 @@ function displayPollResults(results, question, options, votes) {
                 font-size: 13px;
                 font-weight: 500;
             `;
-            
+
             li.appendChild(voterName);
             li.appendChild(voteOption);
             votesList.appendChild(li);
-            
+
             // Efecto hover
             li.addEventListener('mouseenter', () => {
                 li.style.transform = 'translateX(4px)';
@@ -3211,7 +3329,7 @@ function startResultsTimer(durationSeconds) {
 
     updateTimer();
     intervalId = setInterval(updateTimer, 1000);
-    
+
     // ✅ Guardar referencia también en currentPoll si existe
     if (currentPoll) {
         currentPoll.resultsTimerInterval = intervalId;
@@ -3342,30 +3460,30 @@ document.getElementById('closeResultsBtn')?.addEventListener('click', () => {
 // Función para monitorear salud de las conexiones
 async function checkConnectionsHealth() {
     debugLog('🔍 Verificando salud de las conexiones...');
-    
+
     for (const [userId, pc] of Object.entries(peerConnections)) {
         if (!pc) continue;
-        
+
         const iceState = pc.iceConnectionState;
         const connectionState = pc.connectionState;
-        
+
         debugLog(`Conexión con ${userId}: ICE=${iceState}, Connection=${connectionState}`);
-        
+
         // Si la conexión está en mal estado, intentar obtener estadísticas
         if (iceState === 'disconnected' || iceState === 'failed' || connectionState === 'disconnected' || connectionState === 'failed') {
             debugLog(`⚠️ Conexión en mal estado con ${userId}, verificando estadísticas...`);
-            
+
             try {
                 const stats = await pc.getStats();
                 let hasActiveConnection = false;
-                
+
                 stats.forEach(report => {
                     if (report.type === 'candidate-pair' && report.state === 'succeeded') {
                         hasActiveConnection = true;
                         debugLog(`✅ Encontrado par de candidatos activo para ${userId}`);
                     }
                 });
-                
+
                 if (!hasActiveConnection && (iceState === 'disconnected' || iceState === 'failed')) {
                     debugLog(`❌ No hay conexión activa con ${userId}, intentando reiniciar...`);
                     restartPeerConnection(userId);
@@ -3388,7 +3506,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log('[DOM] roomCode:', roomCode);
     console.log('[DOM] userName:', userName);
     console.log('[DOM] isModerator:', isModerator);
-    
+
     if (!roomCode) {
         console.error('[DOM] ERROR: Código de sala no proporcionado en la URL');
         showError('Código de sala no proporcionado en la URL. Redirigiendo...', 5000);
@@ -3419,7 +3537,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     screenShareContainer = document.getElementById('screenShareContainer');
     participantList = document.getElementById('participantsList');
     participantCount = document.getElementById('participantCount');
-    
+
     if (!videosContainer) {
         console.error('❌ ERROR: Contenedor de videos (#videoGrid) no encontrado');
     }
@@ -3450,7 +3568,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.log('[END-WORD-BTN] 🔴 Botón clickeado');
             console.log('[END-WORD-BTN] currentSpeaker:', currentSpeaker);
             console.log('[END-WORD-BTN] isModerator:', isModerator);
-            
+
             if (currentSpeaker && isModerator) {
                 console.log('[END-WORD-BTN] ✅ Condiciones cumplidas, llamando a takeWordFromParticipant()');
                 takeWordFromParticipant();
@@ -3492,8 +3610,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (pollResultsPanel) {
         pollResultsPanel.addEventListener('click', (e) => {
             const panel = e.currentTarget;
-            if (panel.classList.contains('minimized') && 
-                !e.target.closest('.minimize-btn') && 
+            if (panel.classList.contains('minimized') &&
+                !e.target.closest('.minimize-btn') &&
                 !e.target.closest('.close-modal') &&
                 e.target.closest('.modal-content')) {
                 e.stopPropagation();
@@ -3511,11 +3629,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 document.getElementById('leaveBtn')?.addEventListener('click', () => {
     // Marcar como desconexión intencional
     intentionalDisconnect = true;
-    
+
     if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ type: 'leave', room: roomCode, name: userName }));
     }
-    
+
     // Cerrar todas las conexiones peer
     for (const userId in peerConnections) {
         if (peerConnections[userId]) {
@@ -3523,21 +3641,21 @@ document.getElementById('leaveBtn')?.addEventListener('click', () => {
         }
     }
     peerConnections = {};
-    
+
     // Detener todos los streams
     localStream?.getTracks().forEach(track => track.stop());
     localScreenStream?.getTracks().forEach(track => track.stop());
     localStream = null;
     localScreenStream = null;
-    
+
     // Cerrar WebSocket
     if (ws) {
         ws.close(1000, 'Usuario salió de la sala');
     }
-    
+
     showError('Saliendo de la sala...', 2000);
     debugLog('Saliendo de la sala intencionalmente.');
-    
+
     setTimeout(() => {
         window.location.href = '/';
     }, 2000);
@@ -3547,7 +3665,7 @@ document.getElementById('leaveBtn')?.addEventListener('click', () => {
 async function showShareLink() {
     // Obtener la URL base (ngrok o localhost)
     let baseUrl = window.location.origin;
-    
+
     // Intentar obtener la URL de ngrok desde frontendConfig.json
     try {
         const response = await fetch('/frontendConfig.json');
