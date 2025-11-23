@@ -230,6 +230,11 @@ wss.on('connection', (ws) => {
                   }));
                 }
               });
+            }
+          }
+          break;
+
+        case 'give-word':
           if (room && msg.target) {
             const roomClients = activeRooms.get(room);
             console.log(`[SERVER] Room clients count: ${roomClients ? roomClients.size : 0}`);
@@ -243,7 +248,6 @@ wss.on('connection', (ws) => {
                     duration: msg.duration || 60,
                     grantedBy: userName
                   };
-                  // console.log(`[SERVER] Sending to client:`, messageToSend);
                   client.send(JSON.stringify(messageToSend));
                   sentCount++;
                 }
@@ -327,6 +331,23 @@ wss.on('connection', (ws) => {
                 }
               });
               console.log(`[SERVER] Floor ended for ${msg.name} in room '${room}'. Hand lowered.`);
+            }
+          }
+          break;
+
+        case 'hand-lowered':
+          if (room && msg.name) {
+            const roomClients = activeRooms.get(room);
+            if (roomClients) {
+              roomClients.forEach(client => {
+                if (client.readyState === 1) {
+                  client.send(JSON.stringify({
+                    type: 'hand-lowered',
+                    name: msg.name
+                  }));
+                }
+              });
+              console.log(`[SERVER] Hand lowered for ${msg.name} in room '${room}' (distributed to all clients).`);
             }
           }
           break;

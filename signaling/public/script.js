@@ -608,9 +608,8 @@ function updateHandList() {
             lowerBtn.addEventListener('click', () => {
                 if (ws && ws.readyState === WebSocket.OPEN) {
                     ws.send(JSON.stringify({ type: 'hand-lowered', name: name }));
+                    // No hacer optimistic update aquí, esperar respuesta del servidor
                 }
-                // Optimistic update
-                handleHandLowered(name);
             });
 
             li.appendChild(grantBtn);
@@ -639,14 +638,24 @@ document.getElementById('raiseHand')?.addEventListener('click', () => {
     if (isModerator) {
         toggleHandPanel();
     } else {
-        if (ws && ws.readyState === WebSocket.OPEN && !raisedHands.has(userName)) {
-            ws.send(JSON.stringify({ type: 'raise-hand', name: userName }));
-            raisedHands.add(userName);
-            updateHandList();
-            updateHandNotification();
-            showError('Has levantado la mano ✋', 3000);
-            debugLog('Levantando mano.');
-            document.getElementById('raiseHand')?.classList.add('active');
+        const isHandRaised = raisedHands.has(userName);
+
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            if (!isHandRaised) {
+                // Levantar mano
+                ws.send(JSON.stringify({ type: 'raise-hand', name: userName }));
+                raisedHands.add(userName);
+                updateHandList();
+                updateHandNotification();
+                showError('Has levantado la mano ✋', 3000);
+                debugLog('Levantando mano.');
+                document.getElementById('raiseHand')?.classList.add('active');
+            } else {
+                // Bajar mano (el usuario puede bajar su propia mano)
+                ws.send(JSON.stringify({ type: 'hand-lowered', name: userName }));
+                // No hacer optimistic update aquí, esperar respuesta del servidor
+                debugLog('Solicitando bajar mano.');
+            }
         }
     }
 });
@@ -657,13 +666,29 @@ document.getElementById('closeHandPanel')?.addEventListener('click', () => {
 
 
 function handleHandLowered(name) {
+    console.log(`[HAND-LOWERED] 📥 Mensaje recibido para: ${name}`);
+    console.log(`[HAND-LOWERED] userName actual: ${userName}`);
+    console.log(`[HAND-LOWERED] raisedHands antes:`, Array.from(raisedHands));
+
     raisedHands.delete(name);
+
+    console.log(`[HAND-LOWERED] raisedHands después:`, Array.from(raisedHands));
+
     updateHandList();
     updateHandNotification();
 
     if (name === userName) {
         showError('Tu mano ha sido bajada.', 3000);
-        document.getElementById('raiseHand')?.classList.remove('active');
+        const raiseHandBtn = document.getElementById('raiseHand');
+        console.log(`[HAND-LOWERED] Botón encontrado:`, !!raiseHandBtn);
+        if (raiseHandBtn) {
+            console.log(`[HAND-LOWERED] Classes antes:`, raiseHandBtn.className);
+            raiseHandBtn.classList.remove('active');
+            console.log(`[HAND-LOWERED] Classes después:`, raiseHandBtn.className);
+            console.log(`[HAND-LOWERED] ✅ Clase 'active' removida del botón`);
+        } else {
+            console.error(`[HAND-LOWERED] ❌ No se encontró el botón raiseHand`);
+        }
     }
 
     debugLog(`Mano bajada para ${name}.`);
@@ -722,19 +747,6 @@ function handleFloorGranted(target) {
         showError('Tu mano fue bajada al recibir la palabra.', 3000);
         document.getElementById('raiseHand')?.classList.remove('active');
     }
-}
-
-function handleHandLowered(name) {
-    raisedHands.delete(name);
-    updateHandList();
-    updateHandNotification();
-
-    if (name === userName) {
-        showError('Tu mano ha sido bajada.', 3000);
-        document.getElementById('raiseHand')?.classList.remove('active');
-    }
-
-    debugLog(`Mano bajada para ${name}.`);
 }
 
 function handleFloorEnded(name) {
