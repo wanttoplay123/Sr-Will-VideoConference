@@ -607,11 +607,10 @@ function updateHandList() {
             lowerBtn.textContent = 'Bajar mano';
             lowerBtn.addEventListener('click', () => {
                 if (ws && ws.readyState === WebSocket.OPEN) {
-                    ws.send(JSON.stringify({ type: 'lower-hand', room: roomCode, name }));
+                    ws.send(JSON.stringify({ type: 'hand-lowered', name: name }));
                 }
-                raisedHands.delete(name);
-                updateHandList();
-                updateHandNotification();
+                // Optimistic update
+                handleHandLowered(name);
             });
 
             li.appendChild(grantBtn);
@@ -655,6 +654,20 @@ document.getElementById('raiseHand')?.addEventListener('click', () => {
 document.getElementById('closeHandPanel')?.addEventListener('click', () => {
     toggleHandPanel();
 });
+
+
+function handleHandLowered(name) {
+    raisedHands.delete(name);
+    updateHandList();
+    updateHandNotification();
+
+    if (name === userName) {
+        showError('Tu mano ha sido bajada.', 3000);
+        document.getElementById('raiseHand')?.classList.remove('active');
+    }
+
+    debugLog(`Mano bajada para ${name}.`);
+}
 
 function handleFloorGranted(target) {
     if (target !== userName) {
@@ -1665,6 +1678,10 @@ function initWebSocket() {
                             updateHandNotification();
                             showError(`${msg.name} ha levantado la mano ✋`, 3000);
                         }
+                        break;
+
+                    case 'hand-lowered':
+                        handleHandLowered(msg.name);
                         break;
 
                     case 'give-word':
