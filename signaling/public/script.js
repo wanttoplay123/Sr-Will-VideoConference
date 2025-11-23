@@ -1688,6 +1688,31 @@ function initWebSocket() {
                         // Recibir notificación de que alguien tiene la palabra
                         console.log('[GIVE-WORD] 📢 Mensaje recibido:', msg);
                         if (msg.target && msg.duration) {
+                            // Si soy yo, activar micrófono automáticamente
+                            if (msg.target === userName) {
+                                isMicActive = true;
+                                if (localStream) {
+                                    localStream.getAudioTracks().forEach(t => t.enabled = true);
+                                }
+                                document.getElementById('toggleMic')?.classList.add('active');
+
+                                // Notificar al servidor del nuevo estado
+                                if (ws && ws.readyState === WebSocket.OPEN) {
+                                    ws.send(JSON.stringify({
+                                        type: 'participant-state-update',
+                                        room: roomCode,
+                                        name: userName,
+                                        micActive: true,
+                                        camActive: isCamActive
+                                    }));
+
+                                    // Auto-bajar la mano
+                                    ws.send(JSON.stringify({ type: 'hand-lowered', name: userName }));
+                                }
+                                handleHandLowered(userName); // Optimistic update
+                                showError('¡Tienes la palabra! Tu micrófono ha sido activado.', 5000);
+                            }
+
                             // Si ya hay alguien con la palabra y es diferente, quitársela primero
                             if (currentSpeaker && currentSpeaker.name !== msg.target) {
                                 console.log('[GIVE-WORD] Ya hay un speaker diferente, cerrando panel anterior');

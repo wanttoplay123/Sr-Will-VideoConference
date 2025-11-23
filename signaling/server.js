@@ -230,31 +230,6 @@ wss.on('connection', (ws) => {
                   }));
                 }
               });
-              console.log(`[SERVER] ${userName} raised hand in room '${room}'.`);
-            }
-          }
-          break;
-
-        case 'hand-lowered':
-          if (room && userName) {
-            const roomClients = activeRooms.get(room);
-            if (roomClients) {
-              roomClients.forEach(client => {
-                if (client.readyState === 1) {
-                  client.send(JSON.stringify({
-                    type: 'hand-lowered',
-                    name: msg.name
-                  }));
-                }
-              });
-              console.log(`[SERVER] Hand lowered for ${msg.name} in room '${room}'.`);
-            }
-          }
-          break;
-
-        case 'give-word':
-          console.log(`[SERVER] Received give-word: ${JSON.stringify(msg)}`);
-          // Relaxed check: removed ws.isModerator to ensure broadcast works if client allows it
           if (room && msg.target) {
             const roomClients = activeRooms.get(room);
             console.log(`[SERVER] Room clients count: ${roomClients ? roomClients.size : 0}`);
