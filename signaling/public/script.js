@@ -579,10 +579,13 @@ function updateHandList() {
 
     const arr = Array.from(raisedHands);
     if (arr.length === 0) {
-        const li = document.createElement('li');
-        li.className = 'empty';
-        li.textContent = 'No hay manos levantadas';
-        handList.appendChild(li);
+        const emptyState = document.createElement('li');
+        emptyState.className = 'empty-state';
+        emptyState.innerHTML = `
+            <div class="empty-icon">✋</div>
+            <div class="empty-message">No hay manos levantadas</div>
+        `;
+        handList.appendChild(emptyState);
         updateHandNotification();
         return;
     }
@@ -590,9 +593,42 @@ function updateHandList() {
     arr.forEach(name => {
         const li = document.createElement('li');
         li.className = 'hand-item';
-        li.textContent = name;
+        // Guardar el nombre en dataset para handlers posteriores
+        li.dataset.name = name;
+
+        // Avatar con inicial
+        const avatar = document.createElement('div');
+        avatar.className = 'avatar';
+        avatar.textContent = name.charAt(0).toUpperCase();
+
+        // Info del usuario
+        const userInfo = document.createElement('div');
+        userInfo.className = 'user-info';
+        
+        const userName = document.createElement('div');
+        userName.className = 'user-name';
+        userName.textContent = name;
+        
+        const handTime = document.createElement('div');
+        handTime.className = 'hand-time';
+        handTime.textContent = 'Hace un momento';
+        
+        userInfo.appendChild(userName);
+        userInfo.appendChild(handTime);
+
+        // Icono de mano
+        const handIcon = document.createElement('div');
+        handIcon.className = 'hand-icon';
+        handIcon.textContent = '✋';
+
+        li.appendChild(avatar);
+        li.appendChild(userInfo);
+        li.appendChild(handIcon);
 
         if (isModerator) {
+            const personActions = document.createElement('div');
+            personActions.className = 'person-actions';
+
             const grantBtn = document.createElement('button');
             grantBtn.className = 'grant-btn';
             grantBtn.textContent = 'Dar palabra';
@@ -605,15 +641,23 @@ function updateHandList() {
             const lowerBtn = document.createElement('button');
             lowerBtn.className = 'lower-btn';
             lowerBtn.textContent = 'Bajar mano';
-            lowerBtn.addEventListener('click', () => {
-                if (ws && ws.readyState === WebSocket.OPEN) {
-                    ws.send(JSON.stringify({ type: 'hand-lowered', name: name }));
-                    // No hacer optimistic update aquí, esperar respuesta del servidor
+            lowerBtn.addEventListener('click', (ev) => {
+                ev.stopPropagation();
+                const targetName = li.dataset.name || name;
+                if (ws && ws.readyState === WebSocket.OPEN && isModerator) {
+                    ws.send(JSON.stringify({ type: 'hand-lowered', name: targetName }));
+                    // Optimistic UI update for moderator action
+                    try {
+                        handleHandLowered(targetName);
+                    } catch (e) {
+                        console.warn('Optimistic handleHandLowered failed for', targetName, e);
+                    }
                 }
             });
 
-            li.appendChild(grantBtn);
-            li.appendChild(lowerBtn);
+            personActions.appendChild(grantBtn);
+            personActions.appendChild(lowerBtn);
+            li.appendChild(personActions);
         }
 
         handList.appendChild(li);
@@ -632,6 +676,16 @@ function updateHandNotification() {
     if (badge) {
         badge.textContent = count > 0 ? String(count) : '';
         badge.style.display = count > 0 ? 'inline-block' : 'none';
+    }
+    // Actualizar contador en el header del panel de manos
+    const handCount = document.getElementById('handCount');
+    if (handCount) {
+        handCount.textContent = String(count);
+    }
+    // Habilitar/deshabilitar botón "Bajar Todas"
+    const lowerAllBtn = document.getElementById('lowerAllBtn');
+    if (lowerAllBtn) {
+        lowerAllBtn.disabled = count === 0;
     }
 }
 document.getElementById('raiseHand')?.addEventListener('click', () => {
@@ -662,6 +716,25 @@ document.getElementById('raiseHand')?.addEventListener('click', () => {
 
 document.getElementById('closeHandPanel')?.addEventListener('click', () => {
     toggleHandPanel();
+});
+
+document.getElementById('lowerAllBtn')?.addEventListener('click', () => {
+    if (ws && ws.readyState === WebSocket.OPEN && isModerator) {
+        // Bajar todas las manos
+        const handsToLower = Array.from(raisedHands);
+        handsToLower.forEach(name => {
+            ws.send(JSON.stringify({ type: 'hand-lowered', name: name }));
+        });
+        console.log('[LOWER-ALL] Bajando todas las manos:', handsToLower);
+        // Optimistic update: limpiar localmente la lista de manos levantadas
+        try {
+            raisedHands.clear();
+            updateHandList();
+            updateHandNotification();
+        } catch (e) {
+            console.warn('Error applying optimistic lower-all update:', e);
+        }
+    }
 });
 
 
