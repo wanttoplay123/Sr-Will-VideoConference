@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content">
     <title>Sala de Conferencia Premium</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
         rel="stylesheet">
@@ -1101,6 +1101,7 @@
                 opacity: 0;
                 transform: translateX(-20px);
             }
+
             to {
                 opacity: 1;
                 transform: translateX(0);
@@ -1111,24 +1112,38 @@
             from {
                 opacity: 0;
             }
+
             to {
                 opacity: 1;
             }
         }
 
         @keyframes handPulse {
-            0%, 100% {
+
+            0%,
+            100% {
                 transform: scale(1);
             }
+
             50% {
                 transform: scale(1.05);
             }
         }
 
         @keyframes shake {
-            0%, 100% { transform: rotate(0deg); }
-            25% { transform: rotate(-10deg); }
-            75% { transform: rotate(10deg); }
+
+            0%,
+            100% {
+                transform: rotate(0deg);
+            }
+
+            25% {
+                transform: rotate(-10deg);
+            }
+
+            75% {
+                transform: rotate(10deg);
+            }
         }
 
         #handPanel {
@@ -1263,7 +1278,7 @@
             left: -100%;
             width: 100%;
             height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
             transition: left 0.5s;
         }
 
@@ -1440,7 +1455,7 @@
             font-size: 28px;
             flex-shrink: 0;
             animation: shake 2s infinite;
-            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
         }
 
         #handList li .person-actions {
@@ -1696,14 +1711,17 @@
         }
 
         .modal.minimized .modal-header,
+        .modal.minimized .poll-results-header {
+            display: none !important;
+        }
+
         .modal.minimized .form-group,
         .modal.minimized #addOptionBtn,
         .modal.minimized #startPollBtn,
         .modal.minimized canvas,
         .modal.minimized #resultsPollQuestion,
         .modal.minimized #endPollBtn,
-        .modal.minimized #closeResultsBtn,
-        .modal.minimized .poll-results-header {
+        .modal.minimized #closeResultsBtn {
             display: none !important;
         }
 
@@ -2270,96 +2288,365 @@
             box-shadow: 0 8px 20px rgba(239, 68, 68, 0.4), 0 0 20px rgba(239, 68, 68, 0.3);
         }
 
+        /* ========== NUEVO DISEÑO DE RESULTADOS DE VOTACIÓN ========== */
         #pollResultsPanel .modal-content {
-            max-width: min(750px, 95vw);
+            max-width: min(1200px, 95vw);
             width: 95vw;
-            max-height: min(85vh, calc(100vh - 40px));
-            overflow-y: auto;
-            padding: clamp(16px, 3vw, 24px);
+            max-height: min(90vh, calc(100vh - 40px));
+            overflow: hidden;
+            padding: 0;
             margin: 20px auto;
+            border-radius: 24px;
+            display: flex;
+            flex-direction: column;
         }
 
         #pollResultsPanel .poll-results-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: clamp(12px, 2vw, 20px);
-            gap: clamp(8px, 2vw, 16px);
-            flex-wrap: wrap;
-        }
-
-        #pollResultsPanel .poll-results-header h3 {
-            margin: 0;
-            font-size: clamp(16px, 3vw, 20px);
-            font-weight: 600;
-            color: var(--text-primary);
-            flex: 1 1 auto;
-            min-width: 150px;
-        }
-
-        #pollResultsPanel .poll-results-header>div {
-            display: flex;
-            gap: 8px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            padding: 32px;
+            color: white;
+            text-align: center;
+            position: relative;
             flex-shrink: 0;
         }
 
-        #pollResultsPanel canvas {
-            max-height: min(350px, 40vh);
-            width: 100% !important;
-            height: auto !important;
-            border-radius: 12px;
-            box-shadow: var(--shadow-md);
-            margin-bottom: clamp(12px, 2vw, 20px);
-            background: var(--surface);
-            padding: clamp(8px, 1.5vw, 10px);
+        body.light-theme #pollResultsPanel .poll-results-header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+        }
+
+        #pollResultsPanel .poll-results-header h3 {
+            font-size: clamp(24px, 4vw, 32px);
+            font-weight: 800;
+            margin: 0 0 12px 0;
+            letter-spacing: -0.5px;
+            color: white;
+        }
+
+        #pollResultsPanel .header-top-results {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        #pollResultsPanel .poll-timer-results {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: clamp(20px, 3vw, 24px);
+            font-weight: 700;
+            backdrop-filter: blur(10px);
+            animation: pulse 2s infinite;
+        }
+
+        #pollResultsPanel .header-controls-results {
+            display: flex;
+            gap: 12px;
+        }
+
+        #pollResultsPanel .header-controls-results button {
+            width: 44px;
+            height: 44px;
+            border: none;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            border-radius: 50%;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 0;
+            margin: 0;
+        }
+
+        #pollResultsPanel .header-controls-results button:hover {
+            background: rgba(255, 255, 255, 0.35);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+        }
+
+        #pollResultsPanel .results-content-wrapper {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 24px;
+            padding: 32px;
+            overflow-y: auto;
+            flex: 1;
         }
 
         #pollResultsPanel #resultsPollQuestion {
-            font-weight: 600;
-            margin-bottom: clamp(12px, 2vw, 16px);
-            font-size: clamp(14px, 2.5vw, 16px);
-            color: var(--text-secondary);
+            font-size: clamp(18px, 3vw, 24px);
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 28px;
+            padding: 20px;
+            background: linear-gradient(135deg, var(--glass-bg) 0%, var(--glass-hover) 100%);
+            border-radius: 16px;
+            border-left: 5px solid var(--primary);
             word-wrap: break-word;
             overflow-wrap: break-word;
         }
 
-        #pollResultsPanel button {
-            width: 100%;
-            margin-top: clamp(8px, 1.5vw, 12px);
-            padding: clamp(12px, 2vw, 14px);
-            border-radius: 12px;
-            border: none;
-            font-size: clamp(13px, 2.5vw, 15px);
+        body.light-theme #pollResultsPanel #resultsPollQuestion {
+            background: linear-gradient(135deg, var(--light-surface) 0%, var(--light-bg-secondary) 100%);
+            color: var(--light-text-primary);
+        }
+
+        #pollResultsPanel .chart-section-results {
+            animation: slideIn 0.7s ease-out;
+        }
+
+        #pollResultsPanel .chart-container-results {
+            background: var(--glass-bg);
+            border-radius: 20px;
+            padding: 32px;
+            box-shadow: var(--shadow-md);
+        }
+
+        body.light-theme #pollResultsPanel .chart-container-results {
+            background: var(--light-surface);
+        }
+
+        #pollResultsPanel .option-bar-results {
+            margin-bottom: 24px;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        #pollResultsPanel .option-header-results {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        #pollResultsPanel .option-label-results {
+            font-size: 16px;
             font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        #pollResultsPanel .option-stats-results {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        #pollResultsPanel .vote-count-results {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--primary);
+            background: rgba(102, 126, 234, 0.1);
+            padding: 4px 12px;
+            border-radius: 12px;
+        }
+
+        #pollResultsPanel .percentage-results {
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--text-primary);
+        }
+
+        #pollResultsPanel .bar-track-results {
+            height: 40px;
+            background: var(--glass-border);
+            border-radius: 20px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        body.light-theme #pollResultsPanel .bar-track-results {
+            background: var(--light-bg-secondary);
+        }
+
+        #pollResultsPanel .bar-fill-results {
+            height: 100%;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 16px;
+            font-weight: 700;
+            color: white;
+            transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+            animation: progressBar 1.5s ease-out;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #pollResultsPanel .bar-fill-results::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        @keyframes progressBar {
+            from { width: 0; }
+        }
+
+        #pollResultsPanel .bar-fill-results-1 { background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); }
+        #pollResultsPanel .bar-fill-results-2 { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+        #pollResultsPanel .bar-fill-results-3 { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+        #pollResultsPanel .bar-fill-results-4 { background: linear-gradient(135deg, var(--success) 0%, var(--success-light) 100%); }
+        #pollResultsPanel .bar-fill-results-5 { background: linear-gradient(135deg, var(--warning) 0%, var(--accent-light) 100%); }
+
+        #pollResultsPanel .sidebar-results {
+            animation: slideIn 0.8s ease-out;
+        }
+
+        #pollResultsPanel #votesList {
+            background: var(--glass-bg);
+            border-radius: 20px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow-md);
+            max-height: 400px;
+            overflow-y: auto;
+            list-style: none;
+        }
+
+        body.light-theme #pollResultsPanel #votesList {
+            background: var(--light-surface);
+        }
+
+        #pollResultsPanel #votesList::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        #pollResultsPanel #votesList::-webkit-scrollbar-track {
+            background: var(--glass-border);
+            border-radius: 3px;
+        }
+
+        #pollResultsPanel #votesList::-webkit-scrollbar-thumb {
+            background: var(--glass-hover);
+            border-radius: 3px;
+        }
+
+        #pollResultsPanel .voters-title-results {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        #pollResultsPanel .voter-item-results {
+            padding: 12px 16px;
+            background: var(--surface);
+            border-radius: 12px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border: 2px solid var(--glass-border);
+            transition: all 0.3s ease;
+            animation: slideIn 0.4s ease-out;
+        }
+
+        body.light-theme #pollResultsPanel .voter-item-results {
+            background: white;
+            border-color: var(--light-bg-tertiary);
+        }
+
+        #pollResultsPanel .voter-item-results:hover {
+            border-color: var(--primary);
+            transform: translateX(4px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+        }
+
+        #pollResultsPanel .voter-avatar-results {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 14px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        #pollResultsPanel .voter-name-results {
+            flex: 1;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        #pollResultsPanel .action-buttons-results {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        #pollResultsPanel button {
+            padding: 16px 24px;
+            border: none;
+            border-radius: 14px;
+            font-size: 16px;
+            font-weight: 700;
             cursor: pointer;
             transition: all 0.3s ease;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 8px;
+            box-shadow: var(--shadow-md);
+            width: 100%;
+        }
+
+        #pollResultsPanel button:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
         }
 
         #pollResultsPanel #endPollBtn {
-            background: linear-gradient(145deg, #ef4444 0%, #dc2626 100%);
+            background: linear-gradient(135deg, var(--danger) 0%, var(--danger-dark) 100%);
             color: white;
         }
 
         #pollResultsPanel #endPollBtn:hover {
-            background: linear-gradient(145deg, #dc2626 0%, #b91c1c 100%);
-            transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4);
+            background: linear-gradient(135deg, var(--danger-dark) 0%, var(--danger) 100%);
         }
 
         #pollResultsPanel #closeResultsBtn {
-            background: linear-gradient(145deg, var(--glass-bg) 0%, var(--glass-hover) 100%);
+            background: linear-gradient(135deg, var(--glass-bg) 0%, var(--glass-hover) 100%);
             color: var(--text-primary);
             border: 1px solid var(--glass-border);
         }
 
         #pollResultsPanel #closeResultsBtn:hover {
             background: var(--glass-hover);
-            transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Canvas (mantener para compatibilidad) */
+        #pollResultsPanel canvas {
+            display: none;
         }
 
         /* Estado minimizado del panel de resultados - Centrado en la parte inferior */
@@ -2386,11 +2673,11 @@
             top: auto !important;
             transform: none !important;
             width: auto !important;
-            min-width: 250px !important;
-            max-width: 350px !important;
+            min-width: 280px !important;
+            max-width: 450px !important;
             height: auto !important;
-            max-height: 60px !important;
-            padding: 12px 24px !important;
+            max-height: 65px !important;
+            padding: 14px 28px !important;
             margin: 0 !important;
             border-radius: 50px !important;
             overflow: hidden !important;
@@ -2411,7 +2698,8 @@
         #pollResultsPanel.minimized canvas,
         #pollResultsPanel.minimized #resultsPollQuestion,
         #pollResultsPanel.minimized #votesList,
-        #pollResultsPanel.minimized button {
+        #pollResultsPanel.minimized button,
+        #pollResultsPanel.minimized .results-content-wrapper {
             display: none !important;
         }
 
@@ -2419,42 +2707,85 @@
             display: none !important;
             align-items: center;
             justify-content: center;
+            gap: 12px;
             color: white;
-            font-weight: 600;
-            font-size: clamp(13px, 2.5vw, 15px);
+            font-weight: 700;
+            font-size: clamp(14px, 2.5vw, 16px);
             text-align: center;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            padding: 0 8px;
         }
 
         #pollResultsPanel.minimized .minimized-results-text {
             display: flex !important;
         }
 
-        /* Media queries para móviles */
+        #pollResultsPanel .minimized-results-text .minimized-icon {
+            font-size: clamp(18px, 3vw, 22px);
+            animation: pulse 2s infinite;
+        }
+
+        #pollResultsPanel .minimized-results-text .minimized-details {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: clamp(13px, 2.5vw, 14px);
+            font-weight: 500;
+            opacity: 0.95;
+        }
+
+        #pollResultsPanel .minimized-results-text .minimized-separator {
+            width: 1px;
+            height: 16px;
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        /* Media queries para móviles - Resultados */
+        @media (max-width: 968px) {
+            #pollResultsPanel .results-content-wrapper {
+                grid-template-columns: 1fr;
+            }
+
+            #pollResultsPanel .poll-results-header h3 {
+                font-size: 24px;
+            }
+
+            #pollResultsPanel #resultsPollQuestion {
+                font-size: 18px;
+            }
+
+            #pollResultsPanel .chart-container-results {
+                padding: 20px;
+            }
+        }
+
         @media (max-width: 768px) {
             #pollResultsPanel .modal-content {
                 max-width: calc(100vw - 24px);
-                width: calc(100vw - 24px);
-                padding: 16px;
+                padding: 0;
                 margin: 12px;
             }
 
             #pollResultsPanel .poll-results-header {
+                padding: 20px;
+            }
+
+            #pollResultsPanel .results-content-wrapper {
+                padding: 20px;
+            }
+
+            #pollResultsPanel .header-top-results {
                 flex-direction: column;
-                align-items: flex-start;
+                align-items: center;
                 gap: 12px;
             }
 
-            #pollResultsPanel .poll-results-header h3 {
-                font-size: 18px;
-                min-width: unset;
-            }
-
-            #pollResultsPanel .poll-results-header>div {
-                width: 100%;
-                justify-content: flex-end;
+            #pollResultsPanel .option-header-results {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
             }
 
             #pollResultsPanel canvas {
@@ -3535,6 +3866,12 @@
             #chatPanel {
                 width: 100%;
                 max-width: 100%;
+                height: 100dvh; /* Altura dinámica para evitar que la barra de navegación tape el chat */
+            }
+
+            #chatInputContainer {
+                padding-bottom: max(16px, env(safe-area-inset-bottom)); /* Respetar área segura en iPhone */
+                background: inherit; /* Asegurar que el fondo tape el contenido detrás */
             }
         }
 
@@ -4740,12 +5077,15 @@
 
             #sidebar {
                 width: 100%;
+                height: 50vh;
                 max-height: 50vh;
                 border-left: none;
                 border-top: 1px solid var(--border-color);
+                position: relative;
             }
 
             #sidebar.sidebar-collapsed {
+                height: 0;
                 max-height: 0;
             }
 
@@ -4767,6 +5107,29 @@
 
             .sidebar-tab span:not(.badge) {
                 display: none;
+            }
+
+            /* Chat en móvil - Estructura mejorada */
+            .sidebar-content {
+                height: 100%;
+                max-height: calc(50vh - 50px);
+            }
+
+            .chat-messages {
+                flex: 1;
+                overflow-y: auto;
+                padding: 12px;
+                max-height: calc(50vh - 140px);
+            }
+
+            .chat-input-container {
+                position: sticky;
+                bottom: 0;
+                background: var(--bg-tertiary);
+                padding: 12px;
+                gap: 8px;
+                border-top: 1px solid var(--border-color);
+                z-index: 10;
             }
         }
 
@@ -4806,10 +5169,198 @@
 
             .chat-messages {
                 padding: 12px;
+                max-height: calc(50vh - 150px) !important;
             }
 
             .chat-input-container {
                 padding: 12px;
+                gap: 8px;
+            }
+
+            #chatInput {
+                padding: 10px 12px;
+                font-size: 14px;
+            }
+
+            #sendChatBtn {
+                width: 40px;
+                height: 40px;
+                font-size: 14px;
+            }
+
+            /* Modal de creación de encuesta responsive */
+            #pollCreationModal .modal-content {
+                width: 95vw !important;
+                max-width: 95vw !important;
+                padding: 16px !important;
+                margin: 12px !important;
+                max-height: 90vh;
+                overflow-y: auto;
+            }
+
+            #pollCreationModal .modal-header {
+                padding: 12px 16px;
+                position: relative;
+                z-index: 10;
+            }
+
+            #pollCreationModal .modal-header h3 {
+                font-size: 18px;
+            }
+
+            #pollCreationModal .modal-header > div {
+                display: flex;
+                gap: 8px;
+                z-index: 11;
+            }
+
+            #pollCreationModal .modal-header button {
+                pointer-events: all;
+                cursor: pointer;
+                z-index: 12;
+                min-width: 36px;
+                min-height: 36px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: var(--glass-bg);
+                border: 1px solid var(--glass-border);
+                border-radius: 8px;
+                color: var(--text-primary);
+                padding: 8px;
+            }
+
+            #pollCreationModal .close-modal {
+                background: rgba(255, 59, 48, 0.1) !important;
+                border-color: rgba(255, 59, 48, 0.3) !important;
+                color: #ff3b30 !important;
+            }pollCreationModal .modal-header h3 {
+                font-size: 18px;
+            }
+
+            #pollCreationModal .modal-header > div {
+                display: flex;
+                gap: 8px;
+                z-index: 11;
+            }
+
+            #pollCreationModal .modal-header button {
+                pointer-events: all;
+                cursor: pointer;
+                z-index: 12;
+                min-width: 36px;
+                min-height: 36px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: var(--glass-bg);
+                border: 1px solid var(--glass-border);
+                border-radius: 8px;
+                color: var(--text-primary);
+                padding: 8px;
+            }
+
+            #pollCreationModal .close-modal {
+                background: rgba(255, 59, 48, 0.1) !important;
+                border-color: rgba(255, 59, 48, 0.3) !important;
+                color: #ff3b30 !important;
+            }
+
+            #pollCreationModal .form-group {
+                margin-bottom: 16px;
+            }
+
+            #pollCreationModal .form-group label {
+                font-size: 14px;
+                margin-bottom: 6px;
+            }
+
+            #pollCreationModal input[type="text"],
+            #pollCreationModal input[type="number"] {
+                font-size: 14px;
+                padding: 10px;
+            }
+
+            #pollCreationModal .poll-option-input {
+                font-size: 14px;
+                padding: 10px;
+            }
+
+            #pollCreationModal button {
+                font-size: 14px;
+                padding: 12px 16px;
+            }
+
+            #pollCreationModal .option-input {
+                gap: 8px;
+            }
+
+            #pollCreationModal .remove-option-btn {
+                width: 36px;
+                height: 36px;
+                min-width: 36px;
+            }
+
+            /* Panel de control de vistas responsive */
+            #viewControlPanel {
+                width: 95vw !important;
+                max-width: 95vw !important;
+                max-height: 90vh;
+                padding: 0;
+            }
+
+            #viewControlPanel .view-control-header {
+                padding: 16px;
+                position: sticky;
+                top: 0;
+                background: inherit;
+                z-index: 1;
+            }
+
+            #viewControlPanel .view-control-header h3 {
+                font-size: 18px;
+            }
+
+            #viewControlPanel .close-panel-btn {
+                width: 40px;
+                height: 40px;
+                font-size: 18px;
+                display: flex !important;
+                align-items: center;
+                justify-content: center;
+                background: rgba(255, 59, 48, 0.1);
+                border: 1px solid rgba(255, 59, 48, 0.2);
+                border-radius: 12px;
+                color: #ff3b30;
+                cursor: pointer;
+                transition: all 0.3s ease;
+            }
+
+            #viewControlPanel .close-panel-btn:hover {
+                background: rgba(255, 59, 48, 0.2);
+                transform: scale(1.05);
+            }
+
+            #viewControlPanel .view-control-content {
+                padding: 16px;
+                max-height: calc(90vh - 70px);
+                overflow-y: auto;
+            }
+
+            #viewControlPanel .view-option {
+                padding: 12px;
+            }
+
+            #viewControlPanel .view-option-preview {
+                height: 80px;
+            }
+
+            #viewControlPanel .view-option-text {
+                font-size: 14px;
+            }
+
+            #viewControlPanel .view-option-desc {
+                font-size: 12px;
             }
         }
     </style>
@@ -4880,7 +5431,7 @@
                 </button>
                 <div class="more-menu-content">
                     <button class="control-btn" id="mobileCreatePollBtn" title="Crear Encuesta"
-                        aria-label="Crear encuesta">
+                        aria-label="Crear encuesta" style="display: none;" aria-hidden="true" data-moderator-only="true">
                         <i class="fas fa-poll"></i>
                     </button>
                 </div>
@@ -5237,15 +5788,15 @@
     <div id="errorPanel"></div>
 
     <div id="pollCreationModal" class="modal">
-        <div class="modal-content" draggable="true">
+        <div class="modal-content">
             <div class="modal-header">
                 <h3>Crear Nueva Votación</h3>
                 <div>
-                    <button class="minimize-modal" title="Minimizar"
+                    <button class="minimize-modal" type="button" title="Minimizar"
                         aria-label="Minimizar modal de creación de votación">
                         <i class="fas fa-minus"></i>
                     </button>
-                    <button class="close-modal" id="closePollCreationModal"
+                    <button class="close-modal" type="button" id="closePollCreationModal"
                         aria-label="Cerrar modal de creación de votación">
                         <i class="fas fa-times"></i>
                     </button>
@@ -5325,9 +5876,11 @@
     <div id="pollResultsPanel" class="modal">
         <div class="modal-content" draggable="true">
             <div class="poll-results-header">
-                <h3 id="resultsPanelTitle">Resultados de Votación</h3>
-                <span id="pollResultsTimer" class="poll-timer" style="display: none;"></span>
-                <div>
+                <div class="header-top-results">
+                    <h3 id="resultsPanelTitle">Resultados de Votación</h3>
+                    <span id="pollResultsTimer" class="poll-timer-results" style="display: none;"></span>
+                </div>
+                <div class="header-controls-results">
                     <button class="minimize-btn" id="minimizePollResultsBtn" title="Minimizar"
                         aria-label="Minimizar panel de resultados">
                         <i class="fas fa-minus"></i>
@@ -5337,16 +5890,42 @@
                     </button>
                 </div>
             </div>
-            <p id="resultsPollQuestion" style="font-weight: 600; margin-bottom: 1rem;"></p>
-            <canvas id="pollResultsChart" width="400" height="350"></canvas>
-            <ul id="votesList"></ul>
-            <button id="endPollBtn" style="display: none;" aria-label="Finalizar votación">
-                <i class="fas fa-stop"></i> Finalizar Votación
-            </button>
-            <button id="closeResultsBtn" aria-label="Cerrar resultados">
-                <i class="fas fa-times"></i> Cerrar Resultados
-            </button>
-            <div class="minimized-results-text">Resultados de Votación 📊</div>
+            
+            <div class="results-content-wrapper">
+                <div class="chart-section-results">
+                    <p id="resultsPollQuestion"></p>
+                    <div class="chart-container-results" id="chartContainerResults">
+                        <!-- Las barras de opciones se generarán dinámicamente aquí -->
+                    </div>
+                    <canvas id="pollResultsChart" width="400" height="350" style="display: none;"></canvas>
+                </div>
+                
+                <div class="sidebar-results">
+                    <div class="voters-title-results">
+                        <i class="fas fa-users"></i> Votantes
+                    </div>
+                    <ul id="votesList"></ul>
+                    
+                    <div class="action-buttons-results">
+                        <button id="endPollBtn" style="display: none;" aria-label="Finalizar votación">
+                            <i class="fas fa-stop"></i> Finalizar Votación
+                        </button>
+                        <button id="closeResultsBtn" aria-label="Cerrar resultados">
+                            <i class="fas fa-times"></i> Cerrar Resultados
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="minimized-results-text">
+                <span class="minimized-icon">📊</span>
+                <span class="minimized-title">Resultados</span>
+                <span class="minimized-separator"></span>
+                <span class="minimized-details">
+                    <span id="minimizedVoteCount">0 votos</span>
+                    <span id="minimizedTimer" style="display: none;">⏱️ <span id="minimizedTimerValue">0:00</span></span>
+                </span>
+            </div>
         </div>
     </div>
 
@@ -5491,6 +6070,12 @@
             element.addEventListener('touchstart', startDragging, { passive: false });
 
             function startDragging(e) {
+                // No arrastrar si se hace click en botones
+                if (e.target.closest('button') || e.target.closest('.minimize-modal') || 
+                    e.target.closest('.close-modal') || e.target.closest('.restore-modal')) {
+                    return;
+                }
+                
                 if (e.target.closest('.modal-header') || e.target.closest('.poll-results-header')) {
                     initialX = e.clientX ? e.clientX - xOffset : e.touches[0].clientX - xOffset;
                     initialY = e.clientY ? e.clientY - yOffset : e.touches[0].clientY - yOffset;
@@ -5523,7 +6108,13 @@
             }
         }
 
-        document.querySelectorAll('.modal-content').forEach(makeDraggable);
+        // Aplicar draggable solo a modales específicos, NO al pollCreationModal
+        document.querySelectorAll('.modal-content').forEach(element => {
+            const modal = element.closest('#pollCreationModal');
+            if (!modal) {
+                makeDraggable(element);
+            }
+        });
 
         // ============================================
         // PANEL TOGGLES - Participantes y Chat
@@ -5711,6 +6302,15 @@
                 this.style.height = 'auto';
                 this.style.height = Math.min(this.scrollHeight, 120) + 'px';
             });
+
+            // Fix para móviles: asegurar que el input sea visible al enfocar (teclado virtual)
+            chatInput.addEventListener('focus', function() {
+                if (window.innerWidth <= 768) {
+                    setTimeout(() => {
+                        this.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                    }, 300);
+                }
+            });
         }
 
         // ============================================
@@ -5760,209 +6360,47 @@
             });
         }
 
-        // ✅ Botón de crear encuesta (mobile)
+        // ✅ Botón de crear encuesta (mobile) - protegido por rol
         const mobileCreatePollBtn = document.getElementById('mobileCreatePollBtn');
-        if (mobileCreatePollBtn && !mobileCreatePollBtn.hasAttribute('data-listener-attached')) {
-            mobileCreatePollBtn.setAttribute('data-listener-attached', 'true');
-            mobileCreatePollBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                openPollCreationModalUI();
-                const moreMenu = document.querySelector('.more-menu-content');
-                if (moreMenu) moreMenu.classList.remove('active');
-            });
-        }
+        if (mobileCreatePollBtn) {
+            // Marcar como solo para moderadores (atributo para CSS/identificación)
+            mobileCreatePollBtn.setAttribute('data-moderator-only', 'true');
 
-        // ✅ Minimizar modal
-        const minimizePollCreationBtn = document.querySelector('#pollCreationModal .minimize-modal');
-        if (minimizePollCreationBtn && !minimizePollCreationBtn.hasAttribute('data-listener-attached')) {
-            minimizePollCreationBtn.setAttribute('data-listener-attached', 'true');
-            minimizePollCreationBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                const modal = document.getElementById('pollCreationModal');
-                if (modal) {
-                    modal.classList.add('minimized');
-                    console.log('[POLL] Modal minimizado');
-                }
-            });
-        }
-
-        // ✅ Restaurar modal (botón)
-        const restorePollCreationBtn = document.querySelector('#pollCreationModal .restore-modal');
-        if (restorePollCreationBtn && !restorePollCreationBtn.hasAttribute('data-listener-attached')) {
-            restorePollCreationBtn.setAttribute('data-listener-attached', 'true');
-            restorePollCreationBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                const modal = document.getElementById('pollCreationModal');
-                if (modal) {
-                    modal.classList.remove('minimized');
-                    const modalContent = modal.querySelector('.modal-content');
-                    if (modalContent) {
-                        modalContent.style.transform = 'translate(0, 0)';
-                    }
-                    console.log('[POLL] Modal restaurado');
-                }
-            });
-        }
-
-        // ✅ Click en el modal minimizado para restaurarlo
-        const pollCreationModal = document.getElementById('pollCreationModal');
-        if (pollCreationModal && !pollCreationModal.hasAttribute('data-click-listener-attached')) {
-            pollCreationModal.setAttribute('data-click-listener-attached', 'true');
-            pollCreationModal.addEventListener('click', (e) => {
-                const modal = e.currentTarget;
-                // Solo restaurar si está minimizado y se hace clic en el modal content (no en botones)
-                if (modal.classList.contains('minimized') &&
-                    !e.target.closest('.minimize-modal') &&
-                    !e.target.closest('.close-modal') &&
-                    e.target.closest('.modal-content')) {
+            if (!mobileCreatePollBtn.hasAttribute('data-listener-attached')) {
+                mobileCreatePollBtn.setAttribute('data-listener-attached', 'true');
+                mobileCreatePollBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
                     e.stopPropagation();
-                    modal.classList.remove('minimized');
-                    const modalContent = modal.querySelector('.modal-content');
-                    if (modalContent) {
-                        modalContent.style.transform = 'translate(0, 0)';
+                    // Seguridad adicional: comprobar rol antes de abrir la UI
+                    if (!isModerator) {
+                        try { showError('Solo los moderadores pueden crear encuestas.', 3500); } catch (err) { console.warn('showError no disponible'); }
+                        return;
                     }
-                    console.log('[POLL] Modal restaurado por click');
-                }
-            });
-        }
+                    openPollCreationModalUI();
+                    const moreMenu = document.querySelector('.more-menu-content');
+                    if (moreMenu) moreMenu.classList.remove('active');
+                });
+            }
 
-        // ✅ Cerrar modal (botón X)
-        const closePollCreationModalBtn = document.getElementById('closePollCreationModal');
-        if (closePollCreationModalBtn && !closePollCreationModalBtn.hasAttribute('data-listener-attached')) {
-            closePollCreationModalBtn.setAttribute('data-listener-attached', 'true');
-            closePollCreationModalBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                closePollCreationModalUI();
-            });
+            // Estado inicial: ocultar si no es moderador (se actualizará en updateModeratorUI)
+            if (!isModerator) {
+                mobileCreatePollBtn.style.display = 'none';
+                mobileCreatePollBtn.setAttribute('aria-hidden', 'true');
+            }
         }
 
         // ============================================
-        // POLL PANEL - Event Listeners Únicos
+        // NUEVO SISTEMA: POLL CREATION MODAL - Delegado a pollModalControl.js
         // ============================================
-
-        const pollPanel = document.getElementById('pollPanel');
-        const pollPanelMinimizeBtn = document.querySelector('#pollPanel .minimize-btn');
-        const pollPanelCloseBtn = document.querySelector('#pollPanel .close-poll-btn');
-
-        if (pollPanelMinimizeBtn && !pollPanelMinimizeBtn.hasAttribute('data-listener-attached')) {
-            pollPanelMinimizeBtn.setAttribute('data-listener-attached', 'true');
-            pollPanelMinimizeBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                if (pollPanel) {
-                    pollPanel.classList.add('minimized');
-                    console.log('[POLL PANEL] Panel minimizado');
-                }
-            });
-        }
-
-        if (pollPanelCloseBtn && !pollPanelCloseBtn.hasAttribute('data-listener-attached')) {
-            pollPanelCloseBtn.setAttribute('data-listener-attached', 'true');
-            pollPanelCloseBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                if (pollPanel) {
-                    pollPanel.style.display = 'none';
-                    pollPanel.classList.remove('minimized');
-                    console.log('[POLL PANEL] Panel cerrado');
-                }
-            });
-        }
-
-        if (pollPanel && !pollPanel.hasAttribute('data-click-listener-attached')) {
-            pollPanel.setAttribute('data-click-listener-attached', 'true');
-            pollPanel.addEventListener('click', (e) => {
-                // Solo restaurar si está minimizado y se hace clic en el panel mismo (no en botones internos)
-                if (pollPanel.classList.contains('minimized')) {
-                    // Verificar que no se hizo clic en botones
-                    if (!e.target.closest('button') &&
-                        !e.target.closest('.poll-actions') &&
-                        !e.target.closest('input')) {
-                        pollPanel.classList.remove('minimized');
-                        console.log('[POLL PANEL] Panel restaurado');
-                    }
-                }
-            });
-        }
+        // La lógica de control del modal se ha movido a pollModalControl.js
+        // para evitar conflictos y asegurar una inicialización limpia.
 
         // ============================================
-        // POLL RESULTS PANEL - Event Listeners Únicos
+        // POLL PANEL & RESULTS PANEL - Delegado a pollModalControl.js
         // ============================================
+        // La lógica de minimizar, cerrar y restaurar los paneles de votación
+        // se maneja centralizadamente en pollModalControl.js
 
-        const pollResultsPanel = document.getElementById('pollResultsPanel');
-        const minimizePollResultsBtn = document.getElementById('minimizePollResultsBtn');
-        const closePollResultsPanel = document.getElementById('closePollResultsPanel');
-        const closeResultsBtn = document.getElementById('closeResultsBtn');
-
-        if (minimizePollResultsBtn && !minimizePollResultsBtn.hasAttribute('data-listener-attached')) {
-            minimizePollResultsBtn.setAttribute('data-listener-attached', 'true');
-            minimizePollResultsBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                if (pollResultsPanel) {
-                    pollResultsPanel.classList.add('minimized');
-                    console.log('[POLL RESULTS] Panel de resultados minimizado');
-                }
-            });
-        }
-
-        // Click en el panel de resultados minimizado para restaurarlo
-        if (pollResultsPanel && !pollResultsPanel.hasAttribute('data-click-listener-attached')) {
-            pollResultsPanel.setAttribute('data-click-listener-attached', 'true');
-            pollResultsPanel.addEventListener('click', (e) => {
-                // Solo restaurar si está minimizado y NO se hizo clic en botones del header
-                if (pollResultsPanel.classList.contains('minimized') &&
-                    !e.target.closest('.minimize-btn') &&
-                    !e.target.closest('.close-modal') &&
-                    e.target.closest('.modal-content')) {
-                    e.stopPropagation();
-                    pollResultsPanel.classList.remove('minimized');
-                    const modalContent = pollResultsPanel.querySelector('.modal-content');
-                    if (modalContent) {
-                        modalContent.style.transform = 'translate(0, 0)';
-                    }
-                    console.log('[POLL RESULTS] Panel de resultados restaurado');
-                }
-            });
-        }
-
-        if (closePollResultsPanel && !closePollResultsPanel.hasAttribute('data-listener-attached')) {
-            closePollResultsPanel.setAttribute('data-listener-attached', 'true');
-            closePollResultsPanel.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                if (pollResultsPanel) {
-                    pollResultsPanel.style.display = 'none';
-                    pollResultsPanel.classList.remove('minimized');
-                    const modalContent = pollResultsPanel.querySelector('.modal-content');
-                    if (modalContent) {
-                        modalContent.style.transform = 'translate(0, 0)';
-                    }
-                    console.log('[POLL RESULTS] Panel cerrado (botón X)');
-                }
-            });
-        }
-
-        if (closeResultsBtn && !closeResultsBtn.hasAttribute('data-listener-attached')) {
-            closeResultsBtn.setAttribute('data-listener-attached', 'true');
-            closeResultsBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                if (pollResultsPanel) {
-                    pollResultsPanel.style.display = 'none';
-                    pollResultsPanel.classList.remove('minimized');
-                    const modalContent = pollResultsPanel.querySelector('.modal-content');
-                    if (modalContent) {
-                        modalContent.style.transform = 'translate(0, 0)';
-                    }
-                    console.log('[POLL RESULTS] Panel cerrado (botón Cerrar)');
-                }
-            });
-        }
 
         // Event listeners de teclado REMOVIDOS para evitar interferencias al escribir
         // Anteriormente manejaba: M (mic), C (cam), H (mano), V (vista)
@@ -6022,6 +6460,9 @@
 
     <!-- Sistema de Control de Vistas - Totalmente Independiente -->
     <script src="viewControl.js"></script>
+    
+    <!-- Control del Modal de Votación -->
+    <script src="pollModalControl.js"></script>
 
     <script src="script.js"></script>
 </body>

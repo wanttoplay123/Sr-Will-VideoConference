@@ -604,15 +604,15 @@ function updateHandList() {
         // Info del usuario
         const userInfo = document.createElement('div');
         userInfo.className = 'user-info';
-        
+
         const userName = document.createElement('div');
         userName.className = 'user-name';
         userName.textContent = name;
-        
+
         const handTime = document.createElement('div');
         handTime.className = 'hand-time';
         handTime.textContent = 'Hace un momento';
-        
+
         userInfo.appendChild(userName);
         userInfo.appendChild(handTime);
 
@@ -3226,7 +3226,7 @@ function displayPollResults(results, question, options, votes) {
 
     document.getElementById('resultsPollQuestion').textContent = question;
     pollResultsPanel.style.display = 'flex';
-    pollResultsPanel.classList.remove('minimized'); // Ensure panel is not minimized initially
+    pollResultsPanel.classList.remove('minimized');
     debugLog('Panel de resultados de votación visible para moderador.');
 
     // Add event listener for minimize button
@@ -3235,175 +3235,78 @@ function displayPollResults(results, question, options, votes) {
         minimizeResultsBtn.addEventListener('click', togglePollResultsPanel);
     }
 
-    const ctx = document.getElementById('pollResultsChart').getContext('2d');
-    if (ctx) {
-        if (pollChart) {
-            pollChart.destroy();
-        }
-        const labels = options.map(opt => opt.text);
-        const dataCounts = options.map(opt => results[opt.id] || 0);
-        const totalVotes = dataCounts.reduce((sum, count) => sum + count, 0);
+    // Calcular totales
+    const dataCounts = options.map(opt => results[opt.id] || 0);
+    const totalVotes = dataCounts.reduce((sum, count) => sum + count, 0);
 
-        const backgroundColors = [
-            '#4facfe', '#00f2fe', '#ff416c', '#ff9a00', '#00c853',
-            '#8e2de2', '#4a00e0', '#fbd72b', '#f9c513', '#ff6a00'
-        ].map(color => {
-            const gradient = ctx.createLinearGradient(0, 0, 400, 0);
-            gradient.addColorStop(0, color);
-            gradient.addColorStop(1, `${color}80`);
-            return gradient;
+    // Renderizar barras de progreso horizontales
+    const chartContainer = document.getElementById('chartContainerResults');
+    if (chartContainer) {
+        chartContainer.innerHTML = ''; // Limpiar contenido previo
+
+        options.forEach((option, index) => {
+            const voteCount = results[option.id] || 0;
+            const percentage = totalVotes > 0 ? ((voteCount / totalVotes) * 100).toFixed(1) : 0;
+            const barClass = `bar-fill-results-${(index % 5) + 1}`;
+
+            const optionBarHTML = `
+                <div class="option-bar-results">
+                    <div class="option-header-results">
+                        <span class="option-label-results">${option.text}</span>
+                        <div class="option-stats-results">
+                            <span class="vote-count-results">${voteCount} voto${voteCount !== 1 ? 's' : ''}</span>
+                            <span class="percentage-results">${percentage}%</span>
+                        </div>
+                    </div>
+                    <div class="bar-track-results">
+                        <div class="${barClass} bar-fill-results" style="width: ${percentage}%;"></div>
+                    </div>
+                </div>
+            `;
+            chartContainer.innerHTML += optionBarHTML;
         });
 
-        const data = {
-            labels: labels,
-            datasets: [{
-                label: 'Número de Votos',
-                data: dataCounts,
-                backgroundColor: backgroundColors,
-                borderColor: 'transparent',
-                borderWidth: 1
-            }]
-        };
-
-        const chartOptions = {
-            responsive: true,
-            maintainAspectRatio: false,
-            indexAxis: 'y',
-            scales: {
-                x: {
-                    beginAtZero: true,
-                    ticks: {
-                        color: 'var(--text-light)',
-                        callback: function (value) {
-                            if (value % 1 === 0) return value;
-                        }
-                    },
-                    grid: {
-                        color: 'rgba(255, 255, 255, 0.1)',
-                        drawBorder: false,
-                    }
-                },
-                y: {
-                    ticks: {
-                        color: 'var(--text-light)',
-                        font: {
-                            size: 14,
-                            weight: 'bold'
-                        }
-                    },
-                    grid: {
-                        color: 'rgba(255, 255, 255, 0.05)',
-                        drawBorder: false,
-                    }
-                }
-            },
-            plugins: {
-                legend: {
-                    display: false
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function (context) {
-                            let label = context.dataset.label || '';
-                            if (label) {
-                                label += ': ';
-                            }
-                            label += context.raw;
-                            const percentage = totalVotes > 0 ? ((context.raw / totalVotes) * 100).toFixed(1) + '%' : '0%';
-                            return label + ' (' + percentage + ')';
-                        }
-                    },
-                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                    titleColor: 'var(--primary)',
-                    bodyColor: 'var(--text-light)',
-                    borderColor: 'var(--border-color)',
-                    borderWidth: 1,
-                    cornerRadius: 5,
-                },
-                datalabels: {
-                    color: '#FFF',
-                    anchor: 'end',
-                    align: 'end',
-                    offset: 4,
-                    font: {
-                        weight: 'bold',
-                        size: 12
-                    },
-                    formatter: (value, context) => {
-                        const percentage = totalVotes > 0 ? ((value / totalVotes) * 100).toFixed(0) : '0';
-                        return `${value} (${percentage}%)`;
-                    }
-                }
-            }
-        };
-
-        pollChart = new Chart(ctx, {
-            type: 'bar',
-            data: data,
-            options: chartOptions,
-            plugins: [ChartDataLabels]
-        });
-        debugLog('Gráfico de resultados de votación renderizado.');
+        debugLog('Barras de resultados de votación renderizadas.');
     } else {
-        console.error('No se pudo obtener el contexto 2D para el lienzo del gráfico de votación.');
+        console.error('No se encontró #chartContainerResults');
         showError('No se pudo mostrar el gráfico de resultados de votación.', 5000);
     }
 
+    // Renderizar lista de votantes con avatares
     const votesList = document.getElementById('votesList');
     if (votesList && votes && Array.isArray(votes) && votes.length > 0) {
-        votesList.innerHTML = '<h4 style="margin-top: 24px; margin-bottom: 12px; color: var(--primary-light); font-size: 16px; font-weight: 600;">📋 Lista de Votantes:</h4>';
+        votesList.innerHTML = '';
         votes.forEach(vote => {
             const li = document.createElement('li');
-            li.className = 'vote-item';
-            li.style.cssText = `
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-                padding: 12px 16px;
-                margin-bottom: 8px;
-                background: linear-gradient(145deg, var(--glass-bg) 0%, var(--glass-hover) 100%);
-                border-radius: 12px;
-                border: 1px solid var(--glass-border);
-                backdrop-filter: blur(12px);
-                transition: all 0.3s ease;
-            `;
+            li.className = 'voter-item-results';
+
+            // Crear avatar con inicial del nombre
+            const initial = vote.voter ? vote.voter.charAt(0).toUpperCase() : '?';
+            const avatar = document.createElement('div');
+            avatar.className = 'voter-avatar-results';
+            avatar.textContent = initial;
 
             const voterName = document.createElement('span');
-            voterName.textContent = vote.voter;
-            voterName.style.cssText = 'font-weight: 600; color: var(--text-primary);';
+            voterName.className = 'voter-name-results';
+            voterName.textContent = `${vote.voter} → ${vote.optionText}`;
 
-            const voteOption = document.createElement('span');
-            voteOption.textContent = vote.optionText;
-            voteOption.style.cssText = `
-                padding: 4px 12px;
-                background: linear-gradient(145deg, var(--primary) 0%, var(--primary-light) 100%);
-                color: white;
-                border-radius: 8px;
-                font-size: 13px;
-                font-weight: 500;
-            `;
-
+            li.appendChild(avatar);
             li.appendChild(voterName);
-            li.appendChild(voteOption);
             votesList.appendChild(li);
-
-            // Efecto hover
-            li.addEventListener('mouseenter', () => {
-                li.style.transform = 'translateX(4px)';
-                li.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.2)';
-            });
-            li.addEventListener('mouseleave', () => {
-                li.style.transform = 'translateX(0)';
-                li.style.boxShadow = 'none';
-            });
         });
     } else if (votesList) {
         votesList.innerHTML = '<p style="margin-top: 20px; color: var(--text-tertiary); text-align: center; font-style: italic;">No hay votos registrados aún.</p>';
     }
 
+    // Actualizar información del estado minimizado
+    const minimizedVoteCount = document.getElementById('minimizedVoteCount');
+    if (minimizedVoteCount) {
+        minimizedVoteCount.textContent = `${totalVotes} voto${totalVotes !== 1 ? 's' : ''}`;
+    }
+
     if (isModerator && currentPoll && currentPoll.endTime) {
         const pollResultsTimer = document.getElementById('pollResultsTimer');
-        if (pollResultsTimer) pollResultsTimer.style.display = 'block';
+        if (pollResultsTimer) pollResultsTimer.style.display = 'inline-flex';
         const remainingTime = Math.max(0, Math.floor((currentPoll.endTime - Date.now()) / 1000));
         startResultsTimer(remainingTime);
 
@@ -3424,6 +3327,9 @@ function displayPollResults(results, question, options, votes) {
 
 function startResultsTimer(durationSeconds) {
     const timerDisplay = document.getElementById('pollResultsTimer');
+    const minimizedTimer = document.getElementById('minimizedTimer');
+    const minimizedTimerValue = document.getElementById('minimizedTimerValue');
+    
     if (!timerDisplay) return;
 
     // ✅ Verificar que currentPoll existe antes de acceder a sus propiedades
@@ -3437,7 +3343,17 @@ function startResultsTimer(durationSeconds) {
     const updateTimer = () => {
         const minutes = Math.floor(seconds / 60);
         const remainingSeconds = seconds % 60;
-        timerDisplay.textContent = `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
+        const timeText = `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
+        
+        timerDisplay.textContent = timeText;
+        if (minimizedTimerValue) {
+            minimizedTimerValue.textContent = timeText;
+        }
+        
+        // Mostrar u ocultar el timer minimizado según si hay tiempo
+        if (minimizedTimer) {
+            minimizedTimer.style.display = seconds > 0 ? 'inline-flex' : 'none';
+        }
 
         if (seconds <= 0) {
             // ✅ Usar la referencia local en lugar de currentPoll
@@ -3446,6 +3362,9 @@ function startResultsTimer(durationSeconds) {
                 intervalId = null;
             }
             timerDisplay.textContent = "¡Votación terminada!";
+            if (minimizedTimer) {
+                minimizedTimer.style.display = 'none';
+            }
             if (isModerator) {
                 document.getElementById('endPollBtn').style.display = 'none';
             }
