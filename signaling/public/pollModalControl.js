@@ -21,6 +21,7 @@
 
         const minimizeBtn = modal.querySelector('.minimize-modal');
         const closeBtn = modal.querySelector('.close-modal');
+        const restoreBtn = modal.querySelector('.restore-modal');
         const modalContent = modal.querySelector('.modal-content');
 
         // Minimizar
@@ -29,6 +30,7 @@
             minimizeBtn.parentNode.replaceChild(newBtn, minimizeBtn);
             newBtn.onclick = function(e) {
                 e.preventDefault(); e.stopPropagation();
+                console.log('[POLL CONTROL] Minimizando modal creación...');
                 modal.classList.add('minimized');
                 return false;
             };
@@ -40,6 +42,7 @@
             closeBtn.parentNode.replaceChild(newBtn, closeBtn);
             newBtn.onclick = function(e) {
                 e.preventDefault(); e.stopPropagation();
+                console.log('[POLL CONTROL] Cerrando modal creación...');
                 modal.style.display = 'none';
                 modal.classList.remove('minimized');
                 if (modalContent) modalContent.style.transform = '';
@@ -48,14 +51,27 @@
             };
         }
 
-        // Restaurar
+        // Botón Restaurar
+        if (restoreBtn) {
+            const newBtn = restoreBtn.cloneNode(true);
+            restoreBtn.parentNode.replaceChild(newBtn, restoreBtn);
+            newBtn.onclick = function(e) {
+                e.preventDefault(); e.stopPropagation();
+                console.log('[POLL CONTROL] Restaurando modal creación (botón)...');
+                modal.classList.remove('minimized');
+                if (modalContent) modalContent.style.transform = '';
+                return false;
+            };
+        }
+
+        // Restaurar al hacer click en área minimizada
         modal.onclick = function(e) {
             if (!modal.classList.contains('minimized')) return;
             const target = e.target;
-            if (target.closest('button') || target.closest('.minimize-modal') || target.closest('.close-modal')) return;
+            if (target.closest('button')) return;
             
             if (target.closest('.minimized-view') || target.closest('.modal-content')) {
-                console.log('[POLL CONTROL] Restaurando modal creación...');
+                console.log('[POLL CONTROL] Restaurando modal creación (click)...');
                 modal.classList.remove('minimized');
                 if (modalContent) modalContent.style.transform = '';
             }
@@ -63,6 +79,7 @@
 
         // Override global open
         window.openPollCreationModal = function() {
+            console.log('[POLL CONTROL] Abriendo modal creación...');
             modal.style.display = 'flex';
             modal.classList.remove('minimized');
             if (modalContent) modalContent.style.transform = '';
@@ -126,7 +143,30 @@
 
         const minimizeBtn = document.getElementById('minimizePollResultsBtn') || panel.querySelector('.minimize-btn');
         const closeBtn = document.getElementById('closePollResultsPanel') || panel.querySelector('.close-modal');
+        const restoreBtn = panel.querySelector('.restore-modal');
         const modalContent = panel.querySelector('.modal-content');
+
+        // Función para restaurar y limpiar notificaciones
+        function restorePanel() {
+            console.log('[POLL CONTROL] Restaurando panel resultados...');
+            panel.classList.remove('minimized');
+            if (modalContent) modalContent.style.transform = '';
+            
+            // Limpiar notificaciones de votos
+            if (typeof window.clearPollNotifications === 'function') {
+                window.clearPollNotifications();
+            }
+            
+            // También actualizar los resultados si hay currentPoll
+            if (window.currentPoll && typeof window.displayPollResults === 'function') {
+                window.displayPollResults(
+                    window.currentPoll.results, 
+                    window.currentPoll.question, 
+                    window.currentPoll.options, 
+                    window.currentPoll.votes
+                );
+            }
+        }
 
         // Minimizar
         if (minimizeBtn) {
@@ -134,6 +174,7 @@
             minimizeBtn.parentNode.replaceChild(newBtn, minimizeBtn);
             newBtn.onclick = function(e) {
                 e.preventDefault(); e.stopPropagation();
+                console.log('[POLL CONTROL] Minimizando panel resultados...');
                 panel.classList.add('minimized');
                 return false;
             };
@@ -145,24 +186,39 @@
             closeBtn.parentNode.replaceChild(newBtn, closeBtn);
             newBtn.onclick = function(e) {
                 e.preventDefault(); e.stopPropagation();
+                console.log('[POLL CONTROL] Cerrando panel resultados...');
                 panel.style.display = 'none';
                 panel.classList.remove('minimized');
                 if (modalContent) modalContent.style.transform = '';
+                
+                // Limpiar notificaciones al cerrar
+                if (typeof window.clearPollNotifications === 'function') {
+                    window.clearPollNotifications();
+                }
                 return false;
             };
         }
 
-        // Restaurar
+        // Botón Restaurar
+        if (restoreBtn) {
+            const newBtn = restoreBtn.cloneNode(true);
+            restoreBtn.parentNode.replaceChild(newBtn, restoreBtn);
+            newBtn.onclick = function(e) {
+                e.preventDefault(); e.stopPropagation();
+                restorePanel();
+                return false;
+            };
+        }
+
+        // Restaurar al click en área minimizada
         panel.onclick = function(e) {
             if (!panel.classList.contains('minimized')) return;
             const target = e.target;
             
             if (target.closest('button')) return;
 
-            if (target.closest('.minimized-results-text') || target.closest('.modal-content')) {
-                console.log('[POLL CONTROL] Restaurando panel resultados...');
-                panel.classList.remove('minimized');
-                if (modalContent) modalContent.style.transform = '';
+            if (target.closest('.minimized-results-text') || target.closest('.minimized-results-view') || target.closest('.modal-content')) {
+                restorePanel();
             }
         };
     }

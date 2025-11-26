@@ -2061,23 +2061,44 @@ function initWebSocket() {
                         break;
 
                     case 'poll-ended':
-                        currentPoll = msg.poll;
+                        // Limpiar temporizadores inmediatamente
+                        if (currentPoll?.timerInterval) {
+                            clearInterval(currentPoll.timerInterval);
+                            currentPoll.timerInterval = null;
+                        }
+                        if (currentPoll?.resultsTimerInterval) {
+                            clearInterval(currentPoll.resultsTimerInterval);
+                            currentPoll.resultsTimerInterval = null;
+                        }
+                        
+                        // Actualizar currentPoll
+                        if (currentPoll) {
+                            currentPoll.ended = true;
+                            currentPoll.results = msg.results;
+                            currentPoll.votes = msg.votes || [];
+                        } else {
+                            currentPoll = {
+                                id: msg.pollId,
+                                question: msg.question,
+                                options: msg.options,
+                                results: msg.results,
+                                votes: msg.votes || [],
+                                ended: true
+                            };
+                        }
+                        
                         hidePollForParticipant();
+                        
                         if (isModerator) {
-                            // Guardar los votos en el poll para que persistan
-                            if (!currentPoll) {
-                                currentPoll = {
-                                    id: msg.pollId,
-                                    question: msg.question,
-                                    options: msg.options,
-                                    results: msg.results,
-                                    votes: msg.votes || []
-                                };
-                            } else {
-                                currentPoll.results = msg.results;
-                                currentPoll.votes = msg.votes || [];
-                            }
                             displayPollResults(msg.results, msg.question, msg.options, msg.votes);
+                            // Ocultar timer y botón de finalizar
+                            document.getElementById('endPollBtn').style.display = 'none';
+                            const pollResultsTimer = document.getElementById('pollResultsTimer');
+                            if (pollResultsTimer) {
+                                pollResultsTimer.textContent = '¡Votación terminada!';
+                            }
+                            const minimizedTimer = document.getElementById('minimizedTimer');
+                            if (minimizedTimer) minimizedTimer.style.display = 'none';
                         } else {
                             showError('La votación ha terminado.', 3000);
                         }
@@ -2100,12 +2121,50 @@ function initWebSocket() {
                     case 'poll-update':
                         if (isModerator) {
                             debugLog('Actualización de votación recibida:', msg);
+                            
+                            // Verificar si la votación ya terminó
+                            if (currentPoll?.ended) {
+                                debugLog('Ignorando poll-update porque la votación ya terminó');
+                                break;
+                            }
+                            
+                            // Guardar el conteo de votos anterior
+                            const previousVoteCount = currentPoll?.votes?.length || 0;
+                            const newVoteCount = msg.votes?.length || 0;
+                            
                             currentPoll = msg;
-                            displayPollResults(msg.results, msg.question, msg.options, msg.votes);
+                            
+                            // Verificar si el panel de resultados está minimizado
+                            const pollResultsPanel = document.getElementById('pollResultsPanel');
+                            const isMinimized = pollResultsPanel?.classList.contains('minimized');
+                            
+                            if (isMinimized) {
+                                // Solo actualizar el contador sin abrir el modal
+                                const totalVotes = msg.options.reduce((sum, opt) => sum + (msg.results[opt.id] || 0), 0);
+                                const minimizedVoteCount = document.getElementById('minimizedVoteCount');
+                                if (minimizedVoteCount) {
+                                    minimizedVoteCount.textContent = `${totalVotes} voto${totalVotes !== 1 ? 's' : ''}`;
+                                }
+                                
+                                // Mostrar notificación de nuevo voto
+                                if (newVoteCount > previousVoteCount) {
+                                    const newVotes = newVoteCount - previousVoteCount;
+                                    // Agregar badge de notificación
+                                    updateMinimizedPollNotification(newVotes);
+                                    showError(`🗳️ +${newVotes} nuevo${newVotes > 1 ? 's' : ''} voto${newVotes > 1 ? 's' : ''}`, 2000);
+                                }
+                            } else {
+                                // Modal abierto, actualizar normalmente
+                                displayPollResults(msg.results, msg.question, msg.options, msg.votes);
+                            }
+                            
+                            // Actualizar timer solo si no ha terminado
                             const pollResultsTimer = document.getElementById('pollResultsTimer');
-                            if (pollResultsTimer) {
+                            if (pollResultsTimer && msg.endTime) {
                                 const remainingTime = Math.max(0, Math.floor((msg.endTime - Date.now()) / 1000));
-                                startResultsTimer(remainingTime);
+                                if (remainingTime > 0) {
+                                    startResultsTimer(remainingTime);
+                                }
                             }
                         }
                         break;
@@ -3138,6 +3197,85 @@ function displayPollForParticipant(poll) {
     }
 }
 
+// Variable para rastrear notificaciones de votos pendientes
+let pendingVoteNotifications = 0;
+
+// Función para actualizar notificación en modal minimizado
+function updateMinimizedPollNotification(newVotes) {
+    pendingVoteNotifications += newVotes;
+    
+    const pollResultsPanel = document.getElementById('pollResultsPanel');
+    if (!pollResultsPanel) return;
+    
+    // Buscar o crear el badge de notificación
+    let notificationBadge = pollResultsPanel.querySelector('.poll-notification-badge');
+    
+    if (!notificationBadge) {
+        notificationBadge = document.createElement('span');
+        notificationBadge.className = 'poll-notification-badge';
+        notificationBadge.style.cssText = `
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+            font-size: 12px;
+            font-weight: 700;
+            min-width: 22px;
+            height: 22px;
+            border-radius: 11px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 6px;
+            box-shadow: 0 2px 8px rgba(239, 68, 68, 0.5);
+            animation: pollBadgePulse 0.5s ease-out;
+            z-index: 10;
+        `;
+        
+        // Agregar animación si no existe
+        if (!document.getElementById('pollBadgeAnimation')) {
+            const style = document.createElement('style');
+            style.id = 'pollBadgeAnimation';
+            style.textContent = `
+                @keyframes pollBadgePulse {
+                    0% { transform: scale(0); }
+                    50% { transform: scale(1.3); }
+                    100% { transform: scale(1); }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+        
+        // Agregar al modal-content para que se posicione relativo a él
+        const modalContent = pollResultsPanel.querySelector('.modal-content');
+        if (modalContent) {
+            modalContent.style.position = 'relative';
+            modalContent.appendChild(notificationBadge);
+        }
+    }
+    
+    notificationBadge.textContent = pendingVoteNotifications > 99 ? '99+' : pendingVoteNotifications;
+    notificationBadge.style.display = 'flex';
+    
+    // Re-animar
+    notificationBadge.style.animation = 'none';
+    notificationBadge.offsetHeight; // Trigger reflow
+    notificationBadge.style.animation = 'pollBadgePulse 0.5s ease-out';
+}
+
+// Función para limpiar notificaciones cuando se abre el modal
+function clearPollNotifications() {
+    pendingVoteNotifications = 0;
+    const pollResultsPanel = document.getElementById('pollResultsPanel');
+    if (pollResultsPanel) {
+        const badge = pollResultsPanel.querySelector('.poll-notification-badge');
+        if (badge) {
+            badge.style.display = 'none';
+        }
+    }
+}
+
 function startPollTimer(durationSeconds) {
     const timerDisplay = document.getElementById('pollTimerDisplay');
     const submitVoteButton = document.getElementById('submitVoteBtn');
@@ -3443,6 +3581,20 @@ document.getElementById('endPollBtn')?.addEventListener('click', () => {
         return;
     }
 
+    // Limpiar TODOS los temporizadores antes de enviar
+    if (currentPoll.timerInterval) {
+        clearInterval(currentPoll.timerInterval);
+        currentPoll.timerInterval = null;
+    }
+    if (currentPoll.resultsTimerInterval) {
+        clearInterval(currentPoll.resultsTimerInterval);
+        currentPoll.resultsTimerInterval = null;
+    }
+
+    // Marcar la votación como finalizada
+    currentPoll.ended = true;
+    currentPoll.endTime = Date.now();
+
     if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({
             type: 'end-poll',
@@ -3451,6 +3603,17 @@ document.getElementById('endPollBtn')?.addEventListener('click', () => {
         }));
         showError('Votación finalizada manualmente.', 3000);
         debugLog('Votación finalizada manualmente por moderador.');
+        
+        // Ocultar botón de finalizar y timer
+        document.getElementById('endPollBtn').style.display = 'none';
+        const pollResultsTimer = document.getElementById('pollResultsTimer');
+        if (pollResultsTimer) {
+            pollResultsTimer.textContent = '¡Votación terminada!';
+            pollResultsTimer.style.display = 'inline-flex';
+        }
+        const minimizedTimer = document.getElementById('minimizedTimer');
+        if (minimizedTimer) minimizedTimer.style.display = 'none';
+        
         hidePollForParticipant();
     } else {
         showError('No se pudo finalizar la votación: Conexión con el servidor no establecida.', 5000);
@@ -3840,3 +4003,12 @@ async function showShareLink() {
 
 
 }
+
+// ======================= EXPORTAR FUNCIONES GLOBALES =======================
+// Exponer funciones y variables necesarias para otros módulos
+window.clearPollNotifications = clearPollNotifications;
+window.displayPollResults = displayPollResults;
+Object.defineProperty(window, 'currentPoll', {
+    get: function() { return currentPoll; },
+    set: function(value) { currentPoll = value; }
+});
