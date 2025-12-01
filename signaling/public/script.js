@@ -190,6 +190,151 @@ let pollChart = null;
 let currentSpeaker = null; // { name: string, timeLeft: number (segundos), totalTime: number }
 let speakingTimerInterval = null;
 
+// ======================= SISTEMA DE DETECCIÓN DE HABLANTE ACTIVO =======================
+let audioContext = null;
+let audioAnalysers = {}; // Map<peerId, {analyser, source, stream}>
+let activeSpeakerInterval = null;
+const AUDIO_LEVEL_THRESHOLD = 15; // Umbral mínimo para considerar "hablando"
+const ACTIVE_SPEAKER_CHECK_INTERVAL = 200; // Verificar cada 200ms
+
+/**
+ * Inicializa el AudioContext para análisis de audio
+ */
+function initAudioContext() {
+    if (audioContext) return;
+    
+    try {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        console.log('[AUDIO-DETECT] 🎤 AudioContext inicializado');
+    } catch (err) {
+        console.error('[AUDIO-DETECT] ❌ Error creando AudioContext:', err);
+    }
+}
+
+/**
+ * Agrega un stream de audio para análisis de actividad
+ * @param {string} peerId - ID del peer (o 'local' para el usuario local)
+ * @param {MediaStream} stream - Stream de audio a analizar
+ */
+function addAudioStreamForAnalysis(peerId, stream) {
+    if (!audioContext) {
+        initAudioContext();
+    }
+    
+    // Verificar que el contexto esté activo
+    if (audioContext.state === 'suspended') {
+        audioContext.resume();
+    }
+    
+    const audioTracks = stream.getAudioTracks();
+    if (audioTracks.length === 0) {
+        console.log(`[AUDIO-DETECT] ⚠️ ${peerId} no tiene tracks de audio`);
+        return;
+    }
+    
+    // Limpiar analyser anterior si existe
+    if (audioAnalysers[peerId]) {
+        removeAudioStreamFromAnalysis(peerId);
+    }
+    
+    try {
+        const source = audioContext.createMediaStreamSource(stream);
+        const analyser = audioContext.createAnalyser();
+        analyser.fftSize = 256;
+        analyser.smoothingTimeConstant = 0.5;
+        
+        source.connect(analyser);
+        // NO conectar al destino (no queremos reproducir el audio aquí, solo analizar)
+        
+        audioAnalysers[peerId] = { analyser, source, stream };
+        console.log(`[AUDIO-DETECT] ✅ Analyser agregado para ${peerId}`);
+        
+        // Iniciar el intervalo de detección si no está corriendo
+        startActiveSpeakerDetection();
+    } catch (err) {
+        console.error(`[AUDIO-DETECT] ❌ Error agregando analyser para ${peerId}:`, err);
+    }
+}
+
+/**
+ * Remueve un stream de audio del análisis
+ * @param {string} peerId - ID del peer a remover
+ */
+function removeAudioStreamFromAnalysis(peerId) {
+    const analyserData = audioAnalysers[peerId];
+    if (analyserData) {
+        try {
+            analyserData.source.disconnect();
+        } catch (e) {}
+        delete audioAnalysers[peerId];
+        console.log(`[AUDIO-DETECT] 🗑️ Analyser removido para ${peerId}`);
+    }
+}
+
+/**
+ * Inicia la detección periódica de hablante activo
+ */
+function startActiveSpeakerDetection() {
+    if (activeSpeakerInterval) return; // Ya está corriendo
+    
+    console.log('[AUDIO-DETECT] 🎯 Iniciando detección de hablante activo');
+    
+    activeSpeakerInterval = setInterval(() => {
+        detectActiveSpeaker();
+    }, ACTIVE_SPEAKER_CHECK_INTERVAL);
+}
+
+/**
+ * Detiene la detección de hablante activo
+ */
+function stopActiveSpeakerDetection() {
+    if (activeSpeakerInterval) {
+        clearInterval(activeSpeakerInterval);
+        activeSpeakerInterval = null;
+        console.log('[AUDIO-DETECT] ⏹️ Detección de hablante activo detenida');
+    }
+}
+
+/**
+ * Detecta quién está hablando basándose en niveles de audio
+ */
+function detectActiveSpeaker() {
+    let maxLevel = 0;
+    let activePeerId = null;
+    
+    for (const [peerId, data] of Object.entries(audioAnalysers)) {
+        const level = getAudioLevel(data.analyser);
+        
+        if (level > AUDIO_LEVEL_THRESHOLD && level > maxLevel) {
+            maxLevel = level;
+            activePeerId = peerId;
+        }
+    }
+    
+    // Solo notificar si hay un cambio significativo
+    if (activePeerId && window.ViewControl && typeof window.ViewControl.markActiveSpeaker === 'function') {
+        window.ViewControl.markActiveSpeaker(activePeerId);
+    }
+}
+
+/**
+ * Obtiene el nivel de audio actual de un analyser
+ * @param {AnalyserNode} analyser - El nodo analyser
+ * @returns {number} - Nivel de audio (0-255)
+ */
+function getAudioLevel(analyser) {
+    const dataArray = new Uint8Array(analyser.frequencyBinCount);
+    analyser.getByteFrequencyData(dataArray);
+    
+    // Calcular el promedio de las frecuencias
+    let sum = 0;
+    for (let i = 0; i < dataArray.length; i++) {
+        sum += dataArray[i];
+    }
+    return sum / dataArray.length;
+}
+// ===========================================================================
+
 // Variables para hacer el panel arrastrable
 let isDragging = false;
 let currentX;
@@ -669,14 +814,31 @@ function updateHandList() {
 function updateHandNotification() {
     const raiseBtn = document.getElementById('raiseHand');
     const count = raisedHands.size;
+    
     if (raiseBtn) {
-        raiseBtn.classList.toggle('has-notification', count > 0);
+        // ✅ Solo mostrar notificación al moderador/admin
+        if (isModerator) {
+            // Usar clase has-hands para mostrar el badge numérico
+            raiseBtn.classList.toggle('has-hands', count > 0);
+            raiseBtn.classList.remove('has-notification'); // Remover punto rojo
+        } else {
+            raiseBtn.classList.remove('has-hands');
+            raiseBtn.classList.remove('has-notification');
+        }
     }
+    
+    // ✅ Actualizar badge numérico (solo visible para admin)
     const badge = document.getElementById('handCountBadge');
     if (badge) {
-        badge.textContent = count > 0 ? String(count) : '';
-        badge.style.display = count > 0 ? 'inline-block' : 'none';
+        if (isModerator && count > 0) {
+            badge.textContent = String(count);
+            badge.style.display = 'block';
+        } else {
+            badge.textContent = '';
+            badge.style.display = 'none';
+        }
     }
+    
     // Actualizar contador en el header del panel de manos
     const handCount = document.getElementById('handCount');
     if (handCount) {
@@ -1179,9 +1341,16 @@ function addVideoElement(userId, stream) {
         videoContainer.appendChild(pinIndicator);
 
         const pinBtn = document.createElement('button');
-        pinBtn.className = 'pin-btn';
-        pinBtn.dataset.peer = userId;
-        pinBtn.innerHTML = '<i class="fas fa-thumbtack"></i> Fijar';
+        pinBtn.className = 'pin-video-btn';
+        pinBtn.dataset.peerId = userId;
+        pinBtn.title = 'Fijar video';
+        pinBtn.innerHTML = '<i class="fas fa-thumbtack"></i>';
+        pinBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (typeof pinVideo === 'function') {
+                pinVideo(userId);
+            }
+        });
         videoContainer.appendChild(pinBtn);
 
         // Agregar atributo para identificar el peer
@@ -1246,6 +1415,8 @@ function addVideoElement(userId, stream) {
  */
 function createScreenSharePreview(userId, stream) {
     console.log(`[SCREEN-SHARE] 📺 Creando preview para ${userId}`);
+    console.log(`[SCREEN-SHARE] 🎵 Audio tracks en stream:`, stream.getAudioTracks().length);
+    console.log(`[SCREEN-SHARE] 📹 Video tracks en stream:`, stream.getVideoTracks().length);
 
     const videoGrid = document.getElementById('videoGrid');
     if (!videoGrid) {
@@ -1257,6 +1428,11 @@ function createScreenSharePreview(userId, stream) {
     const existingPreview = document.getElementById(`screen-preview-${userId}`);
     if (existingPreview) {
         console.log(`[SCREEN-SHARE] 🗑️ Eliminando preview anterior de ${userId}`);
+        // Detener stream anterior si existe
+        const oldVideo = existingPreview.querySelector('video');
+        if (oldVideo && oldVideo.srcObject) {
+            oldVideo.srcObject = null;
+        }
         existingPreview.remove();
     }
 
@@ -1271,24 +1447,48 @@ function createScreenSharePreview(userId, stream) {
     video.id = `screen-video-${userId}`;
     video.autoplay = true;
     video.playsInline = true;
-    video.muted = (userId === userName); // Silenciar solo para el que comparte (evita echo)
+    
+    // ✅ AUDIO: Solo silenciar para el presentador (evitar echo)
+    // Para los receptores, el audio debe estar activo
+    const isLocalShare = (userId === userName);
+    video.muted = isLocalShare;
+    video.volume = isLocalShare ? 0 : 1;
+    
     video.style.width = '100%';
     video.style.height = '100%';
     video.style.objectFit = 'contain';
     video.style.backgroundColor = '#000';
+    // ✅ IMPORTANTE: Pantalla compartida sin mirror (sin espejo)
+    video.style.transform = 'scaleX(1)';
 
     // Asignar stream
     video.srcObject = stream;
+
+    // ✅ Configurar audio para reproducción en altavoz (móviles)
+    if (!isLocalShare && stream.getAudioTracks().length > 0) {
+        console.log(`[SCREEN-SHARE] 🔊 Configurando audio para reproducción...`);
+        forceSpeakerOutput(video);
+    }
 
     // Intentar reproducir
     video.play()
         .then(() => {
             console.log(`[SCREEN-SHARE] ✅ Video reproduciendo para ${userId}`);
+            if (!isLocalShare && stream.getAudioTracks().length > 0) {
+                console.log(`[SCREEN-SHARE] 🔊 Audio activo: muted=${video.muted}, volume=${video.volume}`);
+            }
         })
         .catch(err => {
             console.error(`[SCREEN-SHARE] ❌ Error reproduciendo video:`, err);
-            if (userId === userName) {
-                showError('Haz clic en la pantalla compartida para activar la reproducción', 4000);
+            // En móviles, a veces necesita interacción del usuario
+            if (err.name === 'NotAllowedError') {
+                showError('Toca la pantalla compartida para activar el audio', 4000);
+                // Agregar handler para reproducir al tocar
+                previewContainer.addEventListener('click', () => {
+                    video.muted = false;
+                    video.volume = 1;
+                    video.play().catch(() => {});
+                }, { once: true });
             }
         });
 
@@ -1296,23 +1496,37 @@ function createScreenSharePreview(userId, stream) {
     const infoOverlay = document.createElement('div');
     infoOverlay.className = 'screen-share-info-overlay';
     infoOverlay.innerHTML = `
-        <span class="screen-share-user-name">${userId === userName ? 'Tu pantalla' : `Pantalla de ${userId}`}</span>
+        <span class="screen-share-user-name">${isLocalShare ? 'Tu pantalla' : `Pantalla de ${userId}`}</span>
         <span class="screen-share-status">●</span>
+        ${!isLocalShare && stream.getAudioTracks().length > 0 ? '<span class="screen-share-audio">🔊</span>' : ''}
     `;
 
     // Agregar elementos al contenedor
     previewContainer.appendChild(video);
     previewContainer.appendChild(infoOverlay);
 
-    // Insertar al principio del grid
+    // ✅ FORZAR POSICIÓN: Insertar al principio del grid como primer hijo
     videoGrid.insertBefore(previewContainer, videoGrid.firstChild);
+    
+    // ✅ FORZAR ESTILOS DIRECTOS para asegurar que sea visible
+    previewContainer.style.display = 'block';
+    previewContainer.style.order = '-1'; // Siempre primero
+    previewContainer.style.zIndex = '10';
+    
+    console.log(`[SCREEN-SHARE] 📺 Preview container creado:`, previewContainer.id);
+    console.log(`[SCREEN-SHARE] 📺 Preview tiene video con srcObject:`, !!video.srcObject);
 
     // Activar layout de grid para screen-share usando el sistema centralizado
-    if (typeof setViewMode === 'function') {
-        setViewMode('sidebar');
-    } else {
-        console.warn('setViewMode no está disponible');
-    }
+    // ✅ Usar setTimeout para asegurar que el DOM está actualizado
+    setTimeout(() => {
+        if (typeof setViewMode === 'function') {
+            setViewMode('sidebar');
+        } else if (window.ViewControl && typeof window.ViewControl.setViewMode === 'function') {
+            window.ViewControl.setViewMode('sidebar');
+        } else {
+            console.warn('setViewMode no está disponible');
+        }
+    }, 100);
 
     // NOTA: No ocultamos la cámara del presentador, para que se vea en pequeño
     console.log(`[SCREEN-SHARE] ✅ Preview creado exitosamente para ${userId}`);
@@ -1320,13 +1534,32 @@ function createScreenSharePreview(userId, stream) {
 
 /**
  * Maneja la recepción de un stream de pantalla remota
- * Esta función era la pieza faltante que conectaba el evento ontrack con la UI
+ * Esta función conecta el evento ontrack con la UI
  */
 function handleRemoteScreenShare(userId, stream) {
     console.log(`[SCREEN-SHARE] 🚀 handleRemoteScreenShare llamado para ${userId}`);
     console.log(`[SCREEN-SHARE] 🆔 Stream ID: ${stream.id}`);
+    console.log(`[SCREEN-SHARE] 🎵 Audio tracks:`, stream.getAudioTracks().map(t => t.label));
+    console.log(`[SCREEN-SHARE] 📹 Video tracks:`, stream.getVideoTracks().map(t => t.label));
 
-    // Usar la función existente para crear la UI
+    // Si ya existe un preview, actualizar el stream
+    const existingPreview = document.getElementById(`screen-preview-${userId}`);
+    if (existingPreview) {
+        const videoEl = existingPreview.querySelector('video');
+        if (videoEl && videoEl.srcObject !== stream) {
+            console.log(`[SCREEN-SHARE] 🔄 Actualizando stream existente para ${userId}`);
+            videoEl.srcObject = stream;
+            videoEl.muted = false; // Asegurar que el audio esté activo
+            videoEl.volume = 1;
+            videoEl.play().catch(e => {
+                console.warn('[SCREEN-SHARE] Error reproduciendo:', e);
+            });
+            forceSpeakerOutput(videoEl);
+        }
+        return;
+    }
+
+    // Crear nueva preview
     createScreenSharePreview(userId, stream);
 
     // Forzar actualización del layout
@@ -1480,6 +1713,11 @@ async function initMedia() {
         participantStates[userName] = { micActive: isMicActive, camActive: isCamActive };
         addParticipant(userName, true);
         updateParticipantList();
+
+        // ✅ DETECCIÓN DE HABLANTE ACTIVO: Agregar stream local para análisis
+        if (localStream.getAudioTracks().length > 0) {
+            addAudioStreamForAnalysis('local', localStream);
+        }
 
         document.getElementById('toggleMic')?.classList.toggle('active', isMicActive);
         document.getElementById('toggleCam')?.classList.toggle('active', isCamActive);
@@ -1722,22 +1960,65 @@ function initWebSocket() {
                         participantStates[msg.name] = { micActive: msg.micActive ?? true, camActive: msg.camActive ?? true };
                         addParticipant(msg.name || msg.userId, false);
                         updateParticipantList();
-                        const pc = createPeerConnection(msg.userId);
-                        if (pc && msg.initiateOffer && pc.signalingState === 'stable') {
-                            try {
-                                const offer = await pc.createOffer();
-                                await pc.setLocalDescription(offer);
-                                if (ws.readyState === WebSocket.OPEN) {
-                                    ws.send(JSON.stringify({
-                                        type: 'signal',
-                                        room: roomCode,
-                                        target: msg.userId,
-                                        payload: { sdp: pc.localDescription }
-                                    }));
+                        
+                        {
+                            // Bloque para scope de variables
+                            const peerConn = createPeerConnection(msg.userId);
+                            
+                            // ✅ Si tengo initiateOffer, crear oferta inmediatamente
+                            if (peerConn && msg.initiateOffer && peerConn.signalingState === 'stable') {
+                                try {
+                                    const offer = await peerConn.createOffer();
+                                    await peerConn.setLocalDescription(offer);
+                                    if (ws.readyState === WebSocket.OPEN) {
+                                        ws.send(JSON.stringify({
+                                            type: 'signal',
+                                            room: roomCode,
+                                            target: msg.userId,
+                                            payload: { sdp: peerConn.localDescription }
+                                        }));
+                                        debugLog(`✅ Oferta enviada a ${msg.userId}`);
+                                    }
+                                } catch (e) {
+                                    showError(`Error negociando con ${msg.userId}`, 5000);
+                                    debugLog(`Error en la negociación WebRTC con ${msg.userId}:`, e);
                                 }
-                            } catch (e) {
-                                showError(`Error negociando con ${msg.userId}`, 5000);
-                                debugLog(`Error en la negociación WebRTC con ${msg.userId}:`, e);
+                            } else if (!msg.initiateOffer && isScreenSharing && localScreenStream && localScreenStream.active) {
+                                // ✅ Si estoy compartiendo pantalla pero NO tengo initiateOffer,
+                                // esperar a que el otro usuario negocie primero, luego forzar renegociación
+                                console.log(`[SCREEN-SHARE] 📤 Esperando para enviar tracks de pantalla a ${msg.userId}...`);
+                                
+                                const targetUserId = msg.userId;
+                                const targetPeerConn = peerConn;
+                                
+                                // Esperar a que la conexión esté establecida y luego renegociar
+                                const checkAndRenegotiate = () => {
+                                    if (targetPeerConn.iceConnectionState === 'connected' || targetPeerConn.iceConnectionState === 'completed') {
+                                        console.log(`[SCREEN-SHARE] 🔄 Conexión establecida, renegociando para enviar pantalla a ${targetUserId}`);
+                                        
+                                        // Forzar renegociación
+                                        targetPeerConn.createOffer()
+                                            .then(offer => targetPeerConn.setLocalDescription(offer))
+                                            .then(() => {
+                                                if (ws.readyState === WebSocket.OPEN) {
+                                                    ws.send(JSON.stringify({
+                                                        type: 'signal',
+                                                        room: roomCode,
+                                                        target: targetUserId,
+                                                        payload: { sdp: targetPeerConn.localDescription }
+                                                    }));
+                                                    console.log(`[SCREEN-SHARE] ✅ Oferta de renegociación enviada a ${targetUserId}`);
+                                                }
+                                            })
+                                            .catch(e => console.error('[SCREEN-SHARE] Error renegociando:', e));
+                                    } else {
+                                        // Reintentar en 500ms si aún no está conectado
+                                        setTimeout(checkAndRenegotiate, 500);
+                                    }
+                                };
+                                
+                                // Iniciar verificación después de 1 segundo
+                                setTimeout(checkAndRenegotiate, 1000);
                             }
                         }
                         break;
@@ -1761,7 +2042,10 @@ function initWebSocket() {
                             raisedHands.add(msg.name);
                             updateHandList();
                             updateHandNotification();
-                            showError(`${msg.name} ha levantado la mano ✋`, 3000);
+                            // ✅ Solo notificar al admin/moderador, no a todos los participantes
+                            if (isModerator) {
+                                showError(`${msg.name} ha levantado la mano ✋`, 3000);
+                            }
                         }
                         break;
 
@@ -1983,6 +2267,7 @@ function initWebSocket() {
                         console.log(`[SCREEN-SHARE] 📡 Notificación recibida de ${msg.userId}`);
                         console.log(`[SCREEN-SHARE] 📦 Mensaje completo:`, msg);
                         console.log(`[SCREEN-SHARE] 🆔 streamId recibido:`, msg.streamId);
+                        console.log(`[SCREEN-SHARE] 🔄 isSync:`, msg.isSync);
 
                         // ✅ FORZAR VISTA SIDEBAR INMEDIATAMENTE PARA TODOS
                         if (typeof setViewMode === 'function') {
@@ -2013,12 +2298,25 @@ function initWebSocket() {
                                     const pending = pendingStreams[pendingKey];
                                     handleRemoteScreenShare(pending.userId, pending.stream);
                                     delete pendingStreams[pendingKey];
+                                } else if (msg.isSync) {
+                                    // ✅ Es una sincronización para nuevo usuario - esperar que llegue el stream por WebRTC
+                                    console.log(`[SCREEN-SHARE] ⏳ Sincronización: Esperando stream de ${msg.userId} por WebRTC...`);
+                                    // Registrar que esperamos un stream de este usuario
+                                    // El stream llegará por ontrack y se procesará ahí con timeout
                                 }
                             }
 
                             // 2. Verificar si el video ya llegó y se asignó incorrectamente a la cámara
                             const existingVideoContainer = document.getElementById(`video-container-${msg.userId}`);
                             if (existingVideoContainer) {
+                                // ✅ MEJORADO: Buscar todos los videos en el container y ver si hay más de uno
+                                const allVideos = existingVideoContainer.querySelectorAll('video');
+                                console.log(`[SCREEN-SHARE] 🔍 Videos encontrados en container de ${msg.userId}:`, allVideos.length);
+                                
+                                allVideos.forEach((videoEl, idx) => {
+                                    console.log(`[SCREEN-SHARE] Video ${idx}: srcObject=${videoEl.srcObject?.id}`);
+                                });
+                                
                                 const videoEl = existingVideoContainer.querySelector('video');
                                 if (videoEl && videoEl.srcObject && videoEl.srcObject.id === msg.streamId) {
                                     console.log('[SCREEN-SHARE] ⚠️ Rectificando video asignado a cámara...');
@@ -2045,12 +2343,22 @@ function initWebSocket() {
                                 delete pendingStreams[pendingKey];
                             }
                         }
+                        
+                        // ✅ Actualizar tracker de quién está compartiendo
+                        currentScreenSharer = msg.userId;
+                        console.log(`[SCREEN-SHARE] 📺 Tracker actualizado: ${currentScreenSharer} está compartiendo`);
                         break;
 
                     case 'screen-share-stopped':
                         console.log(`[SCREEN-SHARE] 🛑 Notificación de parada de ${msg.userId}`);
                         delete remoteScreenStreams[msg.userId];
                         stopRemoteScreenShare(msg.userId);
+                        
+                        // ✅ Limpiar tracker si era el que estaba compartiendo
+                        if (currentScreenSharer === msg.userId) {
+                            currentScreenSharer = null;
+                            console.log(`[SCREEN-SHARE] 📺 Tracker limpiado: nadie está compartiendo`);
+                        }
                         break;
 
 
@@ -2411,6 +2719,33 @@ function createPeerConnection(userId) {
             console.error(`LocalStream existe pero no tiene tracks:`, localStream.getTracks());
         }
     }
+    
+    // ✅ IMPORTANTE: Si estoy compartiendo pantalla, agregar también esos tracks al nuevo peer
+    if (isScreenSharing && localScreenStream && localScreenStream.active) {
+        console.log(`[SCREEN-SHARE] 📤 Agregando tracks de pantalla compartida al nuevo peer ${userId}`);
+        localScreenStream.getTracks().forEach(track => {
+            try {
+                pc.addTrack(track, localScreenStream);
+                console.log(`[SCREEN-SHARE] ✅ Track ${track.kind} de pantalla agregado a ${userId}`);
+            } catch (e) {
+                console.error(`[SCREEN-SHARE] ❌ Error agregando track de pantalla a ${userId}:`, e);
+            }
+        });
+        
+        // ✅ Notificar al nuevo peer que hay un screen share activo (después de la negociación)
+        setTimeout(() => {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: 'screen-share-started',
+                    room: roomCode,
+                    userId: userName,
+                    streamId: localScreenStream.id,
+                    targetUser: userId // Para que el servidor sepa a quién enviar
+                }));
+                console.log(`[SCREEN-SHARE] 📡 Notificación enviada al nuevo peer ${userId}`);
+            }
+        }, 1000);
+    }
 
     // Buffer para ICE candidates pendientes
     pc.pendingCandidates = [];
@@ -2460,6 +2795,12 @@ function createPeerConnection(userId) {
         console.log(`[WEBRTC] 🔍 remoteScreenStreams[${userId}]:`, remoteScreenStreams[userId]);
         console.log(`[WEBRTC] 🔍 ¿Es pantalla compartida?:`, remoteScreenStreams[userId] === stream.id);
 
+        // ✅ DETECCIÓN DE HABLANTE ACTIVO: Agregar stream de audio para análisis
+        if (track.kind === 'audio' && !remoteScreenStreams[userId]) {
+            // Solo analizar audio de cámaras, no de pantallas compartidas
+            addAudioStreamForAnalysis(userId, stream);
+        }
+
         // Verificar si este stream corresponde a una pantalla compartida conocida
         if (remoteScreenStreams[userId] === stream.id) {
             console.log(`[WEBRTC] 🖥️ Confirmado: Es stream de PANTALLA de ${userId}`);
@@ -2487,6 +2828,21 @@ function createPeerConnection(userId) {
                     console.log(`[WEBRTC] ⏳ Stream recibido pero ya hay cámara activa. Guardando en buffer: ${stream.id}`);
                     pendingStreams[stream.id] = { userId, stream };
                     console.log(`[WEBRTC] 📦 pendingStreams ahora tiene:`, Object.keys(pendingStreams));
+                    
+                    // ✅ NUEVO: Si hay un stream pendiente de este usuario, probablemente es pantalla
+                    // Esperar un poco y si llega screen-share-started, se procesará
+                    // Si no, asumir que es un segundo stream de video (pantalla)
+                    setTimeout(() => {
+                        // Verificar si el stream sigue pendiente (no se procesó por screen-share-started)
+                        if (pendingStreams[stream.id]) {
+                            console.log(`[WEBRTC] ⏰ Timeout: Stream ${stream.id} sigue pendiente, asumiendo es PANTALLA de ${userId}`);
+                            const pending = pendingStreams[stream.id];
+                            // Marcar que este usuario está compartiendo pantalla (aunque no tengamos el ID original)
+                            remoteScreenStreams[userId] = stream.id;
+                            handleRemoteScreenShare(pending.userId, pending.stream);
+                            delete pendingStreams[stream.id];
+                        }
+                    }, 1500); // Esperar 1.5 segundos
                 }
             } else {
                 // Si no hay cámara previa, o es el mismo stream (reemplazo), asumimos cámara por defecto
@@ -2605,12 +2961,17 @@ function createPeerConnection(userId) {
 }
 
 async function handleSignal(senderId, payload) {
-    const pc = peerConnections[senderId] || createPeerConnection(senderId);
+    console.log(`[SIGNAL] 📨 Señal recibida de ${senderId}:`, payload.sdp?.type || 'ICE candidate');
+    
+    const existingPc = peerConnections[senderId];
+    console.log(`[SIGNAL] 🔍 PeerConnection existente para ${senderId}:`, !!existingPc);
+    
+    const pc = existingPc || createPeerConnection(senderId);
 
     try {
         if (payload.sdp) {
             if (payload.sdp.type === 'offer') {
-                debugLog(`Oferta SDP recibida de ${senderId}.`);
+                console.log(`[SIGNAL] 📥 Oferta SDP recibida de ${senderId}. Estado actual: ${pc.signalingState}`);
                 await pc.setRemoteDescription(new RTCSessionDescription(payload.sdp));
                 const answer = await pc.createAnswer();
                 await pc.setLocalDescription(answer);
@@ -2738,6 +3099,9 @@ async function restartPeerConnection(userId) {
 }
 
 function removePeerConnection(userId) {
+    // ✅ Limpiar el analyser de audio al desconectar
+    removeAudioStreamFromAnalysis(userId);
+    
     if (peerConnections[userId]) {
         peerConnections[userId].close();
         delete peerConnections[userId];
@@ -2805,31 +3169,389 @@ document.getElementById('toggleCam')?.addEventListener('click', () => {
 });
 
 // ============================================================================
-// NUEVO HANDLER PARA COMPARTIR PANTALLA - COMPLETAMENTE DESDE CERO
+// NUEVO HANDLER PARA COMPARTIR PANTALLA - CON MODAL DE SELECCIÓN Y PREVIEW
 // ============================================================================
+
+// Variables para el modal de compartir pantalla
+let selectedShareType = null;
+let previewStream = null; // Stream de preview antes de confirmar
+
 document.getElementById('shareScreen')?.addEventListener('click', async () => {
     if (isScreenSharing) {
         await stopScreenSharing();
     } else {
-        await startScreenSharing();
+        // Abrir el modal de selección de pantalla
+        openScreenShareModal();
     }
 });
 
-async function startScreenSharing() {
-    console.log('[SCREEN-SHARE] 🚀 Iniciando proceso...');
-    try {
-        localScreenStream = await navigator.mediaDevices.getDisplayMedia({
-            video: { cursor: 'always' },
-            audio: true
+function openScreenShareModal() {
+    const modal = document.getElementById('screenShareModal');
+    if (modal) {
+        modal.classList.add('active');
+        selectedShareType = null;
+        previewStream = null;
+        
+        // Mostrar selector, ocultar preview
+        document.getElementById('screenShareSelector').style.display = 'block';
+        document.getElementById('screenSharePreviewContainer').style.display = 'none';
+        document.getElementById('screenShareAudioOption').style.display = 'none';
+        document.getElementById('confirmScreenShare').style.display = 'none';
+        document.getElementById('changeScreenShare').style.display = 'none';
+        
+        // Resetear selecciones
+        document.querySelectorAll('.screen-share-option').forEach(opt => {
+            opt.classList.remove('selected');
         });
+        document.getElementById('shareAudioCheckbox').checked = true;
+    }
+}
 
+function closeScreenShareModal() {
+    const modal = document.getElementById('screenShareModal');
+    if (modal) {
+        modal.classList.remove('active');
+        
+        // Si hay un preview stream activo que no se va a usar, detenerlo
+        if (previewStream && !isScreenSharing) {
+            previewStream.getTracks().forEach(track => track.stop());
+            previewStream = null;
+        }
+        
+        selectedShareType = null;
+    }
+}
+
+// Función para solicitar el stream según el tipo seleccionado
+async function requestScreenStream(shareType) {
+    const typeLabels = {
+        'screen': 'Pantalla completa',
+        'window': 'Ventana',
+        'tab': 'Pestaña del navegador'
+    };
+    
+    try {
+        // Configurar opciones según el tipo
+        const displayMediaOptions = {
+            video: { 
+                cursor: 'always'
+            },
+            audio: true // Siempre solicitar audio, el usuario decide después
+        };
+        
+        // Agregar preferencias según el tipo
+        if (shareType === 'screen') {
+            displayMediaOptions.video.displaySurface = 'monitor';
+        } else if (shareType === 'window') {
+            displayMediaOptions.video.displaySurface = 'window';
+        } else if (shareType === 'tab') {
+            displayMediaOptions.video.displaySurface = 'browser';
+            displayMediaOptions.preferCurrentTab = false;
+            displayMediaOptions.selfBrowserSurface = 'exclude';
+            displayMediaOptions.systemAudio = 'include';
+        }
+        
+        console.log('[SCREEN-SHARE] 📺 Solicitando stream tipo:', shareType);
+        const stream = await navigator.mediaDevices.getDisplayMedia(displayMediaOptions);
+        
+        console.log('[SCREEN-SHARE] ✅ Stream obtenido');
+        console.log('[SCREEN-SHARE] 📹 Video tracks:', stream.getVideoTracks().length);
+        console.log('[SCREEN-SHARE] 🔊 Audio tracks:', stream.getAudioTracks().length);
+        
+        return { stream, typeLabel: typeLabels[shareType] || shareType };
+    } catch (err) {
+        console.error('[SCREEN-SHARE] ❌ Error solicitando stream:', err);
+        if (err.name === 'NotAllowedError') {
+            showError('Permiso denegado para compartir pantalla', 3000);
+        }
+        return null;
+    }
+}
+
+// Mostrar preview del stream seleccionado
+function showStreamPreview(stream, typeLabel) {
+    const previewContainer = document.getElementById('screenSharePreviewContainer');
+    const previewVideo = document.getElementById('screenSharePreviewVideo');
+    const previewTypeLabel = document.getElementById('previewTypeLabel');
+    const selector = document.getElementById('screenShareSelector');
+    const audioOption = document.getElementById('screenShareAudioOption');
+    const confirmBtn = document.getElementById('confirmScreenShare');
+    const changeBtn = document.getElementById('changeScreenShare');
+    
+    if (previewContainer && previewVideo) {
+        // Asignar stream al video de preview
+        previewVideo.srcObject = stream;
+        previewTypeLabel.textContent = typeLabel;
+        
+        // Mostrar preview, ocultar selector
+        selector.style.display = 'none';
+        previewContainer.style.display = 'block';
+        audioOption.style.display = 'block';
+        confirmBtn.style.display = 'flex';
+        changeBtn.style.display = 'flex';
+        
+        // Verificar si el stream tiene audio
+        const hasAudio = stream.getAudioTracks().length > 0;
+        const audioCheckbox = document.getElementById('shareAudioCheckbox');
+        const audioNote = document.querySelector('.audio-note');
+        
+        if (hasAudio) {
+            audioCheckbox.checked = true;
+            audioCheckbox.disabled = false;
+            audioNote.textContent = 'El audio de lo que compartes se escuchará en la reunión';
+        } else {
+            audioCheckbox.checked = false;
+            audioCheckbox.disabled = true;
+            audioNote.textContent = 'Este contenido no tiene audio disponible para compartir';
+        }
+    }
+}
+
+// Event listeners para el modal de compartir pantalla
+document.addEventListener('DOMContentLoaded', () => {
+    // Cerrar modal
+    document.getElementById('closeScreenShareModal')?.addEventListener('click', closeScreenShareModal);
+    document.getElementById('cancelScreenShare')?.addEventListener('click', closeScreenShareModal);
+    
+    // Cerrar al hacer clic fuera
+    document.getElementById('screenShareModal')?.addEventListener('click', (e) => {
+        if (e.target.id === 'screenShareModal') {
+            closeScreenShareModal();
+        }
+    });
+    
+    // Seleccionar tipo de pantalla - ahora solicita el stream inmediatamente
+    document.querySelectorAll('.screen-share-option').forEach(option => {
+        option.addEventListener('click', async () => {
+            const shareType = option.dataset.shareType;
+            selectedShareType = shareType;
+            
+            // Detener preview anterior si existe
+            if (previewStream) {
+                previewStream.getTracks().forEach(track => track.stop());
+                previewStream = null;
+            }
+            
+            // Solicitar el stream
+            const result = await requestScreenStream(shareType);
+            
+            if (result && result.stream) {
+                previewStream = result.stream;
+                
+                // Handler para cuando el usuario cancela desde el navegador
+                previewStream.getVideoTracks()[0].onended = () => {
+                    console.log('[SCREEN-SHARE] ⏹️ Stream cancelado por el usuario');
+                    // Volver al selector
+                    document.getElementById('screenShareSelector').style.display = 'block';
+                    document.getElementById('screenSharePreviewContainer').style.display = 'none';
+                    document.getElementById('screenShareAudioOption').style.display = 'none';
+                    document.getElementById('confirmScreenShare').style.display = 'none';
+                    document.getElementById('changeScreenShare').style.display = 'none';
+                    previewStream = null;
+                };
+                
+                showStreamPreview(result.stream, result.typeLabel);
+            }
+        });
+    });
+    
+    // Botón "Cambiar" - volver al selector
+    document.getElementById('changeScreenShare')?.addEventListener('click', () => {
+        // Detener preview actual
+        if (previewStream) {
+            previewStream.getTracks().forEach(track => track.stop());
+            previewStream = null;
+        }
+        
+        // Mostrar selector, ocultar preview
+        document.getElementById('screenShareSelector').style.display = 'block';
+        document.getElementById('screenSharePreviewContainer').style.display = 'none';
+        document.getElementById('screenShareAudioOption').style.display = 'none';
+        document.getElementById('confirmScreenShare').style.display = 'none';
+        document.getElementById('changeScreenShare').style.display = 'none';
+    });
+    
+    // Botón de confirmar compartir
+    document.getElementById('confirmScreenShare')?.addEventListener('click', async () => {
+        if (!previewStream) return;
+        
+        const includeAudio = document.getElementById('shareAudioCheckbox')?.checked ?? true;
+        
+        // Si el usuario desactivó el audio, remover los tracks de audio
+        if (!includeAudio) {
+            previewStream.getAudioTracks().forEach(track => {
+                track.stop();
+                previewStream.removeTrack(track);
+            });
+        }
+        
+        // Cerrar modal y usar el stream de preview
+        document.getElementById('screenShareModal').classList.remove('active');
+        
+        // Iniciar compartir con el stream ya capturado
+        await startScreenSharingWithStream(previewStream);
+        previewStream = null; // Ya fue transferido
+    });
+});
+
+// Variable para rastrear quién está compartiendo pantalla actualmente
+let currentScreenSharer = null;
+
+// Nueva función que usa un stream ya capturado
+async function startScreenSharingWithStream(stream) {
+    console.log('[SCREEN-SHARE] 🚀 Iniciando compartir con stream existente...');
+    
+    // ✅ VALIDACIÓN: Verificar si alguien más ya está compartiendo
+    if (currentScreenSharer && currentScreenSharer !== userName) {
+        showError(`⚠️ ${currentScreenSharer} ya está compartiendo pantalla. Espera a que termine.`, 4000);
+        stream.getTracks().forEach(track => track.stop());
+        return;
+    }
+    
+    const activeRemoteShares = Object.keys(remoteScreenStreams);
+    if (activeRemoteShares.length > 0) {
+        const sharerName = activeRemoteShares[0];
+        showError(`⚠️ ${sharerName} ya está compartiendo pantalla. Espera a que termine.`, 4000);
+        stream.getTracks().forEach(track => track.stop());
+        return;
+    }
+    
+    try {
+        localScreenStream = stream;
         isScreenSharing = true;
+        currentScreenSharer = userName;
         document.getElementById('shareScreen')?.classList.add('active');
 
         // 1. Mostrar preview local
         createScreenSharePreview(userName, localScreenStream);
 
-        // Silenciar el video local de pantalla para evitar eco/feedback
+        // Silenciar el video local de pantalla para evitar eco
+        const myVideo = document.getElementById(`screen-video-${userName}`);
+        if (myVideo) {
+            myVideo.muted = true;
+            myVideo.volume = 0;
+        }
+
+        // 2. Notificar al servidor
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({
+                type: 'screen-share-started',
+                room: roomCode,
+                userId: userName,
+                streamId: localScreenStream.id
+            }));
+        }
+
+        // 3. Añadir tracks a todas las conexiones
+        const videoTrack = localScreenStream.getVideoTracks()[0];
+        const audioTrack = localScreenStream.getAudioTracks()[0];
+
+        console.log('[SCREEN-SHARE] 📹 Video track:', videoTrack?.label);
+        console.log('[SCREEN-SHARE] 🔊 Audio track:', audioTrack?.label || 'Sin audio');
+
+        for (const peerId in peerConnections) {
+            const pc = peerConnections[peerId];
+            console.log(`[SCREEN-SHARE] 📤 Agregando tracks a ${peerId}...`);
+
+            if (videoTrack) {
+                try {
+                    pc.addTrack(videoTrack, localScreenStream);
+                    console.log(`[SCREEN-SHARE] ✅ Video track agregado a ${peerId}`);
+                } catch (e) {
+                    console.error(`[SCREEN-SHARE] ❌ Error adding video track to ${peerId}:`, e);
+                }
+            }
+            if (audioTrack) {
+                try {
+                    pc.addTrack(audioTrack, localScreenStream);
+                    console.log(`[SCREEN-SHARE] ✅ Audio track agregado a ${peerId}`);
+                } catch (e) {
+                    console.error(`[SCREEN-SHARE] ❌ Error adding audio track to ${peerId}:`, e);
+                }
+            }
+
+            // Renegociar
+            await renegotiate(peerId, pc);
+        }
+
+        // Handler para cuando el usuario detiene desde los controles del navegador
+        videoTrack.onended = () => {
+            console.log('[SCREEN-SHARE] ⏹️ Usuario detuvo compartir desde controles del navegador');
+            stopScreenSharing();
+        };
+
+        showError('✅ Compartiendo pantalla', 2000);
+        console.log('[SCREEN-SHARE] ✅ Pantalla compartida exitosamente');
+
+    } catch (err) {
+        console.error('[SCREEN-SHARE] ❌ Error:', err);
+        showError('Error al compartir pantalla: ' + err.message, 5000);
+        isScreenSharing = false;
+        currentScreenSharer = null;
+        document.getElementById('shareScreen')?.classList.remove('active');
+    }
+}
+
+// Función legacy para compatibilidad (ahora redirige al modal)
+async function startScreenSharing(shareType = 'screen', includeAudio = true) {
+    console.log('[SCREEN-SHARE] 🚀 Iniciando proceso...');
+    console.log('[SCREEN-SHARE] 📺 Tipo:', shareType, '| Audio:', includeAudio);
+    
+    // ✅ VALIDACIÓN: Verificar si alguien más ya está compartiendo
+    if (currentScreenSharer && currentScreenSharer !== userName) {
+        showError(`⚠️ ${currentScreenSharer} ya está compartiendo pantalla. Espera a que termine.`, 4000);
+        console.log(`[SCREEN-SHARE] ❌ Bloqueado: ${currentScreenSharer} ya está compartiendo`);
+        return;
+    }
+    
+    // Verificar si hay screen shares remotos activos
+    const activeRemoteShares = Object.keys(remoteScreenStreams);
+    if (activeRemoteShares.length > 0) {
+        const sharerName = activeRemoteShares[0];
+        showError(`⚠️ ${sharerName} ya está compartiendo pantalla. Espera a que termine.`, 4000);
+        console.log(`[SCREEN-SHARE] ❌ Bloqueado: ${sharerName} tiene un screen share activo`);
+        return;
+    }
+    
+    try {
+        // Configurar las constraints según el tipo de pantalla
+        const displayMediaOptions = {
+            video: { 
+                cursor: 'always'
+            },
+            audio: includeAudio ? {
+                echoCancellation: false,
+                noiseSuppression: false,
+                autoGainControl: false,
+                sampleRate: 48000
+            } : false
+        };
+        
+        // Agregar preferencias según el tipo
+        if (shareType === 'screen') {
+            displayMediaOptions.video.displaySurface = 'monitor';
+        } else if (shareType === 'window') {
+            displayMediaOptions.video.displaySurface = 'window';
+        } else if (shareType === 'tab') {
+            displayMediaOptions.video.displaySurface = 'browser';
+            // Para pestañas, el audio es más confiable
+            if (includeAudio) {
+                displayMediaOptions.preferCurrentTab = false;
+                displayMediaOptions.selfBrowserSurface = 'exclude';
+                displayMediaOptions.systemAudio = 'include';
+            }
+        }
+        
+        localScreenStream = await navigator.mediaDevices.getDisplayMedia(displayMediaOptions);
+
+        isScreenSharing = true;
+        currentScreenSharer = userName;
+        document.getElementById('shareScreen')?.classList.add('active');
+
+        // 1. Mostrar preview local
+        createScreenSharePreview(userName, localScreenStream);
+
+        // Silenciar el video local de pantalla para evitar eco/feedback (solo para el presentador)
         const myVideo = document.getElementById(`screen-video-${userName}`);
         if (myVideo) {
             myVideo.muted = true;
@@ -2915,8 +3637,10 @@ async function stopScreenSharing() {
             if (sender.track && sender.track.kind === 'video' && sender.track.label === localScreenStream.getVideoTracks()[0]?.label) {
                 pc.removeTrack(sender);
             }
-            // Nota: Audio de pantalla es más difícil de distinguir si no guardamos referencia, 
-            // pero por ahora nos enfocamos en video.
+            // También remover audio track de screen share si existe
+            if (sender.track && sender.track.kind === 'audio' && localScreenStream.getAudioTracks().some(t => t.label === sender.track.label)) {
+                pc.removeTrack(sender);
+            }
         }
 
         // Renegociar
@@ -2926,12 +3650,15 @@ async function stopScreenSharing() {
     // 3. Limpiar UI y estado
     removeScreenSharePreview(userName);
     isScreenSharing = false;
+    currentScreenSharer = null; // ✅ Limpiar el tracker
     localScreenStream = null;
     document.getElementById('shareScreen')?.classList.remove('active');
 
     // Restaurar vista normal
     if (typeof setViewMode === 'function') {
         setViewMode('grid-auto');
+    } else if (window.ViewControl && typeof window.ViewControl.setViewMode === 'function') {
+        window.ViewControl.setViewMode('grid-auto');
     }
 
     // 4. Notificar servidor
@@ -2976,30 +3703,6 @@ async function renegotiate(peerId, pc) {
     } catch (e) {
         console.error(`[RENEGOTIATE] ❌ Error renegociando con ${peerId}:`, e);
     }
-}
-
-// Alias para mantener compatibilidad con el código de initWebSocket
-function handleRemoteScreenShare(userId, stream) {
-    // Si ya existe un placeholder, asignar el stream al video existente
-    const preview = document.getElementById(`screen-preview-${userId}`);
-    if (preview) {
-        const videoEl = preview.querySelector('video');
-        if (videoEl && videoEl.srcObject !== stream) {
-            videoEl.srcObject = stream;
-            try { videoEl.play().catch(() => { }); } catch (e) { }
-        }
-
-        // Asegurar layout
-        if (typeof setViewMode === 'function') {
-            setViewMode('sidebar');
-        } else if (window.ViewControl && typeof window.ViewControl.setViewMode === 'function') {
-            window.ViewControl.setViewMode('sidebar');
-        }
-        return;
-    }
-
-    // Si no hay placeholder, crear la preview normalmente
-    createScreenSharePreview(userId, stream);
 }
 
 function stopRemoteScreenShare(userId) {

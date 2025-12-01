@@ -447,6 +447,48 @@
             animation: notification-ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
         }
 
+        /* Badge numérico para manos levantadas (solo admin) */
+        .hand-count-badge {
+            display: none;
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            min-width: 20px;
+            height: 20px;
+            padding: 0 6px;
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+            font-size: 11px;
+            font-weight: 700;
+            border-radius: 10px;
+            border: 2px solid var(--bg-primary);
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.5);
+            line-height: 16px;
+            text-align: center;
+        }
+
+        /* Cuando hay manos levantadas y es admin */
+        .control-btn.has-hands .hand-count-badge {
+            display: block;
+            animation: badge-pulse 2s infinite;
+        }
+
+        /* Para admin, NO mostrar el punto rojo, solo el número */
+        .control-btn.has-hands::after {
+            display: none !important;
+        }
+
+        @keyframes badge-pulse {
+            0%, 100% {
+                transform: scale(1);
+                box-shadow: 0 2px 8px rgba(59, 130, 246, 0.5);
+            }
+            50% {
+                transform: scale(1.1);
+                box-shadow: 0 4px 12px rgba(59, 130, 246, 0.7);
+            }
+        }
+
         @keyframes pulse-notification {
 
             0%,
@@ -521,8 +563,98 @@
             transform: scaleX(-1);
         }
 
-        .video-container.screen-share video {
-            transform: scaleX(1);
+        /* IMPORTANTE: Pantalla compartida NUNCA debe tener mirror */
+        .video-container.screen-share video,
+        .screen-share-preview video,
+        [id^="screen-preview-"] video,
+        [id^="screen-video-"] {
+            transform: scaleX(1) !important;
+            object-fit: contain !important;
+            background: #000 !important;
+        }
+
+        /* ============================================
+           ESTILOS MEJORADOS PARA SCREEN SHARE
+           ============================================ */
+        .video-container.screen-share {
+            min-height: 250px;
+            background: #000;
+            border: 3px solid var(--primary);
+            box-shadow: 0 0 20px rgba(75, 94, 170, 0.4);
+            z-index: 10;
+        }
+
+        .video-container.screen-share .screen-share-info-overlay {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(10px);
+            padding: 8px 16px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: white;
+            font-size: 14px;
+            font-weight: 500;
+            z-index: 5;
+        }
+
+        .video-container.screen-share .screen-share-info-overlay .screen-share-status {
+            color: #4ade80;
+            animation: pulse 2s infinite;
+        }
+        
+        .video-container.screen-share .screen-share-info-overlay .screen-share-audio {
+            color: #60a5fa;
+            margin-left: 4px;
+        }
+
+        /* Cuando hay screen share activo, el grid debe cambiar su layout */
+        #videoGrid:has(.screen-share) {
+            display: grid !important;
+            grid-template-columns: 1fr 200px !important;
+            grid-template-rows: 1fr !important;
+            gap: 12px;
+        }
+
+        #videoGrid:has(.screen-share) .video-container.screen-share {
+            grid-column: 1 / 2 !important;
+            grid-row: 1 / -1 !important;
+            max-height: none;
+            min-height: 300px;
+            aspect-ratio: 16/9;
+        }
+
+        /* Sidebar container para los thumbnails - CÁMARAS CUADRADAS */
+        #videoGrid:has(.screen-share) .sidebar-videos-container {
+            grid-column: 2 / 3 !important;
+            grid-row: 1 / -1 !important;
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 8px;
+            overflow-y: auto;
+            max-height: 100%;
+            padding: 4px;
+        }
+        
+        #videoGrid:has(.screen-share) .sidebar-videos-container .video-container {
+            flex: 0 0 auto;
+            width: 100%;
+            height: auto;
+            min-height: 120px;
+            max-height: 150px;
+            aspect-ratio: 1/1; /* Cuadrado */
+            border-radius: 12px;
+        }
+        
+        #videoGrid:has(.screen-share) .sidebar-videos-container .video-container video {
+            object-fit: cover;
+        }
+
+        #videoGrid:has(.screen-share) .video-container:not(.screen-share):not(.sidebar-videos-container *) {
+            display: none; /* Ocultar videos sueltos fuera del container */
         }
 
         .video-info {
@@ -1153,22 +1285,22 @@
             top: 0;
             height: 100%;
             width: 380px;
-            background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
-            box-shadow: 4px 0 24px rgba(0, 0, 0, 0.5);
+            background: linear-gradient(180deg, #0f172a 0%, #1e3a5f 50%, #1e293b 100%);
+            box-shadow: 4px 0 24px rgba(59, 130, 246, 0.3);
             z-index: 1000;
             transform: translateX(-100%);
             transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
             padding: 0;
             display: flex;
             flex-direction: column;
-            border-right: 1px solid #334155;
+            border-right: 2px solid #3b82f6;
             overflow: hidden;
         }
 
         body.light-theme #handPanel {
-            background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
-            border-right: 1px solid #cbd5e1;
-            box-shadow: 4px 0 24px rgba(0, 0, 0, 0.08);
+            background: linear-gradient(180deg, #eff6ff 0%, #dbeafe 50%, #bfdbfe 100%);
+            border-right: 2px solid #3b82f6;
+            box-shadow: 4px 0 24px rgba(59, 130, 246, 0.15);
         }
 
         #handPanel.visible {
@@ -1177,15 +1309,15 @@
 
         #handPanel-header {
             padding: 24px;
-            border-bottom: 2px solid #334155;
-            background: #1e293b;
+            border-bottom: 2px solid #3b82f6;
+            background: linear-gradient(135deg, #1e3a5f 0%, #1e293b 100%);
             animation: fadeIn 0.5s ease-out;
             flex-shrink: 0;
         }
 
         body.light-theme #handPanel-header {
-            background: #ffffff;
-            border-bottom: 2px solid #e2e8f0;
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+            border-bottom: 2px solid #3b82f6;
         }
 
         .header-content {
@@ -1195,16 +1327,24 @@
             margin-bottom: 16px;
         }
 
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
         #handPanel-header h4 {
             font-size: 22px;
             font-weight: 700;
-            color: #f1f5f9;
+            color: #ffffff;
             letter-spacing: -0.5px;
             margin: 0;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
         }
 
         body.light-theme #handPanel-header h4 {
-            color: #0f172a;
+            color: #1e3a8a;
+            text-shadow: none;
         }
 
         @keyframes waveHand {
@@ -1349,8 +1489,8 @@
         }
 
         #handList li {
-            background: #ffffff;
-            border: 2px solid #334155;
+            background: linear-gradient(135deg, #1e3a5f 0%, #1e293b 100%);
+            border: 2px solid #3b82f6;
             border-radius: 16px;
             padding: 16px;
             margin-bottom: 14px;
@@ -1364,9 +1504,9 @@
         }
 
         body.light-theme #handList li {
-            background: #ffffff;
-            border: 2px solid #e2e8f0;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+            border: 2px solid #3b82f6;
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15);
         }
 
         #handList li::before {
@@ -1376,7 +1516,7 @@
             top: 0;
             height: 100%;
             width: 4px;
-            background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%);
+            background: linear-gradient(180deg, #60a5fa 0%, #3b82f6 100%);
             transform: scaleY(0);
             transition: transform 0.3s ease;
         }
@@ -1387,20 +1527,20 @@
 
         #handList li:hover {
             transform: translateX(4px);
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-            border-color: #3b82f6;
+            box-shadow: 0 8px 24px rgba(59, 130, 246, 0.3);
+            border-color: #60a5fa;
         }
 
         body.light-theme #handList li:hover {
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
-            border-color: #3b82f6;
+            box-shadow: 0 8px 24px rgba(59, 130, 246, 0.25);
+            border-color: #2563eb;
         }
 
         #handList li .avatar {
             width: 56px;
             height: 56px;
             border-radius: 50%;
-            background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 50%, #3b82f6 100%);
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -1408,7 +1548,7 @@
             font-size: 22px;
             font-weight: 700;
             flex-shrink: 0;
-            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.5);
             transition: transform 0.3s ease;
         }
 
@@ -1432,24 +1572,26 @@
         #handList li .user-name {
             font-weight: 600;
             font-size: 16px;
-            color: #f1f5f9;
+            color: #ffffff;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
         }
 
         body.light-theme #handList li .user-name {
-            color: #0f172a;
+            color: #1e3a8a;
+            text-shadow: none;
         }
 
         #handList li .hand-time {
             font-size: 13px;
-            color: #94a3b8;
+            color: #93c5fd;
             font-weight: 500;
         }
 
         body.light-theme #handList li .hand-time {
-            color: #64748b;
+            color: #3b82f6;
         }
 
         #handList li .hand-icon {
@@ -1510,7 +1652,7 @@
         .empty-state {
             text-align: center;
             padding: 80px 20px;
-            color: #94a3b8;
+            color: #93c5fd;
             animation: fadeIn 0.6s ease-out;
         }
 
@@ -1524,34 +1666,34 @@
         .empty-message {
             font-size: 17px;
             font-weight: 600;
-            color: #64748b;
+            color: #93c5fd;
         }
 
         body.light-theme .empty-message {
-            color: #64748b;
+            color: #3b82f6;
         }
 
         #handList li[style*="color"] {
-            color: #94a3b8;
+            color: #93c5fd;
             font-style: italic;
             text-align: center;
             padding: 32px 20px;
             background: transparent;
-            border: 2px dashed rgba(255, 255, 255, 0.1);
+            border: 2px dashed rgba(59, 130, 246, 0.3);
             box-shadow: none;
         }
 
         body.light-theme #handList li[style*="color"] {
-            color: #64748b;
-            border: 2px dashed rgba(0, 0, 0, 0.1);
+            color: #3b82f6;
+            border: 2px dashed rgba(59, 130, 246, 0.3);
         }
 
         #closeHandPanel {
-            position: absolute;
-            top: 24px;
-            right: 24px;
-            background: rgba(239, 68, 68, 0.1);
-            border: none;
+            position: relative;
+            top: auto;
+            right: auto;
+            background: rgba(59, 130, 246, 0.2);
+            border: 1px solid rgba(59, 130, 246, 0.3);
             border-radius: 8px;
             width: 32px;
             height: 32px;
@@ -1559,25 +1701,29 @@
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            color: #ef4444;
+            color: #93c5fd;
             font-size: 20px;
             font-weight: 700;
             transition: all 0.2s ease;
+            flex-shrink: 0;
         }
 
         #closeHandPanel:hover {
-            background: #ef4444;
+            background: rgba(239, 68, 68, 0.9);
+            border-color: #ef4444;
             color: white;
             transform: scale(1.1);
         }
 
         body.light-theme #closeHandPanel {
-            background: rgba(239, 68, 68, 0.1);
-            color: #ef4444;
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            color: #3b82f6;
         }
 
         body.light-theme #closeHandPanel:hover {
             background: #ef4444;
+            border-color: #ef4444;
             color: white;
         }
 
@@ -1996,6 +2142,409 @@
         #endPollBtn:hover {
             background: linear-gradient(145deg, var(--danger-dark) 0%, var(--danger) 100%);
             box-shadow: var(--shadow-lg), var(--glow-danger);
+        }
+
+        /* ============================================
+           MODAL DE COMPARTIR PANTALLA (estilo Google Meet)
+           ============================================ */
+        .screen-share-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(8px);
+            z-index: 2000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.2s ease-out;
+        }
+
+        .screen-share-modal.active {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .screen-share-modal-content {
+            background: linear-gradient(145deg, var(--bg-card) 0%, var(--surface) 100%);
+            border-radius: 24px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 25px 80px rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--glass-border);
+            animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        body.light-theme .screen-share-modal-content {
+            background: linear-gradient(145deg, #ffffff 0%, #f3f4f6 100%);
+        }
+
+        @keyframes slideUp {
+            from { 
+                opacity: 0;
+                transform: translateY(30px) scale(0.95);
+            }
+            to { 
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .screen-share-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .screen-share-modal-header h3 {
+            color: var(--text-primary);
+            font-size: 20px;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .close-screen-share-modal {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-size: 20px;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 50%;
+            transition: all 0.2s ease;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .close-screen-share-modal:hover {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+        }
+
+        .screen-share-modal-body {
+            padding: 24px;
+        }
+
+        .screen-share-description {
+            color: var(--text-muted);
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+
+        .screen-share-options {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .screen-share-option {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 16px 20px;
+            background: var(--glass-bg);
+            border: 2px solid transparent;
+            border-radius: 16px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .screen-share-option:hover {
+            background: var(--glass-hover);
+            border-color: var(--primary);
+        }
+
+        .screen-share-option.selected {
+            background: rgba(75, 94, 170, 0.15);
+            border-color: var(--primary);
+        }
+
+        .screen-share-option .option-icon {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(145deg, var(--primary) 0%, var(--primary-light) 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 22px;
+            flex-shrink: 0;
+        }
+
+        .screen-share-option .option-info h4 {
+            color: var(--text-primary);
+            font-size: 16px;
+            font-weight: 600;
+            margin: 0 0 4px 0;
+        }
+
+        .screen-share-option .option-info p {
+            color: var(--text-muted);
+            font-size: 13px;
+            margin: 0;
+        }
+
+        .screen-share-audio-option {
+            background: var(--glass-bg);
+            border-radius: 16px;
+            padding: 16px 20px;
+            margin-bottom: 8px;
+        }
+
+        .audio-toggle {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+        }
+
+        .audio-toggle input[type="checkbox"] {
+            display: none;
+        }
+
+        .toggle-slider {
+            width: 48px;
+            height: 26px;
+            background: var(--text-muted);
+            border-radius: 13px;
+            position: relative;
+            transition: background 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .toggle-slider::after {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.2s ease;
+        }
+
+        .audio-toggle input:checked + .toggle-slider {
+            background: var(--success);
+        }
+
+        .audio-toggle input:checked + .toggle-slider::after {
+            transform: translateX(22px);
+        }
+
+        .toggle-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-primary);
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .toggle-label i {
+            color: var(--primary);
+        }
+
+        .audio-note {
+            color: var(--text-muted);
+            font-size: 12px;
+            margin: 8px 0 0 60px;
+        }
+
+        .screen-share-modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            padding: 16px 24px 24px;
+        }
+
+        .screen-share-modal-footer .btn-cancel {
+            padding: 12px 24px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            color: var(--text-primary);
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .screen-share-modal-footer .btn-cancel:hover {
+            background: var(--glass-hover);
+        }
+
+        .screen-share-modal-footer .btn-share {
+            padding: 12px 24px;
+            background: linear-gradient(145deg, var(--primary) 0%, var(--primary-light) 100%);
+            border: none;
+            color: white;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .screen-share-modal-footer .btn-share:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(75, 94, 170, 0.4);
+        }
+
+        .screen-share-modal-footer .btn-share:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Botón cambiar */
+        .screen-share-modal-footer .btn-change {
+            padding: 12px 24px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            color: var(--text-primary);
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .screen-share-modal-footer .btn-change:hover {
+            background: var(--glass-hover);
+        }
+
+        /* Flecha en opciones */
+        .screen-share-option .option-arrow {
+            color: var(--text-muted);
+            font-size: 14px;
+            margin-left: auto;
+            transition: transform 0.2s ease;
+        }
+
+        .screen-share-option:hover .option-arrow {
+            transform: translateX(4px);
+            color: var(--primary);
+        }
+
+        /* Preview del contenido a compartir */
+        .screen-share-preview-container {
+            background: #000;
+            border-radius: 16px;
+            overflow: hidden;
+            margin-bottom: 16px;
+            border: 2px solid var(--primary);
+        }
+
+        .preview-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            background: rgba(75, 94, 170, 0.2);
+        }
+
+        .preview-label {
+            color: var(--primary-light);
+            font-size: 13px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .preview-type {
+            background: var(--primary);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .preview-video-wrapper {
+            width: 100%;
+            aspect-ratio: 16/9;
+            background: #000;
+        }
+
+        .preview-video-wrapper video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .preview-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 16px;
+            background: rgba(34, 197, 94, 0.1);
+            color: #4ade80;
+            font-size: 13px;
+        }
+
+        .preview-info i {
+            font-size: 16px;
+        }
+
+        /* Responsive para móvil */
+        @media (max-width: 480px) {
+            .screen-share-modal-content {
+                width: 95%;
+                max-height: 85vh;
+                border-radius: 20px;
+            }
+
+            .screen-share-modal-header {
+                padding: 16px 20px;
+            }
+
+            .screen-share-modal-body {
+                padding: 20px;
+            }
+
+            .screen-share-option {
+                padding: 14px 16px;
+            }
+
+            .screen-share-option .option-icon {
+                width: 44px;
+                height: 44px;
+                font-size: 18px;
+            }
+
+            .screen-share-modal-footer {
+                flex-direction: column;
+                padding: 16px 20px 20px;
+            }
+
+            .screen-share-modal-footer .btn-cancel,
+            .screen-share-modal-footer .btn-share,
+            .screen-share-modal-footer .btn-change {
+                width: 100%;
+                justify-content: center;
+            }
         }
 
         #pollPanel {
@@ -5127,6 +5676,54 @@
                 height: 50%;
             }
 
+            /* ============================================
+               SCREEN SHARE RESPONSIVE - MÓVIL PORTRAIT
+               ============================================ */
+            #videoGrid:has(.screen-share) {
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 8px;
+                overflow-y: auto;
+                padding: 8px;
+            }
+
+            #videoGrid:has(.screen-share) .video-container.screen-share {
+                flex: 0 0 auto;
+                width: 100%;
+                min-height: 180px;
+                max-height: 45vh;
+                aspect-ratio: 16/9;
+                order: -1; /* Siempre primero */
+                border-radius: 12px;
+            }
+            
+            /* Contenedor de thumbnails en sidebar - CÁMARAS MÁS CUADRADAS */
+            #videoGrid:has(.screen-share) .sidebar-videos-container {
+                display: flex !important;
+                flex-direction: row !important;
+                flex-wrap: wrap;
+                gap: 6px;
+                width: 100%;
+                overflow-x: auto;
+                padding: 4px;
+                justify-content: center;
+            }
+
+            #videoGrid:has(.screen-share) .sidebar-videos-container .video-container {
+                flex: 0 0 calc(48% - 4px);
+                min-height: 80px;
+                max-height: 100px;
+                width: auto !important;
+                aspect-ratio: 1/1; /* Cuadrado */
+                border-radius: 10px;
+            }
+
+            #videoGrid:has(.screen-share) .video-container:not(.screen-share):not(.sidebar-videos-container .video-container) {
+                flex: 0 0 calc(48% - 4px);
+                min-height: 70px;
+                max-height: 90px;
+            }
+
             #videoGrid {
                 grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)) !important;
             }
@@ -6083,8 +6680,8 @@
             }
 
             .video-container {
-                min-height: 140px;
-                aspect-ratio: 4/3;
+                min-height: 120px;
+                aspect-ratio: 1/1;
             }
 
             .video-info {
@@ -6159,6 +6756,63 @@
                 padding: 8px 12px;
                 font-size: 12px;
             }
+
+            /* Screen share preview en móvil pequeño */
+            .video-container.screen-share {
+                min-height: 180px !important;
+                max-height: 55vh !important;
+                border-width: 2px;
+            }
+
+            .video-container.screen-share .screen-share-info-overlay {
+                padding: 6px 10px;
+                font-size: 11px;
+                top: 6px;
+                left: 6px;
+            }
+            
+            /* ============================================
+               SCREEN SHARE EN MÓVIL - LAYOUT VERTICAL
+               Pantalla compartida arriba, cámaras abajo
+               ============================================ */
+            #videoGrid:has(.screen-share) {
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 8px;
+            }
+            
+            /* Pantalla compartida: ocupa la parte superior */
+            #videoGrid:has(.screen-share) .video-container.screen-share {
+                order: -1 !important; /* Siempre primero */
+                flex: 0 0 auto;
+                width: 100% !important;
+                min-height: 40vh !important;
+                max-height: 55vh !important;
+                aspect-ratio: 16/9;
+                border-radius: 12px;
+            }
+            
+            /* Container de cámaras debajo */
+            #videoGrid:has(.screen-share) .sidebar-videos-container {
+                order: 1;
+                display: grid !important;
+                grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)) !important;
+                gap: 6px;
+                width: 100%;
+                max-height: 35vh;
+                overflow-y: auto;
+                padding: 4px;
+            }
+            
+            /* Cámaras cuadradas pequeñas */
+            #videoGrid:has(.screen-share) .sidebar-videos-container .video-container {
+                width: 100% !important;
+                height: auto !important;
+                min-height: 70px;
+                max-height: 100px;
+                aspect-ratio: 1/1 !important;
+                border-radius: 12px !important;
+            }
         }
 
         /* ============================================
@@ -6198,9 +6852,45 @@
                 gap: 6px;
             }
 
+            /* ============================================
+               SCREEN SHARE RESPONSIVE - MÓVIL LANDSCAPE
+               ============================================ */
+            #videoGrid:has(.screen-share) {
+                display: grid !important;
+                grid-template-columns: 1fr 160px !important;
+                grid-template-rows: 1fr !important;
+                gap: 6px;
+            }
+
+            #videoGrid:has(.screen-share) .video-container.screen-share {
+                grid-column: 1 / 2 !important;
+                grid-row: 1 / -1 !important;
+                min-height: unset;
+                max-height: 100%;
+                height: 100%;
+            }
+
+            #videoGrid:has(.screen-share) .sidebar-videos-container {
+                grid-column: 2 / 3 !important;
+                grid-row: 1 / -1 !important;
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 4px;
+                overflow-y: auto;
+                max-height: 100%;
+            }
+            
+            /* Cámaras cuadradas en landscape */
+            #videoGrid:has(.screen-share) .sidebar-videos-container .video-container {
+                flex: 0 0 auto;
+                min-height: 70px;
+                max-height: 90px;
+                aspect-ratio: 1/1;
+                border-radius: 8px;
+            }
+
             .video-container {
                 min-height: 90px;
-                aspect-ratio: 16/9;
             }
 
             .video-info {
@@ -6356,9 +7046,9 @@
             }
 
             .video-container {
-                min-height: 140px;
-                max-height: 200px;
-                aspect-ratio: 4/3;
+                min-height: 120px;
+                max-height: 180px;
+                aspect-ratio: 1/1;
                 border-radius: 10px;
                 border-width: 2px;
             }
@@ -6469,8 +7159,8 @@
             }
 
             .video-container {
-                min-height: 120px;
-                aspect-ratio: 4/3;
+                min-height: 100px;
+                aspect-ratio: 1/1;
                 border-radius: 12px;
             }
 
@@ -6502,6 +7192,43 @@
                 height: 45%;
                 min-height: 180px;
                 margin-bottom: 6px;
+            }
+
+            /* ============================================
+               SCREEN SHARE EN MÓVILES MEDIANOS
+               ============================================ */
+            #videoGrid:has(.screen-share) {
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 8px;
+            }
+            
+            #videoGrid:has(.screen-share) .video-container.screen-share {
+                order: -1 !important;
+                flex: 0 0 auto;
+                width: 100% !important;
+                min-height: 35vh !important;
+                max-height: 50vh !important;
+                aspect-ratio: 16/9;
+                border-radius: 12px;
+            }
+            
+            #videoGrid:has(.screen-share) .sidebar-videos-container {
+                order: 1;
+                display: grid !important;
+                grid-template-columns: repeat(3, 1fr) !important;
+                gap: 6px;
+                width: 100%;
+                max-height: 40vh;
+                overflow-y: auto;
+            }
+            
+            #videoGrid:has(.screen-share) .sidebar-videos-container .video-container {
+                width: 100% !important;
+                min-height: 70px;
+                max-height: 90px;
+                aspect-ratio: 1/1 !important;
+                border-radius: 12px !important;
             }
 
             #sidebar {
@@ -6539,8 +7266,8 @@
             }
 
             .video-container {
-                min-height: 130px;
-                aspect-ratio: 4/3;
+                min-height: 110px;
+                aspect-ratio: 1/1;
                 border-radius: 14px;
             }
 
@@ -6568,6 +7295,43 @@
                 height: 45%;
                 min-height: 200px;
                 margin-bottom: 8px;
+            }
+
+            /* ============================================
+               SCREEN SHARE EN MÓVILES GRANDES
+               ============================================ */
+            #videoGrid:has(.screen-share) {
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 8px;
+            }
+            
+            #videoGrid:has(.screen-share) .video-container.screen-share {
+                order: -1 !important;
+                flex: 0 0 auto;
+                width: 100% !important;
+                min-height: 35vh !important;
+                max-height: 50vh !important;
+                aspect-ratio: 16/9;
+                border-radius: 14px;
+            }
+            
+            #videoGrid:has(.screen-share) .sidebar-videos-container {
+                order: 1;
+                display: grid !important;
+                grid-template-columns: repeat(3, 1fr) !important;
+                gap: 8px;
+                width: 100%;
+                max-height: 40vh;
+                overflow-y: auto;
+            }
+            
+            #videoGrid:has(.screen-share) .sidebar-videos-container .video-container {
+                width: 100% !important;
+                min-height: 80px;
+                max-height: 100px;
+                aspect-ratio: 1/1 !important;
+                border-radius: 12px !important;
             }
 
             #sidebar {
@@ -6605,7 +7369,7 @@
                 padding: 6px;
             }
 
-            /* CÁMARAS en landscape: múltiples columnas pequeñas */
+            /* CÁMARAS en landscape: múltiples columnas */
             #videoGrid {
                 grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)) !important;
                 grid-auto-rows: minmax(80px, 1fr);
@@ -6616,7 +7380,6 @@
             .video-container {
                 min-height: 80px;
                 max-height: 150px;
-                aspect-ratio: 16/9;
                 border-radius: 10px;
             }
 
@@ -6664,6 +7427,45 @@
                 left: 4px;
                 padding: 4px 8px;
                 font-size: 10px;
+            }
+            
+            /* ============================================
+               SCREEN SHARE EN LANDSCAPE MÓVIL
+               Layout horizontal: pantalla izquierda, cámaras derecha
+               ============================================ */
+            #videoGrid:has(.screen-share) {
+                display: grid !important;
+                grid-template-columns: 1fr 120px !important;
+                grid-template-rows: 1fr !important;
+                gap: 6px;
+            }
+            
+            #videoGrid:has(.screen-share) .video-container.screen-share {
+                grid-column: 1 / 2 !important;
+                grid-row: 1 / -1 !important;
+                width: 100% !important;
+                height: 100% !important;
+                min-height: unset;
+                max-height: 100%;
+            }
+            
+            #videoGrid:has(.screen-share) .sidebar-videos-container {
+                grid-column: 2 / 3 !important;
+                grid-row: 1 / -1 !important;
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 4px;
+                overflow-y: auto;
+                max-height: 100%;
+            }
+            
+            #videoGrid:has(.screen-share) .sidebar-videos-container .video-container {
+                flex: 0 0 auto;
+                width: 100% !important;
+                min-height: 60px;
+                max-height: 80px;
+                aspect-ratio: 1/1 !important;
+                border-radius: 10px !important;
             }
 
             /* Sidebar en landscape */
@@ -6839,8 +7641,8 @@
             }
 
             .video-container {
-                min-height: 160px;
-                aspect-ratio: 4/3;
+                min-height: 130px;
+                aspect-ratio: 1/1;
                 border-radius: 16px;
             }
 
@@ -6895,7 +7697,6 @@
 
             .video-container {
                 min-height: 140px;
-                aspect-ratio: 16/9;
             }
 
             #sidebar {
@@ -6913,9 +7714,9 @@
             }
 
             #videoGrid:has(.video-container:only-child) .video-container {
-                min-height: 250px;
-                max-height: 350px;
-                aspect-ratio: 4/3;
+                min-height: 200px;
+                max-height: 300px;
+                aspect-ratio: 1/1;
             }
 
             /* 2 participantes: 1 columna, apilados */
@@ -7035,6 +7836,70 @@
 
             .logo i {
                 font-size: 20px !important;
+            }
+            
+            /* ============================================
+               SCREEN SHARE OVERRIDE MÓVIL FINAL
+               Prioridad absoluta a la pantalla compartida
+               ============================================ */
+            #videoGrid:has(.screen-share),
+            #videoGrid:has(.screen-share-preview) {
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 8px !important;
+                padding: 8px !important;
+            }
+            
+            /* Pantalla compartida siempre primero y grande */
+            #videoGrid:has(.screen-share) .video-container.screen-share,
+            #videoGrid:has(.screen-share-preview) .screen-share-preview,
+            #videoGrid .screen-share-preview {
+                order: -1 !important;
+                flex: 0 0 auto !important;
+                width: 100% !important;
+                min-height: 30vh !important;
+                max-height: 45vh !important;
+                aspect-ratio: 16/9 !important;
+                border-radius: 12px !important;
+                margin-bottom: 8px !important;
+            }
+            
+            /* Sidebar de cámaras debajo - GRID horizontal */
+            #videoGrid:has(.screen-share) .sidebar-videos-container,
+            #videoGrid:has(.screen-share-preview) .sidebar-videos-container {
+                order: 1 !important;
+                display: grid !important;
+                grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)) !important;
+                flex-direction: row !important;
+                flex-wrap: wrap !important;
+                gap: 8px !important;
+                width: 100% !important;
+                max-height: 40vh !important;
+                overflow-y: auto !important;
+                overflow-x: hidden !important;
+                padding: 4px !important;
+                justify-content: center !important;
+                align-content: start !important;
+            }
+            
+            /* Cámaras cuadradas pequeñas */
+            #videoGrid:has(.screen-share) .sidebar-videos-container .video-container,
+            #videoGrid:has(.screen-share-preview) .sidebar-videos-container .video-container {
+                width: 100% !important;
+                min-width: 70px !important;
+                max-width: 110px !important;
+                height: auto !important;
+                min-height: 70px !important;
+                max-height: 110px !important;
+                aspect-ratio: 1/1 !important;
+                border-radius: 12px !important;
+                flex: 0 0 auto !important;
+            }
+            
+            /* Ocultar videos sueltos fuera del container */
+            #videoGrid:has(.screen-share) > .video-container:not(.screen-share):not(.screen-share-preview),
+            #videoGrid:has(.screen-share-preview) > .video-container:not(.screen-share):not(.screen-share-preview) {
+                display: none !important;
             }
         }
 
@@ -7927,6 +8792,7 @@
             </button>
             <button class="control-btn" id="raiseHand" title="Levantar Mano" aria-label="Levantar mano">
                 <i class="fas fa-hand-paper"></i>
+                <span id="handCountBadge" class="hand-count-badge">0</span>
             </button>
             <button class="control-btn" id="createPollBtn" title="Crear Encuesta" aria-label="Crear encuesta"
                 style="display: none;">
@@ -8361,11 +9227,13 @@
         <div id="handPanel-header">
             <div class="header-content">
                 <h4>Manos Levantadas</h4>
-                <span id="handCount">0</span>
+                <div class="header-right">
+                    <span id="handCount">0</span>
+                    <button id="closeHandPanel" title="Cerrar Panel" aria-label="Cerrar panel de manos">×</button>
+                </div>
             </div>
             <button id="lowerAllBtn" disabled aria-label="Bajar todas las manos">Bajar Todas</button>
         </div>
-        <button id="closeHandPanel" title="Cerrar Panel" aria-label="Cerrar panel de manos">×</button>
         <ul id="handList">
             <li class="empty-state">
                 <div class="empty-icon">✋</div>
@@ -8541,6 +9409,109 @@
                 </span>
                 <button class="restore-modal" title="Restaurar" aria-label="Restaurar panel de resultados">
                     <i class="fas fa-expand"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================
+         MODAL DE COMPARTIR PANTALLA (estilo Google Meet)
+         ============================================ -->
+    <div id="screenShareModal" class="screen-share-modal">
+        <div class="screen-share-modal-content">
+            <div class="screen-share-modal-header">
+                <h3>Compartir pantalla</h3>
+                <button class="close-screen-share-modal" id="closeScreenShareModal" aria-label="Cerrar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="screen-share-modal-body">
+                <!-- Preview del contenido a compartir -->
+                <div class="screen-share-preview-container" id="screenSharePreviewContainer" style="display: none;">
+                    <div class="preview-header">
+                        <span class="preview-label">
+                            <i class="fas fa-eye"></i> Vista previa
+                        </span>
+                        <span class="preview-type" id="previewTypeLabel">Pantalla</span>
+                    </div>
+                    <div class="preview-video-wrapper">
+                        <video id="screenSharePreviewVideo" autoplay muted playsinline></video>
+                    </div>
+                    <div class="preview-info">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Esto es lo que verán los demás participantes</span>
+                    </div>
+                </div>
+                
+                <!-- Selector de tipo (se oculta después de seleccionar) -->
+                <div class="screen-share-selector" id="screenShareSelector">
+                    <p class="screen-share-description">Elige qué quieres compartir con los demás participantes</p>
+                    
+                    <div class="screen-share-options">
+                        <!-- Opción: Pantalla completa -->
+                        <div class="screen-share-option" data-share-type="screen">
+                            <div class="option-icon">
+                                <i class="fas fa-desktop"></i>
+                            </div>
+                            <div class="option-info">
+                                <h4>Pantalla completa</h4>
+                                <p>Comparte todo tu escritorio</p>
+                            </div>
+                            <div class="option-arrow">
+                                <i class="fas fa-chevron-right"></i>
+                            </div>
+                        </div>
+                        
+                        <!-- Opción: Ventana -->
+                        <div class="screen-share-option" data-share-type="window">
+                            <div class="option-icon">
+                                <i class="fas fa-window-maximize"></i>
+                            </div>
+                            <div class="option-info">
+                                <h4>Una ventana</h4>
+                                <p>Comparte una aplicación específica</p>
+                            </div>
+                            <div class="option-arrow">
+                                <i class="fas fa-chevron-right"></i>
+                            </div>
+                        </div>
+                        
+                        <!-- Opción: Pestaña del navegador -->
+                        <div class="screen-share-option" data-share-type="tab">
+                            <div class="option-icon">
+                                <i class="fas fa-globe"></i>
+                            </div>
+                            <div class="option-info">
+                                <h4>Pestaña del navegador</h4>
+                                <p>Comparte una pestaña con audio</p>
+                            </div>
+                            <div class="option-arrow">
+                                <i class="fas fa-chevron-right"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Opción de audio (visible solo con preview) -->
+                <div class="screen-share-audio-option" id="screenShareAudioOption" style="display: none;">
+                    <label class="audio-toggle">
+                        <input type="checkbox" id="shareAudioCheckbox" checked>
+                        <span class="toggle-slider"></span>
+                        <span class="toggle-label">
+                            <i class="fas fa-volume-up"></i>
+                            Compartir audio del sistema
+                        </span>
+                    </label>
+                    <p class="audio-note">El audio de lo que compartes se escuchará en la reunión</p>
+                </div>
+            </div>
+            <div class="screen-share-modal-footer">
+                <button class="btn-cancel" id="cancelScreenShare">Cancelar</button>
+                <button class="btn-change" id="changeScreenShare" style="display: none;">
+                    <i class="fas fa-exchange-alt"></i> Cambiar
+                </button>
+                <button class="btn-share" id="confirmScreenShare" style="display: none;">
+                    <i class="fas fa-share-square"></i> Compartir ahora
                 </button>
             </div>
         </div>

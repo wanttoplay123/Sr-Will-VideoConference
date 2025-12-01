@@ -11,6 +11,7 @@ const wss = new WebSocketServer({ server });
 const PORT = 3000;
 const activeRooms = new Map();
 const activePolls = new Map();
+const activeScreenShares = new Map(); // Rastrear quién está compartiendo pantalla en cada sala
 
 app.use((req, res, next) => {
   res.setHeader("ngrok-skip-browser-warning", "true");
@@ -761,20 +762,69 @@ wss.on('connection', (ws) => {
           break;
 
         case 'screen-share-started':
+          if (room && userName) {
+            // ✅ Guardar estado de screen share para nuevos participantes
+            activeScreenShares.set(room, {
+              userId: userName,
+              streamId: msg.streamId,
+              timestamp: Date.now()
+            });
+            console.log(`[SERVER] Screen share state saved for room '${room}': ${userName}`);
+            
+            const roomClients = activeRooms.get(room);
+            if (roomClients) {
+              // ✅ Si hay targetUser, solo enviar a ese usuario específico
+              if (msg.targetUser) {
+                const targetClient = Array.from(roomClients).find(c => c.userName === msg.targetUser);
+                if (targetClient && targetClient.readyState === 1) {
+                  targetClient.send(JSON.stringify({
+                    type: 'screen-share-started',
+                    userId: userName,
+                    streamId: msg.streamId,
+                    isSync: true
+                  }));
+                  console.log(`[SERVER] screen-share-started sent to specific user ${msg.targetUser}`);
+                }
+              } else {
+                // Enviar a todos (comportamiento normal)
+                roomClients.forEach(client => {
+                  if (client.readyState === 1 && client !== ws) {
+                    client.send(JSON.stringify({
+                      type: 'screen-share-started',
+                      userId: userName,
+                      streamId: msg.streamId
+                    }));
+                  }
+                });
+                console.log(`[SERVER] screen-share-started by ${userName} in room '${room}'.`);
+              }
+            }
+          }
+          break;
+
         case 'screen-share-stopped':
           if (room && userName) {
+            // ✅ Limpiar estado de screen share
+            if (activeScreenShares.has(room)) {
+              const currentShare = activeScreenShares.get(room);
+              if (currentShare.userId === userName) {
+                activeScreenShares.delete(room);
+                console.log(`[SERVER] Screen share state cleared for room '${room}'`);
+              }
+            }
+            
             const roomClients = activeRooms.get(room);
             if (roomClients) {
               roomClients.forEach(client => {
                 if (client.readyState === 1 && client !== ws) {
                   client.send(JSON.stringify({
-                    type: msg.type,
+                    type: 'screen-share-stopped',
                     userId: userName,
-                    streamId: msg.streamId  // ✅ CRÍTICO: Incluir streamId
+                    streamId: msg.streamId
                   }));
                 }
               });
-              console.log(`[SERVER] ${msg.type} by ${userName} in room '${room}'.`);
+              console.log(`[SERVER] screen-share-stopped by ${userName} in room '${room}'.`);
             }
           }
           break;
@@ -820,10 +870,30 @@ wss.on('connection', (ws) => {
     if (room && activeRooms.has(room)) {
       const roomClients = activeRooms.get(room);
       roomClients.delete(ws);
+      
+      // ✅ Limpiar screen share si el usuario que compartía se desconecta
+      if (activeScreenShares.has(room)) {
+        const screenShare = activeScreenShares.get(room);
+        if (screenShare.userId === userName) {
+          activeScreenShares.delete(room);
+          console.log(`[SERVER] Screen share cleared: ${userName} disconnected from room '${room}'`);
+          
+          // Notificar a todos que el screen share terminó
+          roomClients.forEach(client => {
+            if (client.readyState === 1) {
+              client.send(JSON.stringify({
+                type: 'screen-share-stopped',
+                userId: userName
+              }));
+            }
+          });
+        }
+      }
 
       if (roomClients.size === 0) {
         activeRooms.delete(room);
         activePolls.delete(room);
+        activeScreenShares.delete(room); // También limpiar screen share
         console.log(`[SERVER] Room '${room}' is empty and deleted.`);
       } else {
         roomClients.forEach(client => {
@@ -848,6 +918,25 @@ wss.on('connection', (ws) => {
   });
 
   function notifyNewPeer(roomClients, newClient, newUserName, micActive, camActive) {
+    // ✅ Notificar al nuevo participante sobre pantalla compartida activa
+    if (activeScreenShares.has(room)) {
+      const screenShare = activeScreenShares.get(room);
+      console.log(`[SERVER] Sending active screen share info to ${newUserName}: ${screenShare.userId}`);
+      
+      // Enviar después de un pequeño delay para que el cliente esté listo
+      setTimeout(() => {
+        if (newClient.readyState === 1) {
+          newClient.send(JSON.stringify({
+            type: 'screen-share-started',
+            userId: screenShare.userId,
+            streamId: screenShare.streamId,
+            isSync: true // Marcar que es una sincronización
+          }));
+          console.log(`[SERVER] ✅ Screen share sync sent to ${newUserName}`);
+        }
+      }, 500);
+    }
+    
     roomClients.forEach(client => {
       if (client !== newClient && client.readyState === 1) {
         client.send(JSON.stringify({
