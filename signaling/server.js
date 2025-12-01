@@ -12,6 +12,24 @@ const PORT = 3000;
 const activeRooms = new Map();
 const activePolls = new Map();
 const activeScreenShares = new Map(); // Rastrear quién está compartiendo pantalla en cada sala
+const waitingRoom = new Map(); // Map<room, Map<userName, ws>> - Cola de espera por sala
+
+// ============ FUNCIÓN DE VALIDACIÓN DE APROBACIÓN ============
+function isUserApproved(ws) {
+  return ws.approved === true || ws.isModerator === true;
+}
+
+function requireApproval(ws, action = 'esta acción') {
+  if (!isUserApproved(ws)) {
+    ws.send(JSON.stringify({
+      type: "error",
+      message: `No tienes permiso para ${action}. Debes ser aprobado primero.`
+    }));
+    console.log(`[SERVER] ⛔ ${ws.userName || 'unknown'} intentó ${action} sin aprobación`);
+    return false;
+  }
+  return true;
+}
 
 app.use((req, res, next) => {
   res.setHeader("ngrok-skip-browser-warning", "true");
@@ -109,52 +127,85 @@ wss.on('connection', (ws) => {
 
           ws.userName = userName;
           ws.isModerator = isModerator;
+          ws.room = room;
 
           if (!activeRooms.has(room)) {
+            // Sala no existe - Solo moderadores pueden crearla
             if (isModerator) {
-              ws.isRoomAdmin = true; // ✅ El creador de la sala es el admin
+              ws.isRoomAdmin = true;
+              ws.approved = true; // Moderador aprobado automáticamente
               activeRooms.set(room, new Set([ws]));
               ws.send(JSON.stringify({ type: "joined", exists: true, isRoomAdmin: true }));
-              console.log(`[SERVER] Room '${room}' created by ${userName} (admin).`);
+              console.log(`[SERVER] ✅ Room '${room}' created by ${userName} (admin).`);
             } else {
-              ws.send(JSON.stringify({ type: "joined", exists: false, message: "Room does not exist or has expired and only a moderator can create it." }));
-              console.log(`[SERVER] User ${userName} tried to join non-existent room '${room}'.`);
+              ws.send(JSON.stringify({ 
+                type: "joined", 
+                exists: false, 
+                message: "La sala no existe. Solo un moderador puede crearla." 
+              }));
+              console.log(`[SERVER] ❌ User ${userName} tried to join non-existent room '${room}'.`);
+              ws.close(1008, "Room does not exist");
               return;
             }
           } else {
+            // Sala existe
             const roomClients = activeRooms.get(room);
             const userExists = Array.from(roomClients).some(client => client.userName === userName);
+            
             if (userExists) {
-              ws.send(JSON.stringify({ type: "joined", exists: true, error: "A user with this name already exists in the room." }));
-              console.log(`[SERVER] User ${userName} tried to join room '${room}' but name is already in use.`);
+              ws.send(JSON.stringify({ 
+                type: "joined", 
+                exists: true, 
+                error: "Ya existe un usuario con este nombre en la sala." 
+              }));
+              console.log(`[SERVER] ❌ User ${userName} tried to join room '${room}' but name is already in use.`);
               ws.close(1008, "Username already in use");
               return;
             }
 
-            if (!isModerator) {
+            if (isModerator) {
+              // Moderador entra directamente
+              ws.approved = true;
+              roomClients.add(ws);
+              ws.send(JSON.stringify({ type: "joined", exists: true }));
+              console.log(`[SERVER] ✅ Moderator ${userName} joined room '${room}'.`);
+              notifyNewPeer(roomClients, ws, userName, msg.micActive, msg.camActive);
+            } else {
+              // Participante regular - Debe esperar aprobación
               const moderators = Array.from(roomClients).filter(client => client.isModerator);
+              
               if (moderators.length > 0) {
+                // Hay moderadores - Agregar a sala de espera
+                if (!waitingRoom.has(room)) {
+                  waitingRoom.set(room, new Map());
+                }
+                waitingRoom.get(room).set(userName, ws);
+                
+                // Notificar a TODOS los moderadores
                 moderators.forEach(moderator => {
                   if (moderator.readyState === 1) {
                     moderator.send(JSON.stringify({
                       type: 'join-request',
-                      userId: userName
+                      userId: userName,
+                      room: room
                     }));
                   }
                 });
-                ws.send(JSON.stringify({ type: "waiting-for-approval" }));
-                console.log(`[SERVER] Join request sent to moderators for ${userName} in room '${room}'.`);
+                
+                // Notificar al participante que está en espera
+                ws.send(JSON.stringify({ 
+                  type: "waiting-for-approval",
+                  message: "Esperando aprobación del moderador..." 
+                }));
+                console.log(`[SERVER] ⏳ ${userName} waiting for approval in room '${room}'.`);
               } else {
+                // No hay moderadores - Entrar directamente
+                ws.approved = true;
                 roomClients.add(ws);
                 ws.send(JSON.stringify({ type: "joined", exists: true }));
-                console.log(`[SERVER] User ${userName} joined room '${room}' (no moderators present).`);
+                console.log(`[SERVER] ✅ User ${userName} joined room '${room}' (no moderators present).`);
                 notifyNewPeer(roomClients, ws, userName, msg.micActive, msg.camActive);
               }
-            } else {
-              roomClients.add(ws);
-              ws.send(JSON.stringify({ type: "joined", exists: true }));
-              console.log(`[SERVER] Moderator ${userName} joined room '${room}'.`);
-              notifyNewPeer(roomClients, ws, userName, msg.micActive, msg.camActive);
             }
           }
           break;
@@ -162,52 +213,110 @@ wss.on('connection', (ws) => {
         case 'approve-join':
           if (room && ws.isModerator && msg.userId) {
             const roomClients = activeRooms.get(room);
-            const pendingClient = Array.from(wss.clients).find(
-              client => client.userName === msg.userId && client.readyState === 1
-            );
-            if (pendingClient && roomClients) {
+            const waiting = waitingRoom.get(room);
+            
+            if (!waiting || !waiting.has(msg.userId)) {
+              console.log(`[SERVER] ⚠️ User ${msg.userId} not in waiting room`);
+              break;
+            }
+            
+            const pendingClient = waiting.get(msg.userId);
+            
+            if (pendingClient && pendingClient.readyState === 1 && roomClients) {
+              // Aprobar y mover a la sala
+              pendingClient.approved = true;
               roomClients.add(pendingClient);
-              pendingClient.send(JSON.stringify({ type: "joined", exists: true }));
-              console.log(`[SERVER] User ${msg.userId} approved to join room '${room}' by ${userName}.`);
-              notifyNewPeer(roomClients, pendingClient, msg.userId);
-              roomClients.forEach(client => {
-                if (client.isModerator && client.readyState === 1) {
-                  client.send(JSON.stringify({
+              waiting.delete(msg.userId);
+              
+              // Si la sala de espera queda vacía, eliminarla
+              if (waiting.size === 0) {
+                waitingRoom.delete(room);
+              }
+              
+              pendingClient.send(JSON.stringify({ 
+                type: "join-approved", 
+                exists: true,
+                message: "Has sido aceptado en la reunión"
+              }));
+              
+              console.log(`[SERVER] ✅ User ${msg.userId} approved to join room '${room}' by ${userName}.`);
+              
+              // Notificar a todos sobre el nuevo participante
+              notifyNewPeer(roomClients, pendingClient, msg.userId, true, true);
+              
+              // Notificar a todos los moderadores que se eliminó la solicitud
+              Array.from(roomClients)
+                .filter(client => client.isModerator && client.readyState === 1)
+                .forEach(moderator => {
+                  moderator.send(JSON.stringify({
                     type: "join-request-removed",
                     userId: msg.userId
                   }));
-                }
-              });
+                });
             }
           }
           break;
 
-
-        // server.js
         case 'reject-join':
           if (room && ws.isModerator && msg.userId) {
-            const roomClients = activeRooms.get(room); // Asegúrate que roomClients está definido
-            const pendingClient = Array.from(wss.clients).find(client => client.userName === msg.userId && client.readyState === 1);
-            if (pendingClient) {
-              pendingClient.send(JSON.stringify({ type: "joined", exists: false, message: "Your join request was rejected." }));
-              pendingClient.close(1008, "Join request rejected");
-              console.log(`[SERVER] User ${msg.userId} rejected from room '${room}' by ${userName}.`);
-              roomClients.forEach(client => {
-                // ✅ Se ha eliminado "&& client !== ws"
-                if (client.isModerator && client.readyState === 1) {
-                  client.send(JSON.stringify({ type: "join-request-removed", userId: msg.userId }));
+            const roomClients = activeRooms.get(room);
+            const waiting = waitingRoom.get(room);
+            
+            if (!waiting || !waiting.has(msg.userId)) {
+              console.log(`[SERVER] ⚠️ User ${msg.userId} not in waiting room`);
+              break;
+            }
+            
+            const pendingClient = waiting.get(msg.userId);
+            
+            if (pendingClient && pendingClient.readyState === 1) {
+              // Rechazar y cerrar conexión
+              pendingClient.send(JSON.stringify({ 
+                type: "join-rejected", 
+                exists: false, 
+                message: "Tu solicitud fue rechazada por el moderador." 
+              }));
+              
+              waiting.delete(msg.userId);
+              
+              // Si la sala de espera queda vacía, eliminarla
+              if (waiting.size === 0) {
+                waitingRoom.delete(room);
+              }
+              
+              setTimeout(() => {
+                if (pendingClient.readyState === 1) {
+                  pendingClient.close(1008, "Join request rejected");
                 }
-              });
+              }, 1000);
+              
+              console.log(`[SERVER] ❌ User ${msg.userId} rejected from room '${room}' by ${userName}.`);
+              
+              // Notificar a todos los moderadores que se eliminó la solicitud
+              if (roomClients) {
+                Array.from(roomClients)
+                  .filter(client => client.isModerator && client.readyState === 1)
+                  .forEach(moderator => {
+                    moderator.send(JSON.stringify({ 
+                      type: "join-request-removed", 
+                      userId: msg.userId 
+                    }));
+                  });
+              }
             }
           }
           break;
 
         case 'signal':
+          // ✅ VALIDAR APROBACIÓN
+          if (!requireApproval(ws, 'enviar señales WebRTC')) break;
+          
           if (room && userName) {
             const roomClients = activeRooms.get(room);
             if (roomClients) {
               roomClients.forEach(client => {
-                if (client.readyState === 1 && client.userName === msg.target && client !== ws) {
+                // Solo enviar a usuarios aprobados
+                if (client.readyState === 1 && client.userName === msg.target && client !== ws && isUserApproved(client)) {
                   client.send(JSON.stringify({
                     type: "signal",
                     sender: userName,

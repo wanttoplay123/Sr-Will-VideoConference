@@ -369,6 +369,91 @@ let currentPoll = null;
 let hasVoted = false;
 let pollChart = null;
 
+// ======================= FUNCIÓN CENTRALIZADA PARA LIMPIAR TIMERS DE ENCUESTAS =======================
+/**
+ * Limpia TODOS los temporizadores de encuestas para evitar que sigan corriendo
+ * @param {boolean} markAsEnded - Si true, marca currentPoll.ended = true (default: true)
+ * Debe llamarse en: end-poll, poll-ended (WS), hidePollForParticipant, closePollResultsPanel
+ */
+function stopAllPollTimers(markAsEnded = true) {
+    console.log('[POLL-TIMER] 🛑 Limpiando TODOS los temporizadores de encuesta...');
+    
+    if (currentPoll) {
+        // Limpiar timer principal
+        if (currentPoll.timerInterval) {
+            clearInterval(currentPoll.timerInterval);
+            currentPoll.timerInterval = null;
+            console.log('[POLL-TIMER] ✅ Timer principal limpiado');
+        }
+        
+        // Limpiar timer de resultados
+        if (currentPoll.resultsTimerInterval) {
+            clearInterval(currentPoll.resultsTimerInterval);
+            currentPoll.resultsTimerInterval = null;
+            console.log('[POLL-TIMER] ✅ Timer de resultados limpiado');
+        }
+        
+        // Marcar como finalizada solo si se solicita
+        if (markAsEnded) {
+            currentPoll.ended = true;
+            console.log('[POLL-TIMER] 📌 Encuesta marcada como terminada');
+        }
+    }
+    
+    // Limpiar cualquier referencia huérfana de interval
+    // Actualizar UI
+    const pollTimerDisplay = document.getElementById('pollTimerDisplay');
+    if (pollTimerDisplay) {
+        pollTimerDisplay.textContent = '¡Votación terminada!';
+    }
+    
+    const pollResultsTimer = document.getElementById('pollResultsTimer');
+    if (pollResultsTimer) {
+        pollResultsTimer.textContent = '¡Votación terminada!';
+    }
+    
+    console.log('[POLL-TIMER] ✅ Todos los temporizadores limpiados');
+}
+
+// ======================= SISTEMA DE SALA DE ESPERA =======================
+/**
+ * Muestra la sala de espera visual mientras se espera aprobación del moderador
+ */
+function showWaitingRoom() {
+    const waitingRoomScreen = document.getElementById('waitingRoomScreen');
+    const lobbyScreen = document.getElementById('lobbyScreen');
+    
+    if (waitingRoomScreen) {
+        // Ocultar lobby
+        if (lobbyScreen) {
+            lobbyScreen.style.display = 'none';
+        }
+        
+        // Mostrar sala de espera
+        waitingRoomScreen.style.display = 'flex';
+        
+        // Actualizar información
+        const waitingRoomCode = document.getElementById('waitingRoomCode');
+        const waitingUserName = document.getElementById('waitingUserName');
+        
+        if (waitingRoomCode) waitingRoomCode.textContent = roomCode || '---';
+        if (waitingUserName) waitingUserName.textContent = userName || '---';
+        
+        console.log('[WAITING-ROOM] 🚪 Sala de espera mostrada');
+    }
+}
+
+/**
+ * Oculta la sala de espera
+ */
+function hideWaitingRoom() {
+    const waitingRoomScreen = document.getElementById('waitingRoomScreen');
+    if (waitingRoomScreen) {
+        waitingRoomScreen.style.display = 'none';
+        console.log('[WAITING-ROOM] ✅ Sala de espera ocultada');
+    }
+}
+
 // ======================= SISTEMA DE "DAR LA PALABRA" =======================
 let currentSpeaker = null; // { name: string, timeLeft: number (segundos), totalTime: number }
 let speakingTimerInterval = null;
@@ -1844,30 +1929,38 @@ function removeScreenSharePreview(userId) {
 
 async function initMedia() {
     try {
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        const hasVideoInput = devices.some(d => d.kind === 'videoinput');
-        const hasAudioInput = devices.some(d => d.kind === 'audioinput');
+        // ============ USAR STREAM DEL LOBBY SI EXISTE ============
+        if (localStream && localStream.active) {
+            console.log('[INIT-MEDIA] ✅ Usando stream existente del lobby');
+        } else {
+            // Obtener nuevo stream si no hay uno del lobby
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const hasVideoInput = devices.some(d => d.kind === 'videoinput');
+            const hasAudioInput = devices.some(d => d.kind === 'audioinput');
 
-        if (!hasVideoInput && !hasAudioInput) {
-            showError('No se encontraron dispositivos de audio o video. Asegúrate de que estén conectados y permitidos.', 10000);
-            debugLog('Error: No se encontraron dispositivos de entrada.');
-            return;
+            if (!hasVideoInput && !hasAudioInput) {
+                showError('No se encontraron dispositivos de audio o video. Asegúrate de que estén conectados y permitidos.', 10000);
+                debugLog('Error: No se encontraron dispositivos de entrada.');
+                return;
+            }
+
+            localStream = await navigator.mediaDevices.getUserMedia({
+                video: hasVideoInput ? {
+                    width: { ideal: 640, max: 1280 },
+                    height: { ideal: 480, max: 720 },
+                    frameRate: { ideal: 15, max: 30 }
+                } : false,
+                audio: hasAudioInput ? {
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl: true,
+                    sampleRate: 48000,
+                    channelCount: 2
+                } : false
+            });
         }
-
-        localStream = await navigator.mediaDevices.getUserMedia({
-            video: hasVideoInput ? {
-                width: { ideal: 640, max: 1280 },
-                height: { ideal: 480, max: 720 },
-                frameRate: { ideal: 15, max: 30 }
-            } : false,
-            audio: hasAudioInput ? {
-                echoCancellation: true,
-                noiseSuppression: true,
-                autoGainControl: true,
-                sampleRate: 48000,
-                channelCount: 2
-            } : false
-        });
+        // =========================================================
+        
         debugLog('✅ Stream local obtenido:', localStream);
         console.log('LocalStream details:');
         console.log('  - ID:', localStream.id);
@@ -2042,7 +2135,21 @@ function initWebSocket() {
 
                 switch (msg.type) {
                     case 'waiting-for-approval':
-                        showError('Esperando aprobación del moderador para unirse a la sala.', 0);
+                        console.log('[WAITING] ⏳ Esperando aprobación del moderador');
+                        showWaitingRoom();
+                        break;
+                    
+                    case 'join-approved':
+                        console.log('[WAITING] ✅ Aprobado para unirse');
+                        hideWaitingRoom();
+                        // Continuar con la inicialización normal
+                        break;
+                    
+                    case 'join-rejected':
+                        console.log('[WAITING] ❌ Solicitud rechazada');
+                        hideWaitingRoom();
+                        showError('Tu solicitud fue rechazada por el moderador', 5000);
+                        setTimeout(() => window.location.href = '/', 3000);
                         break;
 
                     case 'joined':
@@ -2050,6 +2157,9 @@ function initWebSocket() {
                             showError(`Error: ${msg.error || 'La sala no existe'}`, 5000);
                             setTimeout(() => window.location.href = '/', 3000);
                         } else {
+                            // ✅ Ocultar sala de espera si estaba visible
+                            hideWaitingRoom();
+                            
                             // ✅ Guardar si es admin de la sala
                             if (msg.isRoomAdmin) {
                                 isRoomAdmin = true;
@@ -2582,15 +2692,8 @@ function initWebSocket() {
                         break;
 
                     case 'poll-ended':
-                        // Limpiar temporizadores inmediatamente
-                        if (currentPoll?.timerInterval) {
-                            clearInterval(currentPoll.timerInterval);
-                            currentPoll.timerInterval = null;
-                        }
-                        if (currentPoll?.resultsTimerInterval) {
-                            clearInterval(currentPoll.resultsTimerInterval);
-                            currentPoll.resultsTimerInterval = null;
-                        }
+                        // ✅ USAR FUNCIÓN CENTRALIZADA PARA LIMPIAR TIMERS
+                        stopAllPollTimers();
                         
                         // Actualizar currentPoll
                         if (currentPoll) {
@@ -2655,12 +2758,24 @@ function initWebSocket() {
                             
                             currentPoll = msg;
                             
-                            // Verificar si el panel de resultados está minimizado
+                            // Verificar si el panel de resultados está abierto o minimizado
                             const pollResultsPanel = document.getElementById('pollResultsPanel');
+                            const isPanelVisible = pollResultsPanel && pollResultsPanel.style.display !== 'none';
                             const isMinimized = pollResultsPanel?.classList.contains('minimized');
                             
-                            if (isMinimized) {
-                                // Solo actualizar el contador sin abrir el modal
+                            // ✅ LÓGICA MEJORADA:
+                            // - Si es el PRIMER VOTO (panel no visible): Abrir automáticamente
+                            // - Si ya está visible pero minimizado: Mantener minimizado, solo notificar
+                            // - Si está visible y expandido: Actualizar normalmente
+                            
+                            if (!isPanelVisible) {
+                                // PRIMER VOTO: Abrir el panel automáticamente
+                                console.log('[POLL-UPDATE] 🎉 Primer voto recibido, abriendo panel de resultados');
+                                displayPollResults(msg.results, msg.question, msg.options, msg.votes);
+                            } else if (isMinimized) {
+                                // Panel YA existe pero está minimizado: Solo notificar, no abrir
+                                console.log('[POLL-UPDATE] Panel minimizado, solo actualizando contador');
+                                
                                 const totalVotes = msg.options.reduce((sum, opt) => sum + (msg.results[opt.id] || 0), 0);
                                 const minimizedVoteCount = document.getElementById('minimizedVoteCount');
                                 if (minimizedVoteCount) {
@@ -2670,12 +2785,12 @@ function initWebSocket() {
                                 // Mostrar notificación de nuevo voto
                                 if (newVoteCount > previousVoteCount) {
                                     const newVotes = newVoteCount - previousVoteCount;
-                                    // Agregar badge de notificación
                                     updateMinimizedPollNotification(newVotes);
                                     showError(`🗳️ +${newVotes} nuevo${newVotes > 1 ? 's' : ''} voto${newVotes > 1 ? 's' : ''}`, 2000);
                                 }
                             } else {
-                                // Modal abierto, actualizar normalmente
+                                // Panel visible y expandido: Actualizar normalmente
+                                console.log('[POLL-UPDATE] Panel expandido, actualizando resultados');
                                 displayPollResults(msg.results, msg.question, msg.options, msg.votes);
                             }
                             
@@ -3493,13 +3608,163 @@ document.getElementById('toggleMic')?.addEventListener('click', () => {
     updateParticipantList();
 });
 
-document.getElementById('toggleCam')?.addEventListener('click', () => {
-    isCamActive = !isCamActive;
-    localStream?.getVideoTracks().forEach(track => track.enabled = isCamActive);
-    document.getElementById('toggleCam').classList.toggle('active', isCamActive);
+// ============ CAMERA TOGGLE CON DETECCIÓN DE ESTADO REAL ============
+document.getElementById('toggleCam')?.addEventListener('click', async () => {
+    const toggleCamBtn = document.getElementById('toggleCam');
+    const localVideoElement = document.getElementById('localVideo');
+    const localVideoPlaceholder = document.getElementById('localVideoPlaceholder');
+    
+    if (isCamActive) {
+        // DESACTIVAR CÁMARA
+        console.log('[CAM-TOGGLE] 🔴 Desactivando cámara...');
+        isCamActive = false;
+        
+        // Deshabilitar track de video (no lo detenemos para poder reactivar rápido)
+        localStream?.getVideoTracks().forEach(track => {
+            track.enabled = false;
+            console.log(`[CAM-TOGGLE] Track ${track.id} enabled = false`);
+        });
+        
+        // Actualizar UI
+        if (toggleCamBtn) {
+            toggleCamBtn.classList.remove('active');
+            const icon = toggleCamBtn.querySelector('i');
+            if (icon) icon.className = 'fas fa-video-slash';
+        }
+        
+        // Mostrar placeholder si existe
+        if (localVideoPlaceholder) {
+            localVideoPlaceholder.style.display = 'flex';
+        }
+        if (localVideoElement) {
+            localVideoElement.style.opacity = '0';
+        }
+        
+        showError('Cámara Desactivada', 2000);
+        
+    } else {
+        // ACTIVAR CÁMARA
+        console.log('[CAM-TOGGLE] 🟢 Activando cámara...');
+        
+        try {
+            const videoTracks = localStream?.getVideoTracks();
+            
+            if (videoTracks && videoTracks.length > 0) {
+                // Verificar estado del track
+                const track = videoTracks[0];
+                
+                if (track.readyState === 'ended') {
+                    // Track terminado, necesitamos obtener uno nuevo
+                    console.log('[CAM-TOGGLE] Track terminado, obteniendo nuevo...');
+                    const newStream = await navigator.mediaDevices.getUserMedia({
+                        video: {
+                            width: { ideal: 640, max: 1280 },
+                            height: { ideal: 480, max: 720 },
+                            frameRate: { ideal: 15, max: 30 }
+                        }
+                    });
+                    
+                    const newVideoTrack = newStream.getVideoTracks()[0];
+                    if (newVideoTrack) {
+                        // Reemplazar en localStream
+                        localStream.getVideoTracks().forEach(t => {
+                            localStream.removeTrack(t);
+                            t.stop();
+                        });
+                        localStream.addTrack(newVideoTrack);
+                        
+                        // Reemplazar en peerConnections
+                        for (const peerId in peerConnections) {
+                            const pc = peerConnections[peerId];
+                            const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+                            if (sender) {
+                                await sender.replaceTrack(newVideoTrack);
+                                console.log(`[CAM-TOGGLE] Track reemplazado para peer ${peerId}`);
+                            }
+                        }
+                    }
+                } else {
+                    // Track disponible, solo activar
+                    track.enabled = true;
+                    console.log(`[CAM-TOGGLE] Track ${track.id} enabled = true`);
+                }
+                
+                isCamActive = true;
+                
+                // Actualizar UI
+                if (toggleCamBtn) {
+                    toggleCamBtn.classList.add('active');
+                    const icon = toggleCamBtn.querySelector('i');
+                    if (icon) icon.className = 'fas fa-video';
+                }
+                
+                // Ocultar placeholder
+                if (localVideoPlaceholder) {
+                    localVideoPlaceholder.style.display = 'none';
+                }
+                if (localVideoElement) {
+                    localVideoElement.style.opacity = '1';
+                    localVideoElement.srcObject = localStream;
+                }
+                
+                showError('Cámara Activada', 2000);
+                
+            } else {
+                // No hay tracks de video, obtener uno nuevo
+                console.log('[CAM-TOGGLE] Sin tracks de video, obteniendo nuevo...');
+                const newStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                const newVideoTrack = newStream.getVideoTracks()[0];
+                
+                if (newVideoTrack) {
+                    localStream.addTrack(newVideoTrack);
+                    isCamActive = true;
+                    
+                    if (toggleCamBtn) {
+                        toggleCamBtn.classList.add('active');
+                        const icon = toggleCamBtn.querySelector('i');
+                        if (icon) icon.className = 'fas fa-video';
+                    }
+                    
+                    if (localVideoElement) {
+                        localVideoElement.srcObject = localStream;
+                        localVideoElement.style.opacity = '1';
+                    }
+                    if (localVideoPlaceholder) {
+                        localVideoPlaceholder.style.display = 'none';
+                    }
+                    
+                    showError('Cámara Activada', 2000);
+                }
+            }
+            
+        } catch (err) {
+            console.error('[CAM-TOGGLE] ❌ Error activando cámara:', err);
+            
+            if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+                showError('La cámara está siendo usada por otra aplicación', 4000);
+            } else if (err.name === 'NotAllowedError') {
+                showError('Permisos de cámara denegados', 4000);
+            } else if (err.name === 'NotFoundError') {
+                showError('No se encontró una cámara disponible', 4000);
+            } else {
+                showError('Error al activar la cámara: ' + err.message, 4000);
+            }
+            
+            // Mantener estado en off
+            isCamActive = false;
+            if (toggleCamBtn) {
+                toggleCamBtn.classList.remove('active');
+                const icon = toggleCamBtn.querySelector('i');
+                if (icon) icon.className = 'fas fa-video-slash';
+            }
+        }
+    }
+    
+    // Actualizar estado del participante
     participantStates[userName].camActive = isCamActive;
-    showError(isCamActive ? 'Cámara Activada' : 'Cámara Apagada', 2000);
     debugLog(`Cámara ${isCamActive ? 'activada' : 'apagada'}.`);
+    
+    // Notificar a otros participantes
     if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({
             type: 'participant-state-update',
@@ -4382,14 +4647,9 @@ function hidePollForParticipant() {
         debugLog('Votación oculta para participante.');
     }
 
-    if (currentPoll?.timerInterval) {
-        clearInterval(currentPoll.timerInterval);
-        currentPoll.timerInterval = null;
-    }
-    if (currentPoll?.resultsTimerInterval) {
-        clearInterval(currentPoll.resultsTimerInterval);
-        currentPoll.resultsTimerInterval = null;
-    }
+    // ✅ LIMPIAR TIMERS PERO NO MARCAR COMO ENDED (para seguir recibiendo actualizaciones)
+    stopAllPollTimers(false);
+    
     document.getElementById('submitVoteBtn').disabled = true;
     document.querySelectorAll('.poll-option-item input[type="radio"]').forEach(radio => radio.disabled = true);
 }
@@ -4628,15 +4888,8 @@ document.getElementById('endPollBtn')?.addEventListener('click', () => {
         return;
     }
 
-    // Limpiar TODOS los temporizadores antes de enviar
-    if (currentPoll.timerInterval) {
-        clearInterval(currentPoll.timerInterval);
-        currentPoll.timerInterval = null;
-    }
-    if (currentPoll.resultsTimerInterval) {
-        clearInterval(currentPoll.resultsTimerInterval);
-        currentPoll.resultsTimerInterval = null;
-    }
+    // ✅ USAR FUNCIÓN CENTRALIZADA PARA LIMPIAR TIMERS
+    stopAllPollTimers();
 
     // Marcar la votación como finalizada
     currentPoll.ended = true;
@@ -4689,10 +4942,8 @@ document.getElementById('closePollResultsPanel')?.addEventListener('click', () =
             pollChart.destroy();
             pollChart = null;
         }
-        if (currentPoll?.resultsTimerInterval) {
-            clearInterval(currentPoll.resultsTimerInterval);
-            currentPoll.resultsTimerInterval = null;
-        }
+        // ✅ USAR FUNCIÓN CENTRALIZADA PARA LIMPIAR TIMERS
+        stopAllPollTimers();
         debugLog('Panel de resultados de votación cerrado.');
     }
 });
@@ -4770,6 +5021,33 @@ document.addEventListener('DOMContentLoaded', async () => {
         setTimeout(() => window.location.href = '/', 3000);
         return;
     }
+
+    // ============ ESPERAR A QUE EL LOBBY COMPLETE ============
+    // Si hay un sistema de lobby, esperar hasta que el usuario haga click en "Unirme"
+    const lobbyScreen = document.getElementById('lobbyScreen');
+    if (lobbyScreen && lobbyScreen.style.display !== 'none') {
+        console.log('[DOM] ⏳ Esperando a que el lobby complete...');
+        
+        await new Promise((resolve) => {
+            document.addEventListener('lobbyComplete', (e) => {
+                console.log('[DOM] ✅ Lobby completado, iniciando reunión...');
+                
+                // Usar configuración del lobby
+                const settings = e.detail || {};
+                isMicActive = settings.micEnabled !== undefined ? settings.micEnabled : true;
+                isCamActive = settings.camEnabled !== undefined ? settings.camEnabled : true;
+                
+                // Si hay un stream del lobby, usarlo
+                if (settings.stream) {
+                    localStream = settings.stream;
+                    console.log('[DOM] Usando stream del lobby');
+                }
+                
+                resolve();
+            }, { once: true });
+        });
+    }
+    // =========================================================
 
     // Inicializar elementos del DOM
     const roomCodeElement = document.getElementById('roomCode');
@@ -5055,6 +5333,7 @@ async function showShareLink() {
 // Exponer funciones y variables necesarias para otros módulos
 window.clearPollNotifications = clearPollNotifications;
 window.displayPollResults = displayPollResults;
+window.stopAllPollTimers = stopAllPollTimers;
 Object.defineProperty(window, 'currentPoll', {
     get: function() { return currentPoll; },
     set: function(value) { currentPoll = value; }
