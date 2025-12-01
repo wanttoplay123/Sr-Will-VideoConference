@@ -38,14 +38,22 @@ const iceServers = [
     { urls: 'stun:stun3.l.google.com:19302' },
     { urls: 'stun:stun4.l.google.com:19302' },
 
-    // Servidores STUN adicionales
-    { urls: 'stun:stun.services.mozilla.com' },
+    // Servidores STUN adicionales públicos
     { urls: 'stun:stun.stunprotocol.org:3478' },
     { urls: 'stun:stun.voip.blackberry.com:3478' },
-
-    // Servidores TURN públicos (para cuando STUN no es suficiente)
+    { urls: 'stun:stun.services.mozilla.com' },
+    
+    // ===== SERVIDORES TURN GRATUITOS =====
+    // Estos son esenciales para conectar usuarios en diferentes redes/NAT
+    
+    // OpenRelay TURN (gratuito y público)
     {
         urls: 'turn:openrelay.metered.ca:80',
+        username: 'openrelayproject',
+        credential: 'openrelayproject'
+    },
+    {
+        urls: 'turn:openrelay.metered.ca:80?transport=tcp',
         username: 'openrelayproject',
         credential: 'openrelayproject'
     },
@@ -60,27 +68,202 @@ const iceServers = [
         credential: 'openrelayproject'
     },
     {
-        urls: 'turn:turn.anyfirewall.com:443?transport=tcp',
-        username: 'webrtc',
-        credential: 'webrtc'
+        urls: 'turns:openrelay.metered.ca:443?transport=tcp',
+        username: 'openrelayproject',
+        credential: 'openrelayproject'
     },
-    // Servidor TURN de Twilio (más confiable pero puede tener límites)
+    
+    // Relay gratuito de Xirsys (alternativa)
     {
-        urls: 'turn:global.turn.twilio.com:3478?transport=udp',
-        username: 'f4b4035eaa76f4a55de5f4351567653ee4ff6fa97b50b6b334fcc1be9c27212d',
-        credential: 'w1uxM55V9yVoqyVFjt+mxDBV0F87AUCemaYVQGxsPLw='
-    },
-    {
-        urls: 'turn:global.turn.twilio.com:3478?transport=tcp',
-        username: 'f4b4035eaa76f4a55de5f4351567653ee4ff6fa97b50b6b334fcc1be9c27212d',
-        credential: 'w1uxM55V9yVoqyVFjt+mxDBV0F87AUCemaYVQGxsPLw='
+        urls: 'turn:global.relay.metered.ca:80',
+        username: 'openrelayproject',
+        credential: 'openrelayproject'
     },
     {
-        urls: 'turn:global.turn.twilio.com:443?transport=tcp',
-        username: 'f4b4035eaa76f4a55de5f4351567653ee4ff6fa97b50b6b334fcc1be9c27212d',
-        credential: 'w1uxM55V9yVoqyVFjt+mxDBV0F87AUCemaYVQGxsPLw='
+        urls: 'turn:global.relay.metered.ca:80?transport=tcp',
+        username: 'openrelayproject',
+        credential: 'openrelayproject'
+    },
+    {
+        urls: 'turn:global.relay.metered.ca:443',
+        username: 'openrelayproject',
+        credential: 'openrelayproject'
+    },
+    {
+        urls: 'turn:global.relay.metered.ca:443?transport=tcp',
+        username: 'openrelayproject',
+        credential: 'openrelayproject'
+    },
+    {
+        urls: 'turns:global.relay.metered.ca:443?transport=tcp',
+        username: 'openrelayproject',
+        credential: 'openrelayproject'
     }
 ];
+
+// ============= FUNCIÓN DE DIAGNÓSTICO DE CONECTIVIDAD =============
+// Llamar desde la consola: diagnosticarConexion()
+async function diagnosticarConexion() {
+    console.log('\n========== DIAGNÓSTICO DE CONECTIVIDAD WEBRTC ==========\n');
+    
+    // 1. Verificar servidores TURN
+    console.log('📡 1. VERIFICANDO SERVIDORES TURN...');
+    for (const server of iceServers) {
+        if (server.urls && server.urls.includes('turn')) {
+            try {
+                const testPc = new RTCPeerConnection({ iceServers: [server] });
+                testPc.createDataChannel('test');
+                const offer = await testPc.createOffer();
+                await testPc.setLocalDescription(offer);
+                
+                await new Promise((resolve, reject) => {
+                    const timeout = setTimeout(() => reject('Timeout'), 5000);
+                    testPc.onicecandidate = (e) => {
+                        if (e.candidate && e.candidate.candidate.includes('relay')) {
+                            clearTimeout(timeout);
+                            resolve(true);
+                        }
+                    };
+                });
+                
+                console.log(`   ✅ ${server.urls} - FUNCIONANDO`);
+                testPc.close();
+            } catch (err) {
+                console.log(`   ❌ ${server.urls} - FALLIDO (${err})`);
+            }
+        }
+    }
+    
+    // 2. Verificar conexiones peer activas
+    console.log('\n👥 2. CONEXIONES PEER ACTIVAS:');
+    for (const [userId, pc] of Object.entries(peerConnections)) {
+        console.log(`\n   Usuario: ${userId}`);
+        console.log(`   - Estado ICE: ${pc.iceConnectionState}`);
+        console.log(`   - Estado conexión: ${pc.connectionState}`);
+        console.log(`   - Estado señalización: ${pc.signalingState}`);
+        
+        // Verificar tipo de conexión
+        const stats = await pc.getStats();
+        let connectionType = 'DESCONOCIDO';
+        stats.forEach(report => {
+            if (report.type === 'candidate-pair' && report.state === 'succeeded') {
+                stats.forEach(r => {
+                    if (r.id === report.localCandidateId) {
+                        connectionType = r.candidateType === 'relay' ? 'TURN/RELAY ⭐' : 
+                                        r.candidateType === 'srflx' ? 'STUN' : 
+                                        r.candidateType === 'host' ? 'LOCAL/HOST' : r.candidateType;
+                    }
+                });
+            }
+        });
+        console.log(`   - Tipo de conexión: ${connectionType}`);
+        
+        // Verificar tracks
+        const senders = pc.getSenders();
+        const receivers = pc.getReceivers();
+        console.log(`   - Tracks enviando: ${senders.filter(s => s.track).length}`);
+        console.log(`   - Tracks recibiendo: ${receivers.filter(r => r.track).length}`);
+    }
+    
+    // 3. Estado del localStream
+    console.log('\n📹 3. ESTADO DEL STREAM LOCAL:');
+    if (localStream) {
+        console.log(`   - Activo: ${localStream.active}`);
+        console.log(`   - Tracks: ${localStream.getTracks().length}`);
+        localStream.getTracks().forEach(t => {
+            console.log(`     * ${t.kind}: enabled=${t.enabled}, readyState=${t.readyState}`);
+        });
+    } else {
+        console.log('   ❌ NO HAY STREAM LOCAL');
+    }
+    
+    // 4. Estado del WebSocket
+    console.log('\n🔌 4. ESTADO DEL WEBSOCKET:');
+    if (ws) {
+        const states = ['CONNECTING', 'OPEN', 'CLOSING', 'CLOSED'];
+        console.log(`   - Estado: ${states[ws.readyState]}`);
+    } else {
+        console.log('   ❌ NO HAY WEBSOCKET');
+    }
+    
+    console.log('\n========== FIN DEL DIAGNÓSTICO ==========\n');
+    
+    return 'Diagnóstico completado. Revisa la consola para más detalles.';
+}
+
+// Hacer la función accesible globalmente
+window.diagnosticarConexion = diagnosticarConexion;
+// ==================================================================
+
+// ============= SISTEMA DE AUDIO ROBUSTO =============
+// Manejar la política de autoplay del navegador
+let audioUnlocked = false;
+
+function unlockAudio() {
+    if (audioUnlocked) return;
+    
+    // Crear un contexto de audio temporal para desbloquear
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    
+    // Crear un buffer vacío
+    const buffer = audioContext.createBuffer(1, 1, 22050);
+    const source = audioContext.createBufferSource();
+    source.buffer = buffer;
+    source.connect(audioContext.destination);
+    source.start(0);
+    
+    audioContext.resume().then(() => {
+        audioUnlocked = true;
+        console.log('[🔊] Audio desbloqueado correctamente');
+        
+        // Intentar reproducir todos los videos que estén pausados
+        document.querySelectorAll('video').forEach(video => {
+            if (video.paused && video.srcObject) {
+                video.play().catch(e => console.log('Video aún no puede reproducirse:', e));
+            }
+        });
+    });
+}
+
+// Desbloquear audio en el primer clic/touch del usuario
+document.addEventListener('click', unlockAudio, { once: true });
+document.addEventListener('touchstart', unlockAudio, { once: true });
+document.addEventListener('keydown', unlockAudio, { once: true });
+
+// Función para asegurar que un video reproduce audio
+async function ensureVideoPlaying(videoElement, userId) {
+    if (!videoElement || !videoElement.srcObject) return;
+    
+    videoElement.muted = false;
+    videoElement.volume = 1.0;
+    
+    try {
+        await videoElement.play();
+        console.log(`[🔊] Video de ${userId} reproduciendo correctamente`);
+    } catch (e) {
+        console.warn(`[⚠️] Autoplay bloqueado para ${userId}, intentando con muted primero...`);
+        
+        // Estrategia: reproducir muted, luego unmute después de interacción
+        videoElement.muted = true;
+        try {
+            await videoElement.play();
+            console.log(`[🔊] Video de ${userId} reproduciendo (muted temporalmente)`);
+            
+            // Intentar unmute después de un breve delay
+            setTimeout(async () => {
+                try {
+                    videoElement.muted = false;
+                    console.log(`[🔊] Audio de ${userId} activado`);
+                } catch (e2) {
+                    console.warn(`[⚠️] No se pudo activar audio de ${userId}`);
+                }
+            }, 100);
+        } catch (e2) {
+            console.error(`[❌] No se puede reproducir video de ${userId}:`, e2);
+        }
+    }
+}
+// =====================================================
 
 async function forceSpeakerOutput(mediaEl) {
     if (typeof mediaEl.setSinkId !== 'function') return;
@@ -1371,15 +1554,8 @@ function addVideoElement(userId, stream) {
         videoElement.muted = false; // ✅ Asegurar que NO está silenciado
         videoElement.volume = 1.0;  // ✅ Volumen al máximo
 
-        videoElement.play().then(() => {
-            console.log(`✅✅✅ VIDEO Y AUDIO REPRODUCIENDO PARA ${userId} ✅✅✅`);
-            debugLog(`▶️ Video y audio reproduciendo para ${userId}`);
-        }).catch(e => {
-            console.error(`❌ Autoplay para ${userId} falló:`, e);
-            // NOTA: NO poner muted=true aquí porque silenciaría el audio
-            // El usuario tendrá que hacer clic en el video para reproducir
-            showError(`Haz clic en el video de ${userId} para escuchar el audio`, 5000);
-        });
+        // ✅ USAR EL NUEVO SISTEMA DE AUDIO ROBUSTO
+        ensureVideoPlaying(videoElement, userId);
 
         // 🔊 Forzar salida de audio al altavoz
         forceSpeakerOutput(videoElement);
@@ -1391,7 +1567,22 @@ function addVideoElement(userId, stream) {
             console.log(`  - readyState:`, videoElement.readyState);
             console.log(`  - paused:`, videoElement.paused);
             console.log(`  - muted:`, videoElement.muted);
+            console.log(`  - volume:`, videoElement.volume);
+            
+            // ✅ Si está pausado, intentar reproducir de nuevo
+            if (videoElement.paused && videoElement.srcObject) {
+                console.log(`[🔄] Reintentando reproducir video de ${userId}...`);
+                ensureVideoPlaying(videoElement, userId);
+            }
         }, 1000);
+        
+        // ✅ Reintentar después de 3 segundos si aún está pausado
+        setTimeout(() => {
+            if (videoElement.paused && videoElement.srcObject) {
+                console.log(`[🔄] Segundo intento de reproducir video de ${userId}...`);
+                ensureVideoPlaying(videoElement, userId);
+            }
+        }, 3000);
     } else {
         console.error('❌ No se pudo encontrar o crear elemento de video.');
     }
@@ -1954,6 +2145,9 @@ function initWebSocket() {
 
                     case 'new-peer':
                         debugLog(`Nuevo par detectado: ${msg.userId}`);
+                        console.log(`[NEW-PEER] 🆕 Nuevo participante: ${msg.userId}, initiateOffer: ${msg.initiateOffer}`);
+                        console.log(`[NEW-PEER] 📹 LocalStream activo: ${localStream?.active}, tracks: ${localStream?.getTracks()?.length}`);
+                        
                         if (msg.name && !userRoles[msg.name]) {
                             userRoles[msg.name] = msg.isModerator ? 'Organizador de la Reunión' : 'Participante';
                         }
@@ -1963,13 +2157,31 @@ function initWebSocket() {
                         
                         {
                             // Bloque para scope de variables
+                            // ✅ VERIFICAR QUE LOCALSTREAM ESTÉ LISTO ANTES DE CREAR CONEXIÓN
+                            if (!localStream || !localStream.active || localStream.getTracks().length === 0) {
+                                console.warn(`[NEW-PEER] ⚠️ LocalStream no está listo aún, esperando...`);
+                                // Esperar un poco y reintentar
+                                await new Promise(resolve => setTimeout(resolve, 500));
+                            }
+                            
                             const peerConn = createPeerConnection(msg.userId);
                             
                             // ✅ Si tengo initiateOffer, crear oferta inmediatamente
                             if (peerConn && msg.initiateOffer && peerConn.signalingState === 'stable') {
+                                console.log(`[NEW-PEER] 📤 Creando oferta SDP para ${msg.userId}...`);
                                 try {
-                                    const offer = await peerConn.createOffer();
+                                    // ✅ IMPORTANTE: Esperar a que los tracks estén agregados
+                                    await new Promise(resolve => setTimeout(resolve, 100));
+                                    
+                                    const offer = await peerConn.createOffer({
+                                        offerToReceiveAudio: true,
+                                        offerToReceiveVideo: true
+                                    });
+                                    console.log(`[NEW-PEER] 📝 Oferta SDP creada para ${msg.userId}`);
+                                    
                                     await peerConn.setLocalDescription(offer);
+                                    console.log(`[NEW-PEER] ✅ LocalDescription establecida para ${msg.userId}`);
+                                    
                                     if (ws.readyState === WebSocket.OPEN) {
                                         ws.send(JSON.stringify({
                                             type: 'signal',
@@ -1977,9 +2189,10 @@ function initWebSocket() {
                                             target: msg.userId,
                                             payload: { sdp: peerConn.localDescription }
                                         }));
-                                        debugLog(`✅ Oferta enviada a ${msg.userId}`);
+                                        console.log(`[NEW-PEER] ✅ Oferta enviada a ${msg.userId}`);
                                     }
                                 } catch (e) {
+                                    console.error(`[NEW-PEER] ❌ Error negociando con ${msg.userId}:`, e);
                                     showError(`Error negociando con ${msg.userId}`, 5000);
                                     debugLog(`Error en la negociación WebRTC con ${msg.userId}:`, e);
                                 }
@@ -2683,13 +2896,23 @@ function initWebSocket() {
 
 function createPeerConnection(userId) {
     debugLog(`Creando PeerConnection para ${userId}`);
+    
+    // ✅ IMPORTANTE: Usar 'relay' fuerza el uso de TURN servers
+    // Esto es más lento pero garantiza conectividad entre redes diferentes
+    // Cambiar a 'all' si están en la misma red local para mejor rendimiento
+    const iceTransportPolicy = 'all'; // Usar 'relay' si hay problemas de conectividad
+    
     const pc = new RTCPeerConnection({
         iceServers: iceServers,
-        iceTransportPolicy: 'all',
+        iceTransportPolicy: iceTransportPolicy,
         bundlePolicy: 'max-bundle',
         rtcpMuxPolicy: 'require',
         iceCandidatePoolSize: 10
     });
+    
+    console.log(`[WEBRTC] 🔧 PeerConnection creada para ${userId} con política ICE: ${iceTransportPolicy}`);
+    console.log(`[WEBRTC] 📡 Usando ${iceServers.length} servidores ICE (STUN/TURN)`);
+    
     peerConnections[userId] = pc;
 
     // Agregar tracks locales si existen
@@ -2792,13 +3015,21 @@ function createPeerConnection(userId) {
 
         console.log(`[WEBRTC] 📥 Track recibido de ${userId}: ${track.kind} (${track.label})`);
         console.log(`[WEBRTC] 🆔 Stream ID: ${stream.id}`);
+        console.log(`[WEBRTC] 🔍 Track enabled: ${track.enabled}, readyState: ${track.readyState}`);
         console.log(`[WEBRTC] 🔍 remoteScreenStreams[${userId}]:`, remoteScreenStreams[userId]);
         console.log(`[WEBRTC] 🔍 ¿Es pantalla compartida?:`, remoteScreenStreams[userId] === stream.id);
+
+        // ✅ IMPORTANTE: ASEGURAR QUE EL TRACK ESTÉ HABILITADO
+        if (!track.enabled) {
+            track.enabled = true;
+            console.log(`[WEBRTC] 🔊 Track ${track.kind} habilitado forzosamente para ${userId}`);
+        }
 
         // ✅ DETECCIÓN DE HABLANTE ACTIVO: Agregar stream de audio para análisis
         if (track.kind === 'audio' && !remoteScreenStreams[userId]) {
             // Solo analizar audio de cámaras, no de pantallas compartidas
             addAudioStreamForAnalysis(userId, stream);
+            console.log(`[WEBRTC] 🎤 Audio de ${userId} agregado para análisis de hablante activo`);
         }
 
         // Verificar si este stream corresponde a una pantalla compartida conocida
@@ -2850,10 +3081,13 @@ function createPeerConnection(userId) {
                 console.log(`[WEBRTC] 📷 Asumiendo: Es stream de CÁMARA/AUDIO de ${userId}`);
                 addVideoElement(userId, stream);
 
-                // Asegurar que el audio esté habilitado
-                if (track.kind === 'audio') {
-                    track.enabled = true;
-                }
+                // ✅ ASEGURAR QUE TODOS LOS TRACKS DEL STREAM ESTÉN HABILITADOS
+                stream.getTracks().forEach(t => {
+                    if (!t.enabled) {
+                        t.enabled = true;
+                        console.log(`[WEBRTC] 🔊 Track ${t.kind} habilitado en stream de ${userId}`);
+                    }
+                });
             }
         }
     };
@@ -2863,6 +3097,43 @@ function createPeerConnection(userId) {
 
         if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
             debugLog(`✅ Conexión ICE establecida con ${userId}`);
+            
+            // ✅ VERIFICAR TRACKS DESPUÉS DE CONEXIÓN
+            setTimeout(() => {
+                const senders = pc.getSenders();
+                const receivers = pc.getReceivers();
+                
+                console.log(`[WEBRTC] 📊 Estado de tracks para ${userId}:`);
+                console.log(`   - Senders (enviando): ${senders.length}`);
+                senders.forEach(s => {
+                    if (s.track) {
+                        console.log(`     * ${s.track.kind}: enabled=${s.track.enabled}, readyState=${s.track.readyState}`);
+                    }
+                });
+                console.log(`   - Receivers (recibiendo): ${receivers.length}`);
+                receivers.forEach(r => {
+                    if (r.track) {
+                        console.log(`     * ${r.track.kind}: enabled=${r.track.enabled}, readyState=${r.track.readyState}, muted=${r.track.muted}`);
+                        // ✅ ASEGURAR QUE LOS TRACKS RECIBIDOS ESTÉN HABILITADOS
+                        if (!r.track.enabled) {
+                            r.track.enabled = true;
+                            console.log(`     -> Track habilitado forzosamente`);
+                        }
+                    }
+                });
+                
+                // ✅ VERIFICAR QUE EL VIDEO ESTÉ REPRODUCIENDO
+                const videoContainer = document.getElementById(`video-container-${userId}`);
+                if (videoContainer) {
+                    const videoEl = videoContainer.querySelector('video');
+                    if (videoEl && videoEl.srcObject) {
+                        console.log(`   - Video element: paused=${videoEl.paused}, muted=${videoEl.muted}`);
+                        if (videoEl.paused) {
+                            ensureVideoPlaying(videoEl, userId);
+                        }
+                    }
+                }
+            }, 500);
 
             // Verificar qué tipo de candidato se está usando
             pc.getStats().then(stats => {
@@ -2965,6 +3236,16 @@ async function handleSignal(senderId, payload) {
     
     const existingPc = peerConnections[senderId];
     console.log(`[SIGNAL] 🔍 PeerConnection existente para ${senderId}:`, !!existingPc);
+    console.log(`[SIGNAL] 📹 LocalStream disponible:`, !!localStream, localStream?.active, localStream?.getTracks()?.length);
+    
+    // ✅ IMPORTANTE: Si no hay localStream, esperar a que esté listo
+    if (!localStream || !localStream.active) {
+        console.warn(`[SIGNAL] ⚠️ LocalStream no está listo, esperando...`);
+        await new Promise(resolve => setTimeout(resolve, 500));
+        if (!localStream || !localStream.active) {
+            console.error(`[SIGNAL] ❌ LocalStream sigue sin estar listo después de esperar`);
+        }
+    }
     
     const pc = existingPc || createPeerConnection(senderId);
 
@@ -2972,9 +3253,38 @@ async function handleSignal(senderId, payload) {
         if (payload.sdp) {
             if (payload.sdp.type === 'offer') {
                 console.log(`[SIGNAL] 📥 Oferta SDP recibida de ${senderId}. Estado actual: ${pc.signalingState}`);
+                
+                // ✅ Manejar el caso de que ya tengamos una oferta pendiente
+                if (pc.signalingState !== 'stable' && pc.signalingState !== 'have-remote-offer') {
+                    console.log(`[SIGNAL] ⚠️ Estado no estable, haciendo rollback...`);
+                    await pc.setLocalDescription({ type: 'rollback' });
+                }
+                
                 await pc.setRemoteDescription(new RTCSessionDescription(payload.sdp));
-                const answer = await pc.createAnswer();
+                console.log(`[SIGNAL] ✅ RemoteDescription establecida para ${senderId}`);
+                
+                // ✅ Procesar candidatos ICE pendientes
+                if (pc.pendingRemoteCandidates && pc.pendingRemoteCandidates.length > 0) {
+                    console.log(`[SIGNAL] 📦 Procesando ${pc.pendingRemoteCandidates.length} candidatos ICE pendientes`);
+                    for (const candidate of pc.pendingRemoteCandidates) {
+                        try {
+                            await pc.addIceCandidate(new RTCIceCandidate(candidate));
+                        } catch (err) {
+                            console.error(`[SIGNAL] ❌ Error agregando candidato pendiente:`, err);
+                        }
+                    }
+                    pc.pendingRemoteCandidates = [];
+                }
+                
+                const answer = await pc.createAnswer({
+                    offerToReceiveAudio: true,
+                    offerToReceiveVideo: true
+                });
+                console.log(`[SIGNAL] 📝 Answer creada para ${senderId}`);
+                
                 await pc.setLocalDescription(answer);
+                console.log(`[SIGNAL] ✅ LocalDescription establecida para ${senderId}`);
+                
                 if (ws && ws.readyState === WebSocket.OPEN) {
                     ws.send(JSON.stringify({
                         type: 'signal',
@@ -2982,23 +3292,57 @@ async function handleSignal(senderId, payload) {
                         target: senderId,
                         payload: { sdp: pc.localDescription }
                     }));
-                    debugLog(`Respuesta SDP enviada a ${senderId}.`);
+                    console.log(`[SIGNAL] 📤 Respuesta SDP enviada a ${senderId}`);
                 }
             } else if (payload.sdp.type === 'answer') {
-                debugLog(`Respuesta SDP recibida de ${senderId}.`);
-                await pc.setRemoteDescription(new RTCSessionDescription(payload.sdp));
+                console.log(`[SIGNAL] 📥 Respuesta SDP recibida de ${senderId}. Estado: ${pc.signalingState}`);
+                
+                if (pc.signalingState === 'have-local-offer') {
+                    await pc.setRemoteDescription(new RTCSessionDescription(payload.sdp));
+                    console.log(`[SIGNAL] ✅ RemoteDescription (answer) establecida para ${senderId}`);
+                    
+                    // ✅ Procesar candidatos ICE pendientes después de recibir answer
+                    if (pc.pendingRemoteCandidates && pc.pendingRemoteCandidates.length > 0) {
+                        console.log(`[SIGNAL] 📦 Procesando ${pc.pendingRemoteCandidates.length} candidatos ICE pendientes`);
+                        for (const candidate of pc.pendingRemoteCandidates) {
+                            try {
+                                await pc.addIceCandidate(new RTCIceCandidate(candidate));
+                            } catch (err) {
+                                console.error(`[SIGNAL] ❌ Error agregando candidato pendiente:`, err);
+                            }
+                        }
+                        pc.pendingRemoteCandidates = [];
+                    }
+                } else {
+                    console.warn(`[SIGNAL] ⚠️ Estado incorrecto para recibir answer: ${pc.signalingState}`);
+                }
             }
         } else if (payload.candidate) {
-            const candidateType = payload.candidate.candidate.includes('typ relay') ? 'TURN/RELAY' :
+            const candidateType = payload.candidate.candidate.includes('typ relay') ? 'TURN/RELAY ⭐' :
                 payload.candidate.candidate.includes('typ srflx') ? 'STUN/SRFLX' :
                     payload.candidate.candidate.includes('typ host') ? 'HOST' : 'UNKNOWN';
 
             debugLog(`🔶 Candidato ICE recibido de ${senderId}:`);
             debugLog(`   Tipo: ${candidateType}`);
+            
+            // ✅ Preferir candidatos RELAY (TURN) para mejor conectividad
+            if (candidateType === 'TURN/RELAY ⭐') {
+                console.log(`[SIGNAL] ⭐ Candidato TURN recibido - Ideal para diferentes redes`);
+            }
 
             try {
-                await pc.addIceCandidate(new RTCIceCandidate(payload.candidate));
-                debugLog(`   ✅ Candidato agregado exitosamente`);
+                // ✅ Solo agregar si tenemos remoteDescription
+                if (pc.remoteDescription) {
+                    await pc.addIceCandidate(new RTCIceCandidate(payload.candidate));
+                    debugLog(`   ✅ Candidato agregado exitosamente`);
+                } else {
+                    // Guardar para después si no hay remoteDescription aún
+                    if (!pc.pendingRemoteCandidates) {
+                        pc.pendingRemoteCandidates = [];
+                    }
+                    pc.pendingRemoteCandidates.push(payload.candidate);
+                    console.log(`[SIGNAL] 📦 Candidato guardado (esperando remoteDescription)`);
+                }
             } catch (err) {
                 console.error(`   ❌ Error agregando candidato ICE:`, err);
             }
