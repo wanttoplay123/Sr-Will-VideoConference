@@ -308,7 +308,7 @@
         }
 
         .copy-room-link:hover {
-            background: rgba(255,255,255,0.03);
+            background: rgba(255, 255, 255, 0.03);
             color: var(--primary-color);
         }
 
@@ -496,10 +496,13 @@
         }
 
         @keyframes badge-pulse {
-            0%, 100% {
+
+            0%,
+            100% {
                 transform: scale(1);
                 box-shadow: 0 2px 8px rgba(59, 130, 246, 0.5);
             }
+
             50% {
                 transform: scale(1.1);
                 box-shadow: 0 4px 12px rgba(59, 130, 246, 0.7);
@@ -538,7 +541,7 @@
         /* ============================================
            NOTIFICACIONES MÓVILES MEJORADAS
            ============================================ */
-        
+
         /* Notificaciones de chat en móvil - Más grandes y visibles */
         @media (max-width: 768px) {
             .control-btn.has-notification::after {
@@ -570,10 +573,13 @@
             }
 
             @keyframes badge-pulse-mobile {
-                0%, 100% {
+
+                0%,
+                100% {
                     transform: scale(1);
                     box-shadow: 0 3px 10px rgba(59, 130, 246, 0.7), 0 0 20px rgba(59, 130, 246, 0.5);
                 }
+
                 50% {
                     transform: scale(1.15);
                     box-shadow: 0 4px 14px rgba(59, 130, 246, 0.9), 0 0 28px rgba(59, 130, 246, 0.7);
@@ -586,9 +592,12 @@
             }
 
             @keyframes pulse-notification-mobile {
-                0%, 100% {
+
+                0%,
+                100% {
                     box-shadow: var(--shadow-md), 0 0 0 0 rgba(239, 68, 68, 0.5);
                 }
+
                 50% {
                     box-shadow: var(--shadow-lg), 0 0 0 10px rgba(239, 68, 68, 0);
                 }
@@ -766,7 +775,7 @@
             color: #4ade80;
             animation: pulse 2s infinite;
         }
-        
+
         .video-container.screen-share .screen-share-info-overlay .screen-share-audio {
             color: #60a5fa;
             margin-left: 4px;
@@ -799,23 +808,25 @@
             max-height: 100%;
             padding: 4px;
         }
-        
+
         #videoGrid:has(.screen-share) .sidebar-videos-container .video-container {
             flex: 0 0 auto;
             width: 100%;
             height: auto;
             min-height: 120px;
             max-height: 150px;
-            aspect-ratio: 1/1; /* Cuadrado */
+            aspect-ratio: 1/1;
+            /* Cuadrado */
             border-radius: 12px;
         }
-        
+
         #videoGrid:has(.screen-share) .sidebar-videos-container .video-container video {
             object-fit: cover;
         }
 
         #videoGrid:has(.screen-share) .video-container:not(.screen-share):not(.sidebar-videos-container *) {
-            display: none; /* Ocultar videos sueltos fuera del container */
+            display: none;
+            /* Ocultar videos sueltos fuera del container */
         }
 
         .video-info {
@@ -2082,9 +2093,12 @@
         }
 
         @keyframes bounce-gentle {
-            0%, 100% {
+
+            0%,
+            100% {
                 transform: translateY(0) scale(1);
             }
+
             50% {
                 transform: translateY(-4px) scale(1.1);
             }
@@ -2143,10 +2157,13 @@
         }
 
         @keyframes pulse-timer {
-            0%, 100% {
+
+            0%,
+            100% {
                 opacity: 1;
                 transform: scale(1);
             }
+
             50% {
                 opacity: 0.8;
                 transform: scale(1.05);
@@ -2445,8 +2462,13 @@
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
         }
 
         .screen-share-modal-content {
@@ -2466,11 +2488,12 @@
         }
 
         @keyframes slideUp {
-            from { 
+            from {
                 opacity: 0;
                 transform: translateY(30px) scale(0.95);
             }
-            to { 
+
+            to {
                 opacity: 1;
                 transform: translateY(0) scale(1);
             }
@@ -2617,11 +2640,11 @@
             transition: transform 0.2s ease;
         }
 
-        .audio-toggle input:checked + .toggle-slider {
+        .audio-toggle input:checked+.toggle-slider {
             background: var(--success);
         }
 
-        .audio-toggle input:checked + .toggle-slider::after {
+        .audio-toggle input:checked+.toggle-slider::after {
             transform: translateX(22px);
         }
 
@@ -4499,10 +4522,13 @@
             }
 
             @keyframes badge-glow-mobile {
-                0%, 100% {
+
+                0%,
+                100% {
                     box-shadow: 0 3px 10px rgba(239, 68, 68, 0.7), 0 0 20px rgba(239, 68, 68, 0.5);
                     transform: scale(1);
                 }
+
                 50% {
                     box-shadow: 0 4px 14px rgba(239, 68, 68, 0.9), 0 0 28px rgba(239, 68, 68, 0.7);
                     transform: scale(1.1);
@@ -6023,10 +6049,11 @@
                 min-height: 180px;
                 max-height: 45vh;
                 aspect-ratio: 16/9;
-                order: -1; /* Siempre primero */
+                order: -1;
+                /* Siempre primero */
                 border-radius: 12px;
             }
-            
+
             /* Contenedor de thumbnails en sidebar - CÁMARAS MÁS CUADRADAS */
             #videoGrid:has(.screen-share) .sidebar-videos-container {
                 display: flex !important;
@@ -6044,7 +6071,8 @@
                 min-height: 80px;
                 max-height: 100px;
                 width: auto !important;
-                aspect-ratio: 1/1; /* Cuadrado */
+                aspect-ratio: 1/1;
+                /* Cuadrado */
                 border-radius: 10px;
             }
 
@@ -6287,7 +6315,7 @@
                 top: 0;
                 background: inherit;
                 z-index: 10;
-                border-bottom: 1px solid rgba(255,255,255,0.1);
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
             }
 
             #viewControlPanel .view-control-header h3 {
@@ -6375,13 +6403,14 @@
             .sidebar-close-btn {
                 display: flex;
             }
-            
+
             #sidebar {
                 position: relative;
             }
-            
+
             .sidebar-tabs {
-                padding-right: 60px; /* Espacio para el botón cerrar */
+                padding-right: 60px;
+                /* Espacio para el botón cerrar */
             }
         }
 
@@ -6418,7 +6447,7 @@
 
         body.light-theme .mobile-compact-badge {
             background: var(--light-surface);
-            border-color: rgba(0,0,0,0.1);
+            border-color: rgba(0, 0, 0, 0.1);
             color: var(--light-text-secondary);
         }
 
@@ -6920,7 +6949,8 @@
 
             #chatInput {
                 padding: 12px 16px;
-                font-size: 16px; /* Previene zoom en iOS */
+                font-size: 16px;
+                /* Previene zoom en iOS */
             }
 
             #sendChatBtn {
@@ -6966,7 +6996,8 @@
             }
 
             .logo {
-                font-size: 0; /* Solo icono */
+                font-size: 0;
+                /* Solo icono */
             }
 
             .logo i {
@@ -6974,7 +7005,8 @@
             }
 
             .mobile-compact-badge:last-child {
-                display: none; /* Ocultar participantes, mostrar solo sala */
+                display: none;
+                /* Ocultar participantes, mostrar solo sala */
             }
 
             .mobile-compact-badge {
@@ -7018,7 +7050,8 @@
             }
 
             .video-info {
-                opacity: 1; /* Siempre visible en móvil pequeño */
+                opacity: 1;
+                /* Siempre visible en móvil pequeño */
                 padding: 6px 10px;
             }
 
@@ -7103,7 +7136,7 @@
                 top: 6px;
                 left: 6px;
             }
-            
+
             /* ============================================
                SCREEN SHARE EN MÓVIL - LAYOUT VERTICAL
                Pantalla compartida arriba, cámaras abajo
@@ -7113,10 +7146,11 @@
                 flex-direction: column !important;
                 gap: 8px;
             }
-            
+
             /* Pantalla compartida: ocupa la parte superior */
             #videoGrid:has(.screen-share) .video-container.screen-share {
-                order: -1 !important; /* Siempre primero */
+                order: -1 !important;
+                /* Siempre primero */
                 flex: 0 0 auto;
                 width: 100% !important;
                 min-height: 40vh !important;
@@ -7124,7 +7158,7 @@
                 aspect-ratio: 16/9;
                 border-radius: 12px;
             }
-            
+
             /* Container de cámaras debajo */
             #videoGrid:has(.screen-share) .sidebar-videos-container {
                 order: 1;
@@ -7136,7 +7170,7 @@
                 overflow-y: auto;
                 padding: 4px;
             }
-            
+
             /* Cámaras cuadradas pequeñas */
             #videoGrid:has(.screen-share) .sidebar-videos-container .video-container {
                 width: 100% !important;
@@ -7170,7 +7204,8 @@
 
             #main {
                 height: calc(100dvh - 50px);
-                flex-direction: row !important; /* Forzar horizontal */
+                flex-direction: row !important;
+                /* Forzar horizontal */
             }
 
             #videoSection {
@@ -7212,7 +7247,7 @@
                 overflow-y: auto;
                 max-height: 100%;
             }
-            
+
             /* Cámaras cuadradas en landscape */
             #videoGrid:has(.screen-share) .sidebar-videos-container .video-container {
                 flex: 0 0 auto;
@@ -7535,7 +7570,7 @@
                 flex-direction: column !important;
                 gap: 8px;
             }
-            
+
             #videoGrid:has(.screen-share) .video-container.screen-share {
                 order: -1 !important;
                 flex: 0 0 auto;
@@ -7545,7 +7580,7 @@
                 aspect-ratio: 16/9;
                 border-radius: 12px;
             }
-            
+
             #videoGrid:has(.screen-share) .sidebar-videos-container {
                 order: 1;
                 display: grid !important;
@@ -7555,7 +7590,7 @@
                 max-height: 40vh;
                 overflow-y: auto;
             }
-            
+
             #videoGrid:has(.screen-share) .sidebar-videos-container .video-container {
                 width: 100% !important;
                 min-height: 70px;
@@ -7638,7 +7673,7 @@
                 flex-direction: column !important;
                 gap: 8px;
             }
-            
+
             #videoGrid:has(.screen-share) .video-container.screen-share {
                 order: -1 !important;
                 flex: 0 0 auto;
@@ -7648,7 +7683,7 @@
                 aspect-ratio: 16/9;
                 border-radius: 14px;
             }
-            
+
             #videoGrid:has(.screen-share) .sidebar-videos-container {
                 order: 1;
                 display: grid !important;
@@ -7658,7 +7693,7 @@
                 max-height: 40vh;
                 overflow-y: auto;
             }
-            
+
             #videoGrid:has(.screen-share) .sidebar-videos-container .video-container {
                 width: 100% !important;
                 min-height: 80px;
@@ -7729,7 +7764,8 @@
             }
 
             .video-info .user-name i {
-                display: none; /* Ocultar icono para ahorrar espacio */
+                display: none;
+                /* Ocultar icono para ahorrar espacio */
             }
 
             .video-status {
@@ -7761,7 +7797,7 @@
                 padding: 4px 8px;
                 font-size: 10px;
             }
-            
+
             /* ============================================
                SCREEN SHARE EN LANDSCAPE MÓVIL
                Layout horizontal: pantalla izquierda, cámaras derecha
@@ -7772,7 +7808,7 @@
                 grid-template-rows: 1fr !important;
                 gap: 6px;
             }
-            
+
             #videoGrid:has(.screen-share) .video-container.screen-share {
                 grid-column: 1 / 2 !important;
                 grid-row: 1 / -1 !important;
@@ -7781,7 +7817,7 @@
                 min-height: unset;
                 max-height: 100%;
             }
-            
+
             #videoGrid:has(.screen-share) .sidebar-videos-container {
                 grid-column: 2 / 3 !important;
                 grid-row: 1 / -1 !important;
@@ -7791,7 +7827,7 @@
                 overflow-y: auto;
                 max-height: 100%;
             }
-            
+
             #videoGrid:has(.screen-share) .sidebar-videos-container .video-container {
                 flex: 0 0 auto;
                 width: 100% !important;
@@ -8041,6 +8077,7 @@
            AJUSTES SEGÚN NÚMERO DE PARTICIPANTES (MÓVIL)
            ============================================ */
         @media (max-width: 480px) {
+
             /* 1 participante: video grande */
             #videoGrid:has(.video-container:only-child) {
                 grid-template-columns: 1fr !important;
@@ -8079,6 +8116,7 @@
            Estas reglas prevalecen sobre todas las anteriores
            ============================================ */
         @media screen and (max-width: 900px) {
+
             /* Header compacto */
             #header {
                 padding: 8px 12px !important;
@@ -8170,7 +8208,7 @@
             .logo i {
                 font-size: 20px !important;
             }
-            
+
             /* ============================================
                SCREEN SHARE OVERRIDE MÓVIL FINAL
                Prioridad absoluta a la pantalla compartida
@@ -8182,7 +8220,7 @@
                 gap: 8px !important;
                 padding: 8px !important;
             }
-            
+
             /* Pantalla compartida siempre primero y grande */
             #videoGrid:has(.screen-share) .video-container.screen-share,
             #videoGrid:has(.screen-share-preview) .screen-share-preview,
@@ -8196,7 +8234,7 @@
                 border-radius: 12px !important;
                 margin-bottom: 8px !important;
             }
-            
+
             /* Sidebar de cámaras debajo - GRID horizontal */
             #videoGrid:has(.screen-share) .sidebar-videos-container,
             #videoGrid:has(.screen-share-preview) .sidebar-videos-container {
@@ -8214,7 +8252,7 @@
                 justify-content: center !important;
                 align-content: start !important;
             }
-            
+
             /* Cámaras cuadradas pequeñas */
             #videoGrid:has(.screen-share) .sidebar-videos-container .video-container,
             #videoGrid:has(.screen-share-preview) .sidebar-videos-container .video-container {
@@ -8228,10 +8266,10 @@
                 border-radius: 12px !important;
                 flex: 0 0 auto !important;
             }
-            
+
             /* Ocultar videos sueltos fuera del container */
-            #videoGrid:has(.screen-share) > .video-container:not(.screen-share):not(.screen-share-preview),
-            #videoGrid:has(.screen-share-preview) > .video-container:not(.screen-share):not(.screen-share-preview) {
+            #videoGrid:has(.screen-share)>.video-container:not(.screen-share):not(.screen-share-preview),
+            #videoGrid:has(.screen-share-preview)>.video-container:not(.screen-share):not(.screen-share-preview) {
                 display: none !important;
             }
         }
@@ -8270,15 +8308,17 @@
         /* ============================================
            RESPONSIVE MODALES Y PANELES - MODO TELÉFONO
            ============================================ */
-        
+
         /* Tablets y móviles grandes */
         @media screen and (max-width: 900px) {
+
             /* Modal principal - solo cuando está activo (display inline) */
             .modal[style*="display: flex"],
             .modal[style*="display:flex"],
             .modal.active {
                 position: fixed !important;
-                top: 60px !important; /* Debajo del navbar */
+                top: 60px !important;
+                /* Debajo del navbar */
                 left: 0 !important;
                 right: 0 !important;
                 bottom: 0 !important;
@@ -8287,7 +8327,8 @@
                 justify-content: center !important;
                 padding: 16px !important;
                 padding-top: 20px !important;
-                z-index: 900 !important; /* Debajo del navbar (z-index 1000) */
+                z-index: 900 !important;
+                /* Debajo del navbar (z-index 1000) */
                 background: rgba(0, 0, 0, 0.7) !important;
             }
 
@@ -8319,7 +8360,8 @@
             /* Modal minimizado - en la parte inferior, visible */
             .modal.minimized {
                 top: auto !important;
-                bottom: 70px !important; /* Espacio para controles */
+                bottom: 70px !important;
+                /* Espacio para controles */
                 left: 50% !important;
                 right: auto !important;
                 transform: translateX(-50%) !important;
@@ -8368,7 +8410,8 @@
                 position: fixed !important;
                 left: 8px !important;
                 right: 8px !important;
-                bottom: 70px !important; /* Espacio para controles móviles */
+                bottom: 70px !important;
+                /* Espacio para controles móviles */
                 top: auto !important;
                 width: auto !important;
                 max-width: none !important;
@@ -8446,6 +8489,7 @@
 
         /* Móviles medianos */
         @media screen and (max-width: 768px) {
+
             /* Modal visible con display flex */
             .modal[style*="display: flex"],
             .modal[style*="display:flex"] {
@@ -8475,8 +8519,8 @@
                 margin: 0 !important;
             }
 
-            .modal-header > div,
-            .poll-results-header > div,
+            .modal-header>div,
+            .poll-results-header>div,
             .header-controls-results {
                 display: flex !important;
                 gap: 8px !important;
@@ -8840,7 +8884,7 @@
                 font-size: 16px !important;
             }
 
-            #pollCreationModal .modal-header > div {
+            #pollCreationModal .modal-header>div {
                 display: flex !important;
                 gap: 8px !important;
             }
@@ -8851,7 +8895,7 @@
                 min-width: 40px !important;
                 min-height: 40px !important;
                 border-radius: 12px !important;
-                background: rgba(255,255,255,0.1) !important;
+                background: rgba(255, 255, 255, 0.1) !important;
                 font-size: 18px !important;
             }
 
@@ -8902,9 +8946,9 @@
                 border-radius: 24px !important;
                 pointer-events: auto !important;
                 cursor: pointer !important;
-                box-shadow: 0 4px 24px rgba(0,0,0,0.5) !important;
+                box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5) !important;
                 background: linear-gradient(145deg, rgba(75, 94, 170, 0.98), rgba(60, 75, 140, 0.98)) !important;
-                border: 2px solid rgba(255,255,255,0.25) !important;
+                border: 2px solid rgba(255, 255, 255, 0.25) !important;
             }
 
             #pollCreationModal.minimized .modal-header,
@@ -8952,9 +8996,9 @@
                 height: auto !important;
                 border-radius: 24px !important;
                 padding: 14px 20px !important;
-                box-shadow: 0 4px 24px rgba(0,0,0,0.5) !important;
+                box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5) !important;
                 background: linear-gradient(145deg, rgba(75, 94, 170, 0.98), rgba(60, 75, 140, 0.98)) !important;
-                border: 2px solid rgba(255,255,255,0.25) !important;
+                border: 2px solid rgba(255, 255, 255, 0.25) !important;
             }
 
             #pollPanel.minimized .poll-header,
@@ -9003,9 +9047,9 @@
                 border-radius: 24px !important;
                 pointer-events: auto !important;
                 cursor: pointer !important;
-                box-shadow: 0 4px 24px rgba(0,0,0,0.5) !important;
+                box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5) !important;
                 background: linear-gradient(145deg, rgba(75, 94, 170, 0.98), rgba(60, 75, 140, 0.98)) !important;
-                border: 2px solid rgba(255,255,255,0.25) !important;
+                border: 2px solid rgba(255, 255, 255, 0.25) !important;
             }
 
             #pollResultsPanel.minimized .poll-results-header,
@@ -9053,7 +9097,7 @@
             width: 32px !important;
             height: 32px !important;
             border-radius: 8px !important;
-            background: rgba(255,255,255,0.15) !important;
+            background: rgba(255, 255, 255, 0.15) !important;
             border: none !important;
             cursor: pointer !important;
             color: white !important;
@@ -9063,11 +9107,12 @@
 
         .modal.minimized .minimized-view .restore-modal:hover,
         .modal.minimized .minimized-results-view .restore-modal:hover {
-            background: rgba(255,255,255,0.25) !important;
+            background: rgba(255, 255, 255, 0.25) !important;
             transform: scale(1.05) !important;
         }
 
         @media screen and (max-width: 768px) {
+
             .modal.minimized .minimized-view .restore-modal,
             .modal.minimized .minimized-results-view .restore-modal {
                 width: 36px !important;
@@ -9126,7 +9171,311 @@
             }
         }
     </style>
-    
+
+    <!-- ============================================ -->
+    <!-- SIDEBAR CONTROLES MÓVIL - PANTALLA COMPARTIDA -->
+    <!-- ============================================ -->
+    <style>
+        /* Sidebar de controles para móvil durante screen share */
+        #mobileControlsSidebar {
+            display: none;
+            position: fixed;
+            top: 0;
+            right: -280px;
+            width: 280px;
+            height: 100dvh;
+            background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+            box-shadow: -8px 0 32px rgba(0, 0, 0, 0.5);
+            z-index: 10001;
+            transition: right 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow-y: auto;
+            padding: 0;
+        }
+
+        body.light-theme #mobileControlsSidebar {
+            background: linear-gradient(180deg, var(--light-bg-card) 0%, var(--light-bg-primary) 100%);
+        }
+
+        #mobileControlsSidebar.active {
+            right: 0;
+        }
+
+        /* Overlay para el sidebar */
+        #mobileControlsOverlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 10000;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+
+        #mobileControlsOverlay.active {
+            display: block;
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* Header del sidebar */
+        .controls-sidebar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 16px;
+            border-bottom: 1px solid var(--glass-border);
+            background: linear-gradient(145deg, rgba(75, 94, 170, 0.15) 0%, transparent 100%);
+        }
+
+        .controls-sidebar-header h3 {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 0;
+        }
+
+        body.light-theme .controls-sidebar-header h3 {
+            color: var(--light-text-primary);
+        }
+
+        .controls-sidebar-close {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: var(--danger);
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .controls-sidebar-close:hover {
+            background: var(--danger);
+            color: white;
+        }
+
+        /* Contenido del sidebar */
+        .controls-sidebar-content {
+            padding: 16px;
+        }
+
+        .controls-sidebar-section {
+            margin-bottom: 24px;
+        }
+
+        .controls-sidebar-section-title {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-tertiary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+            padding-left: 4px;
+        }
+
+        body.light-theme .controls-sidebar-section-title {
+            color: var(--light-text-tertiary);
+        }
+
+        .controls-sidebar-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .controls-sidebar-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 14px 10px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 14px;
+            color: var(--text-secondary);
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            position: relative;
+        }
+
+        body.light-theme .controls-sidebar-btn {
+            background: rgba(0, 0, 0, 0.03);
+            border-color: rgba(0, 0, 0, 0.08);
+            color: var(--light-text-secondary);
+        }
+
+        .controls-sidebar-btn i {
+            font-size: 20px;
+        }
+
+        .controls-sidebar-btn:hover {
+            background: var(--glass-hover);
+            color: var(--primary);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(75, 94, 170, 0.2);
+        }
+
+        .controls-sidebar-btn.active {
+            background: rgba(75, 94, 170, 0.2);
+            color: var(--primary);
+            border-color: var(--primary);
+        }
+
+        .controls-sidebar-btn.danger {
+            color: var(--danger);
+        }
+
+        .controls-sidebar-btn.danger:hover {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--danger);
+        }
+
+        /* Botón flotante para abrir sidebar en móvil durante screen share */
+        #mobileControlsToggle {
+            display: none;
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            border: none;
+            border-radius: 50%;
+            color: white;
+            font-size: 22px;
+            cursor: pointer;
+            z-index: 9999;
+            box-shadow: 0 4px 20px rgba(75, 94, 170, 0.5);
+            transition: all 0.3s ease;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #mobileControlsToggle:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 28px rgba(75, 94, 170, 0.6);
+        }
+
+        #mobileControlsToggle:active {
+            transform: scale(0.95);
+        }
+
+        /* ============================================
+           MODO MÓVIL CON PANTALLA COMPARTIDA
+           Header oculto, solo pantalla compartida visible
+           ============================================ */
+        @media screen and (max-width: 900px) {
+            /* Cuando hay screen share activo en móvil */
+            body.mobile-screenshare-mode #header {
+                display: none !important;
+            }
+
+            body.mobile-screenshare-mode #main {
+                height: 100dvh !important;
+            }
+
+            body.mobile-screenshare-mode #videoSection {
+                height: 100dvh !important;
+                padding: 0 !important;
+            }
+
+            /* Ocultar cámaras de participantes cuando hay screen share */
+            body.mobile-screenshare-mode #videoGrid .sidebar-videos-container {
+                display: none !important;
+            }
+
+            body.mobile-screenshare-mode #videoGrid .video-container:not(.screen-share):not(.screen-share-preview) {
+                display: none !important;
+            }
+
+            /* Pantalla compartida a pantalla completa */
+            body.mobile-screenshare-mode #videoGrid {
+                display: flex !important;
+                flex-direction: column !important;
+                padding: 0 !important;
+                gap: 0 !important;
+            }
+
+            body.mobile-screenshare-mode #videoGrid .video-container.screen-share,
+            body.mobile-screenshare-mode #videoGrid .screen-share-preview {
+                flex: 1 !important;
+                width: 100% !important;
+                height: 100dvh !important;
+                max-height: 100dvh !important;
+                min-height: 100dvh !important;
+                border-radius: 0 !important;
+                margin: 0 !important;
+                aspect-ratio: unset !important;
+            }
+
+            body.mobile-screenshare-mode #videoGrid .video-container.screen-share video,
+            body.mobile-screenshare-mode #videoGrid .screen-share-preview video {
+                object-fit: contain !important;
+                background: #000 !important;
+            }
+
+            /* Mostrar botón flotante y sidebar solo en móvil con screen share */
+            body.mobile-screenshare-mode #mobileControlsToggle {
+                display: flex !important;
+            }
+
+            body.mobile-screenshare-mode #mobileControlsSidebar {
+                display: block;
+            }
+
+            /* Ocultar menú hamburguesa normal durante screen share */
+            body.mobile-screenshare-mode .hamburger-btn {
+                display: none !important;
+            }
+
+            body.mobile-screenshare-mode .mobile-menu,
+            body.mobile-screenshare-mode .mobile-menu-overlay {
+                display: none !important;
+            }
+        }
+
+        /* Ajustes para móviles pequeños */
+        @media screen and (max-width: 480px) {
+            #mobileControlsToggle {
+                width: 50px;
+                height: 50px;
+                font-size: 20px;
+                bottom: 16px;
+                right: 16px;
+            }
+
+            #mobileControlsSidebar {
+                width: 260px;
+                right: -260px;
+            }
+
+            .controls-sidebar-btn {
+                padding: 12px 8px;
+            }
+
+            .controls-sidebar-btn i {
+                font-size: 18px;
+            }
+
+            .controls-sidebar-btn span {
+                font-size: 11px;
+            }
+        }
+    </style>
+
     <!-- ============================================ -->
     <!-- ESTILOS DEL LOBBY (Pantalla previa a unirse) -->
     <!-- ============================================ -->
@@ -9142,12 +9491,15 @@
             z-index: 10000;
             display: flex;
             align-items: center;
-            justify-content: flex-start; /* Cambiar de center a flex-start para permitir scroll */
+            justify-content: flex-start;
+            /* Cambiar de center a flex-start para permitir scroll */
             opacity: 1;
             transition: opacity 0.4s ease-out;
-            overflow-y: auto; /* ✅ Permitir scroll vertical */
+            overflow-y: auto;
+            /* ✅ Permitir scroll vertical */
             overflow-x: hidden;
-            padding: 20px 0; /* ✅ Padding vertical para que no toque los bordes */
+            padding: 20px 0;
+            /* ✅ Padding vertical para que no toque los bordes */
         }
 
         #lobbyScreen.hidden {
@@ -9189,7 +9541,7 @@
         body.light-theme .permission-item {
             background: var(--light-surface);
             color: var(--light-text-secondary);
-            border-color: rgba(0,0,0,0.1);
+            border-color: rgba(0, 0, 0, 0.1);
         }
 
         .permission-item.granted {
@@ -9232,8 +9584,10 @@
             max-width: 900px;
             width: 95%;
             padding: 24px;
-            margin: auto; /* ✅ Centrar verticalmente cuando hay espacio */
-            min-height: min-content; /* ✅ Ajustar al contenido */
+            margin: auto;
+            /* ✅ Centrar verticalmente cuando hay espacio */
+            min-height: min-content;
+            /* ✅ Ajustar al contenido */
         }
 
         /* Header del Lobby */
@@ -9291,7 +9645,7 @@
 
         body.light-theme .lobby-room-code {
             background: var(--light-bg-card);
-            border-color: rgba(0,0,0,0.1);
+            border-color: rgba(0, 0, 0, 0.1);
         }
 
         body.light-theme .lobby-room-code span {
@@ -9329,7 +9683,7 @@
 
         body.light-theme .lobby-video-container {
             background: #e5e7eb;
-            border-color: rgba(0,0,0,0.15);
+            border-color: rgba(0, 0, 0, 0.15);
         }
 
         .lobby-video-container video {
@@ -9367,7 +9721,7 @@
             width: 80px;
             height: 80px;
             border-radius: 50%;
-            background: rgba(255,255,255,0.1);
+            background: rgba(255, 255, 255, 0.1);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -9375,7 +9729,7 @@
         }
 
         body.light-theme .lobby-video-placeholder .placeholder-icon {
-            background: rgba(0,0,0,0.08);
+            background: rgba(0, 0, 0, 0.08);
         }
 
         .lobby-video-placeholder .placeholder-icon i {
@@ -9431,8 +9785,17 @@
         }
 
         @keyframes pulse-dot {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.7; transform: scale(1.2); }
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.7;
+                transform: scale(1.2);
+            }
         }
 
         /* Controles de media del lobby */
@@ -9465,7 +9828,7 @@
 
         body.light-theme .lobby-control-btn.media-btn {
             background: var(--light-bg-card);
-            border-color: rgba(0,0,0,0.1);
+            border-color: rgba(0, 0, 0, 0.1);
             color: var(--light-text-primary);
         }
 
@@ -9501,7 +9864,7 @@
         }
 
         body.light-theme .lobby-control-btn.device-selector {
-            border-color: rgba(0,0,0,0.1);
+            border-color: rgba(0, 0, 0, 0.1);
             color: var(--light-text-tertiary);
         }
 
@@ -9538,7 +9901,7 @@
 
         body.light-theme .lobby-devices-panel {
             background: var(--light-bg-card);
-            border-color: rgba(0,0,0,0.1);
+            border-color: rgba(0, 0, 0, 0.1);
         }
 
         .lobby-devices-panel h3 {
@@ -9598,7 +9961,7 @@
 
         body.light-theme .device-row select {
             background: var(--light-surface);
-            border-color: rgba(0,0,0,0.1);
+            border-color: rgba(0, 0, 0, 0.1);
             color: var(--light-text-primary);
         }
 
@@ -9623,7 +9986,7 @@
 
         body.light-theme .lobby-permissions {
             background: var(--light-bg-card);
-            border-color: rgba(0,0,0,0.1);
+            border-color: rgba(0, 0, 0, 0.1);
         }
 
         .permission-item {
@@ -9701,7 +10064,9 @@
         }
 
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            to {
+                transform: rotate(360deg);
+            }
         }
 
         /* ===== RESPONSIVE LOBBY ===== */
@@ -9724,8 +10089,10 @@
 
         @media (max-width: 600px) {
             #lobbyScreen {
-                padding: 16px 0; /* ✅ Reducir padding en móvil */
-                justify-content: flex-start; /* ✅ Forzar scroll desde arriba */
+                padding: 16px 0;
+                /* ✅ Reducir padding en móvil */
+                justify-content: flex-start;
+                /* ✅ Forzar scroll desde arriba */
             }
 
             .lobby-container {
@@ -9783,7 +10150,8 @@
             .lobby-join-btn {
                 padding: 14px 28px;
                 font-size: 15px;
-                width: 100%; /* ✅ Botón full width en móvil */
+                width: 100%;
+                /* ✅ Botón full width en móvil */
             }
 
             .lobby-permissions {
@@ -9940,7 +10308,8 @@
                             <button class="lobby-control-btn media-btn active" id="lobbyToggleMic" title="Micrófono">
                                 <i class="fas fa-microphone"></i>
                             </button>
-                            <button class="lobby-control-btn device-selector" id="lobbyMicSelector" title="Seleccionar micrófono">
+                            <button class="lobby-control-btn device-selector" id="lobbyMicSelector"
+                                title="Seleccionar micrófono">
                                 <i class="fas fa-chevron-down"></i>
                             </button>
                         </div>
@@ -9950,17 +10319,20 @@
                             <button class="lobby-control-btn media-btn active" id="lobbyToggleCam" title="Cámara">
                                 <i class="fas fa-video"></i>
                             </button>
-                            <button class="lobby-control-btn device-selector" id="lobbyCamSelector" title="Seleccionar cámara">
+                            <button class="lobby-control-btn device-selector" id="lobbyCamSelector"
+                                title="Seleccionar cámara">
                                 <i class="fas fa-chevron-down"></i>
                             </button>
                         </div>
 
                         <!-- Altavoz -->
                         <div style="display: flex; align-items: center; gap: 4px;">
-                            <button class="lobby-control-btn media-btn active" id="lobbyToggleSpeaker" title="Altavoz" style="display: none;">
+                            <button class="lobby-control-btn media-btn active" id="lobbyToggleSpeaker" title="Altavoz"
+                                style="display: none;">
                                 <i class="fas fa-volume-up"></i>
                             </button>
-                            <button class="lobby-control-btn device-selector" id="lobbySpeakerSelector" title="Seleccionar altavoz">
+                            <button class="lobby-control-btn device-selector" id="lobbySpeakerSelector"
+                                title="Seleccionar altavoz">
                                 <i class="fas fa-volume-up"></i>
                             </button>
                         </div>
@@ -9977,7 +10349,7 @@
                     <!-- Panel de dispositivos -->
                     <div class="lobby-devices-panel">
                         <h3><i class="fas fa-sliders-h"></i> Dispositivos</h3>
-                        
+
                         <div class="device-row">
                             <i class="fas fa-microphone"></i>
                             <select id="lobbyMicSelect">
@@ -10083,7 +10455,7 @@
 
         body.light-theme .waiting-room-container {
             background: var(--light-bg-card);
-            border-color: rgba(0,0,0,0.1);
+            border-color: rgba(0, 0, 0, 0.1);
         }
 
         .waiting-animation {
@@ -10106,7 +10478,9 @@
         }
 
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            to {
+                transform: rotate(360deg);
+            }
         }
 
         .waiting-animation i {
@@ -10120,8 +10494,17 @@
         }
 
         @keyframes pulse {
-            0%, 100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-            50% { opacity: 0.6; transform: translate(-50%, -50%) scale(0.9); }
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1);
+            }
+
+            50% {
+                opacity: 0.6;
+                transform: translate(-50%, -50%) scale(0.9);
+            }
         }
 
         .waiting-room-content h2 {
@@ -10135,14 +10518,14 @@
             color: var(--light-text-primary);
         }
 
-        .waiting-room-content > p {
+        .waiting-room-content>p {
             font-size: 16px;
             color: var(--text-secondary);
             margin-bottom: 32px;
             line-height: 1.5;
         }
 
-        body.light-theme .waiting-room-content > p {
+        body.light-theme .waiting-room-content>p {
             color: var(--light-text-secondary);
         }
 
@@ -10233,7 +10616,7 @@
                 font-size: 24px;
             }
 
-            .waiting-room-content > p {
+            .waiting-room-content>p {
                 font-size: 14px;
             }
         }
@@ -10256,12 +10639,13 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.5);
+            background: rgba(0, 0, 0, 0.5);
             z-index: 10001;
             display: flex;
             align-items: center;
             justify-content: center;
         }
+
         .device-selector-content {
             background: var(--bg-card);
             border-radius: 16px;
@@ -10272,18 +10656,22 @@
             box-shadow: var(--shadow-xl);
             border: 1px solid var(--glass-border);
         }
+
         body.light-theme .device-selector-content {
             background: var(--light-bg-card);
-            border-color: rgba(0,0,0,0.1);
+            border-color: rgba(0, 0, 0, 0.1);
         }
+
         .device-selector-content h4 {
             margin-bottom: 16px;
             color: var(--text-primary);
             font-size: 16px;
         }
+
         body.light-theme .device-selector-content h4 {
             color: var(--light-text-primary);
         }
+
         .device-selector-list .device-option {
             padding: 12px 16px;
             border-radius: 8px;
@@ -10294,19 +10682,24 @@
             color: var(--text-secondary);
             transition: all 0.2s ease;
         }
+
         body.light-theme .device-selector-list .device-option {
             color: var(--light-text-secondary);
         }
+
         .device-selector-list .device-option:hover {
             background: var(--glass-bg);
         }
+
         .device-selector-list .device-option.selected {
             background: rgba(75, 94, 170, 0.2);
             color: var(--primary);
         }
+
         .device-selector-list .device-option i {
             width: 20px;
         }
+
         .device-selector-close {
             position: absolute;
             top: 12px;
@@ -10318,6 +10711,7 @@
             font-size: 18px;
             padding: 8px;
         }
+
         .device-selector-close:hover {
             color: var(--text-primary);
         }
@@ -10337,7 +10731,8 @@
                 <div class="room-code-badge">
                     <i class="fas fa-door-open"></i>
                     <span>Sala: <strong id="roomCode"></strong></span>
-                    <button id="copyRoomLinkBtn" class="copy-room-link" title="Copiar enlace de sala" aria-label="Copiar enlace de sala">
+                    <button id="copyRoomLinkBtn" class="copy-room-link" title="Copiar enlace de sala"
+                        aria-label="Copiar enlace de sala">
                         <i class="fas fa-link"></i>
                     </button>
                 </div>
@@ -10493,6 +10888,84 @@
             </div>
         </div>
     </nav>
+
+    <!-- ============================================ -->
+    <!-- SIDEBAR CONTROLES MÓVIL - PANTALLA COMPARTIDA -->
+    <!-- ============================================ -->
+    <div id="mobileControlsOverlay"></div>
+    <button id="mobileControlsToggle" aria-label="Abrir controles">
+        <i class="fas fa-ellipsis-h"></i>
+    </button>
+    <aside id="mobileControlsSidebar">
+        <div class="controls-sidebar-header">
+            <h3><i class="fas fa-sliders-h"></i> Controles</h3>
+            <button class="controls-sidebar-close" id="closeMobileControlsSidebar" aria-label="Cerrar controles">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="controls-sidebar-content">
+            <!-- Media controls -->
+            <div class="controls-sidebar-section">
+                <div class="controls-sidebar-section-title">Audio y Video</div>
+                <div class="controls-sidebar-grid">
+                    <button class="controls-sidebar-btn active" id="sidebarToggleMic">
+                        <i class="fas fa-microphone"></i>
+                        <span>Micrófono</span>
+                    </button>
+                    <button class="controls-sidebar-btn active" id="sidebarToggleCam">
+                        <i class="fas fa-video"></i>
+                        <span>Cámara</span>
+                    </button>
+                    <button class="controls-sidebar-btn" id="sidebarStopScreenShare">
+                        <i class="fas fa-desktop"></i>
+                        <span>Dejar pantalla</span>
+                    </button>
+                    <button class="controls-sidebar-btn" id="sidebarRaiseHand">
+                        <i class="fas fa-hand-paper"></i>
+                        <span>Mano</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Paneles -->
+            <div class="controls-sidebar-section">
+                <div class="controls-sidebar-section-title">Paneles</div>
+                <div class="controls-sidebar-grid">
+                    <button class="controls-sidebar-btn" id="sidebarParticipants">
+                        <i class="fas fa-users"></i>
+                        <span>Participantes</span>
+                    </button>
+                    <button class="controls-sidebar-btn" id="sidebarChat">
+                        <i class="fas fa-comments"></i>
+                        <span>Chat</span>
+                    </button>
+                    <button class="controls-sidebar-btn" id="sidebarCreatePoll" style="display: none;">
+                        <i class="fas fa-poll"></i>
+                        <span>Encuesta</span>
+                    </button>
+                    <button class="controls-sidebar-btn" id="sidebarViewControl">
+                        <i class="fas fa-th-large"></i>
+                        <span>Vista</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Configuración -->
+            <div class="controls-sidebar-section">
+                <div class="controls-sidebar-section-title">Configuración</div>
+                <div class="controls-sidebar-grid">
+                    <button class="controls-sidebar-btn" id="sidebarThemeToggle">
+                        <i class="fas fa-moon"></i>
+                        <span>Tema</span>
+                    </button>
+                    <button class="controls-sidebar-btn danger" id="sidebarLeave">
+                        <i class="fas fa-sign-out-alt"></i>
+                        <span>Salir</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </aside>
 
     <!-- Overlay del panel de control -->
     <div id="viewControlOverlay"></div>
@@ -11029,11 +11502,11 @@
                         <span>Esto es lo que verán los demás participantes</span>
                     </div>
                 </div>
-                
+
                 <!-- Selector de tipo (se oculta después de seleccionar) -->
                 <div class="screen-share-selector" id="screenShareSelector">
                     <p class="screen-share-description">Elige qué quieres compartir con los demás participantes</p>
-                    
+
                     <div class="screen-share-options">
                         <!-- Opción: Pantalla completa -->
                         <div class="screen-share-option" data-share-type="screen">
@@ -11048,7 +11521,7 @@
                                 <i class="fas fa-chevron-right"></i>
                             </div>
                         </div>
-                        
+
                         <!-- Opción: Ventana -->
                         <div class="screen-share-option" data-share-type="window">
                             <div class="option-icon">
@@ -11062,7 +11535,7 @@
                                 <i class="fas fa-chevron-right"></i>
                             </div>
                         </div>
-                        
+
                         <!-- Opción: Pestaña del navegador -->
                         <div class="screen-share-option" data-share-type="tab">
                             <div class="option-icon">
@@ -11078,7 +11551,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- Opción de audio (visible solo con preview) -->
                 <div class="screen-share-audio-option" id="screenShareAudioOption" style="display: none;">
                     <label class="audio-toggle">
@@ -11253,7 +11726,7 @@
             function syncCompactInfo() {
                 const roomCode = document.getElementById('roomCode');
                 const participantCount = document.getElementById('participantCount');
-                
+
                 if (roomCode && mobileCompactRoomCode) {
                     mobileCompactRoomCode.textContent = roomCode.textContent;
                 }
@@ -11264,14 +11737,14 @@
 
             // Sincronizar al cargar y observar cambios
             syncCompactInfo();
-            
+
             // Observador para sincronizar cambios en participantes
             const participantCount = document.getElementById('participantCount');
             if (participantCount) {
                 const observer = new MutationObserver(syncCompactInfo);
                 observer.observe(participantCount, { childList: true, characterData: true, subtree: true });
             }
-            
+
             // Observador para sincronizar cambios en código de sala
             const roomCode = document.getElementById('roomCode');
             if (roomCode) {
@@ -11285,13 +11758,13 @@
                 mobileMenuOverlay.classList.add('active');
                 hamburgerBtn.classList.add('active');
                 document.body.style.overflow = 'hidden';
-                
+
                 // Sincronizar datos de la sala en el menú
                 const roomCode = document.getElementById('roomCode');
                 const mobileRoomCode = document.getElementById('mobileRoomCode');
                 const participantCount = document.getElementById('participantCount');
                 const mobileParticipantCount = document.getElementById('mobileParticipantCount');
-                
+
                 if (roomCode && mobileRoomCode) mobileRoomCode.textContent = roomCode.textContent;
                 if (participantCount && mobileParticipantCount) mobileParticipantCount.textContent = participantCount.textContent;
             }
@@ -11305,16 +11778,16 @@
             }
 
             // Event listeners para abrir/cerrar
-            hamburgerBtn.addEventListener('click', function(e) {
+            hamburgerBtn.addEventListener('click', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 openMobileMenu();
             });
-            
+
             if (closeMobileMenuBtn) {
                 closeMobileMenuBtn.addEventListener('click', closeMobileMenu);
             }
-            
+
             mobileMenuOverlay.addEventListener('click', closeMobileMenu);
 
             // Botones del menú móvil
@@ -11370,7 +11843,7 @@
                 mobileParticipants.addEventListener('click', () => {
                     const sidebar = document.getElementById('sidebar');
                     const participantsTab = document.querySelector('.sidebar-tab[data-tab="participants"]');
-                    
+
                     if (sidebar) {
                         sidebar.classList.remove('sidebar-collapsed');
                         if (participantsTab) participantsTab.click();
@@ -11384,7 +11857,7 @@
                 mobileChat.addEventListener('click', () => {
                     const sidebar = document.getElementById('sidebar');
                     const chatTab = document.querySelector('.sidebar-tab[data-tab="chat"]');
-                    
+
                     if (sidebar) {
                         sidebar.classList.remove('sidebar-collapsed');
                         if (chatTab) chatTab.click();
@@ -11508,7 +11981,7 @@
                 const sidebar = document.getElementById('sidebar');
                 const participantsToggleBtn = document.getElementById('participantsToggle');
                 const chatToggleBtn = document.getElementById('chatToggle');
-                
+
                 if (sidebar) {
                     sidebar.classList.add('sidebar-collapsed');
                     if (participantsToggleBtn) participantsToggleBtn.classList.remove('active');
@@ -11700,7 +12173,7 @@
         // ============================================
 
         // ✅ Función para abrir modal de creación de encuesta (global)
-        window.openPollCreationModalUI = function() {
+        window.openPollCreationModalUI = function () {
             const modal = document.getElementById('pollCreationModal');
             if (modal) {
                 modal.style.display = 'flex';
@@ -11715,7 +12188,7 @@
         const openPollCreationModalUI = window.openPollCreationModalUI;
 
         // ✅ Función para cerrar modal de creación de encuesta (global)
-        window.closePollCreationModalUI = function() {
+        window.closePollCreationModalUI = function () {
             const modal = document.getElementById('pollCreationModal');
             if (modal) {
                 modal.style.display = 'none';
@@ -11750,7 +12223,7 @@
             // Obtener si es moderador desde URL params
             const urlParamsCheck = new URLSearchParams(window.location.search);
             const isModerator = urlParamsCheck.has('moderator');
-            
+
             // Marcar como solo para moderadores (atributo para CSS/identificación)
             mobileCreatePollBtn.setAttribute('data-moderator-only', 'true');
 
@@ -11850,392 +12323,392 @@
     <!-- LOBBY SYSTEM - JavaScript -->
     <!-- ============================================ -->
     <script>
-    (function() {
-        'use strict';
-        
-        // ============ LOBBY STATE ============
-        let lobbyStream = null;
-        let lobbyMicEnabled = true;
-        let lobbyCamEnabled = true;
-        let selectedMicId = null;
-        let selectedCamId = null;
-        let selectedSpeakerId = null;
-        let permissionsGranted = false;
-        
-        // ============ DOM ELEMENTS ============
-        const lobbyScreen = document.getElementById('lobbyScreen');
-        const lobbyVideo = document.getElementById('lobbyVideo');
-        const lobbyVideoPlaceholder = document.getElementById('lobbyVideoPlaceholder');
-        const lobbyPlaceholderText = document.getElementById('lobbyPlaceholderText');
-        const lobbyUserName = document.getElementById('lobbyUserName');
-        const lobbyRoomCode = document.getElementById('lobbyRoomCode');
-        const lobbyJoinBtn = document.getElementById('lobbyJoinBtn');
-        const lobbyToggleMic = document.getElementById('lobbyToggleMic');
-        const lobbyToggleCam = document.getElementById('lobbyToggleCam');
-        const lobbyMicSelect = document.getElementById('lobbyMicSelect');
-        const lobbyCamSelect = document.getElementById('lobbyCamSelect');
-        const lobbySpeakerSelect = document.getElementById('lobbySpeakerSelect');
-        const permMic = document.getElementById('permMic');
-        const permCam = document.getElementById('permCam');
-        
-        // Device selector buttons
-        const lobbyMicSelector = document.getElementById('lobbyMicSelector');
-        const lobbyCamSelector = document.getElementById('lobbyCamSelector');
-        const lobbySpeakerSelector = document.getElementById('lobbySpeakerSelector');
-        const deviceSelectorModal = document.getElementById('deviceSelectorModal');
-        const deviceSelectorList = document.getElementById('deviceSelectorList');
-        const deviceSelectorTitle = document.getElementById('deviceSelectorTitle');
-        const closeDeviceSelector = document.getElementById('closeDeviceSelector');
-        
-        // ============ GET URL PARAMS ============
-        const urlParams = new URLSearchParams(window.location.search);
-        const userName = urlParams.get('name') || 'Usuario';
-        const roomCode = urlParams.get('room') || '---';
-        
-        // ============ INITIALIZE LOBBY ============
-        function initLobby() {
-            // Set user info
-            if (lobbyUserName) lobbyUserName.textContent = userName;
-            if (lobbyRoomCode) lobbyRoomCode.textContent = roomCode;
-            
-            // Show lobby
-            if (lobbyScreen) {
-                lobbyScreen.style.display = 'flex';
-            }
-            
-            // Request permissions and start preview
-            requestMediaPermissions();
-            
-            // Setup event listeners
-            setupLobbyEventListeners();
-        }
-        
-        // ============ REQUEST PERMISSIONS ============
-        async function requestMediaPermissions() {
-            try {
-                // Request permissions with constraints
-                lobbyStream = await navigator.mediaDevices.getUserMedia({
-                    video: {
-                        width: { ideal: 640, max: 1280 },
-                        height: { ideal: 480, max: 720 },
-                        frameRate: { ideal: 15, max: 30 }
-                    },
-                    audio: {
-                        echoCancellation: true,
-                        noiseSuppression: true,
-                        autoGainControl: true
-                    }
-                });
-                
-                permissionsGranted = true;
-                
-                // Update permission indicators
-                updatePermissionStatus('mic', 'granted');
-                updatePermissionStatus('cam', 'granted');
-                
-                // Set video preview
-                if (lobbyVideo) {
-                    lobbyVideo.srcObject = lobbyStream;
-                    lobbyVideo.play().catch(e => console.warn('[LOBBY] Autoplay warning:', e));
+        (function () {
+            'use strict';
+
+            // ============ LOBBY STATE ============
+            let lobbyStream = null;
+            let lobbyMicEnabled = true;
+            let lobbyCamEnabled = true;
+            let selectedMicId = null;
+            let selectedCamId = null;
+            let selectedSpeakerId = null;
+            let permissionsGranted = false;
+
+            // ============ DOM ELEMENTS ============
+            const lobbyScreen = document.getElementById('lobbyScreen');
+            const lobbyVideo = document.getElementById('lobbyVideo');
+            const lobbyVideoPlaceholder = document.getElementById('lobbyVideoPlaceholder');
+            const lobbyPlaceholderText = document.getElementById('lobbyPlaceholderText');
+            const lobbyUserName = document.getElementById('lobbyUserName');
+            const lobbyRoomCode = document.getElementById('lobbyRoomCode');
+            const lobbyJoinBtn = document.getElementById('lobbyJoinBtn');
+            const lobbyToggleMic = document.getElementById('lobbyToggleMic');
+            const lobbyToggleCam = document.getElementById('lobbyToggleCam');
+            const lobbyMicSelect = document.getElementById('lobbyMicSelect');
+            const lobbyCamSelect = document.getElementById('lobbyCamSelect');
+            const lobbySpeakerSelect = document.getElementById('lobbySpeakerSelect');
+            const permMic = document.getElementById('permMic');
+            const permCam = document.getElementById('permCam');
+
+            // Device selector buttons
+            const lobbyMicSelector = document.getElementById('lobbyMicSelector');
+            const lobbyCamSelector = document.getElementById('lobbyCamSelector');
+            const lobbySpeakerSelector = document.getElementById('lobbySpeakerSelector');
+            const deviceSelectorModal = document.getElementById('deviceSelectorModal');
+            const deviceSelectorList = document.getElementById('deviceSelectorList');
+            const deviceSelectorTitle = document.getElementById('deviceSelectorTitle');
+            const closeDeviceSelector = document.getElementById('closeDeviceSelector');
+
+            // ============ GET URL PARAMS ============
+            const urlParams = new URLSearchParams(window.location.search);
+            const userName = urlParams.get('name') || 'Usuario';
+            const roomCode = urlParams.get('room') || '---';
+
+            // ============ INITIALIZE LOBBY ============
+            function initLobby() {
+                // Set user info
+                if (lobbyUserName) lobbyUserName.textContent = userName;
+                if (lobbyRoomCode) lobbyRoomCode.textContent = roomCode;
+
+                // Show lobby
+                if (lobbyScreen) {
+                    lobbyScreen.style.display = 'flex';
                 }
-                
-                // Enumerate and populate devices
-                await populateDevices();
-                
-                // Enable join button
-                if (lobbyJoinBtn) {
-                    lobbyJoinBtn.disabled = false;
-                    lobbyJoinBtn.classList.add('ready');
-                }
-                
-            } catch (err) {
-                // Handle specific errors
-                if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-                    updatePermissionStatus('mic', 'denied');
-                    updatePermissionStatus('cam', 'denied');
-                    showLobbyError('Permisos denegados. Habilita cámara y micrófono en la configuración del navegador.');
-                } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
-                    updatePermissionStatus('cam', 'unavailable');
-                    // Try audio only
-                    await tryAudioOnly();
-                } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
-                    updatePermissionStatus('cam', 'in-use');
-                    showLobbyError('La cámara está siendo usada por otra aplicación.');
-                    await tryAudioOnly();
-                } else {
-                    showLobbyError('Error al acceder a los dispositivos: ' + err.message);
-                }
+
+                // Request permissions and start preview
+                requestMediaPermissions();
+
+                // Setup event listeners
+                setupLobbyEventListeners();
             }
-        }
-        
-        // ============ TRY AUDIO ONLY ============
-        async function tryAudioOnly() {
-            try {
-                lobbyStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-                updatePermissionStatus('mic', 'granted');
-                lobbyCamEnabled = false;
-                updateCameraUI();
-                await populateDevices();
-                if (lobbyJoinBtn) {
-                    lobbyJoinBtn.disabled = false;
-                    lobbyJoinBtn.classList.add('ready');
-                }
-            } catch (e) {
-                updatePermissionStatus('mic', 'denied');
-            }
-        }
-        
-        // ============ UPDATE PERMISSION STATUS ============
-        function updatePermissionStatus(device, status) {
-            const el = device === 'mic' ? permMic : permCam;
-            if (!el) return;
-            
-            const icon = el.querySelector('i');
-            const span = el.querySelector('span');
-            
-            // Remove all status classes
-            el.classList.remove('granted', 'denied', 'unavailable', 'in-use');
-            
-            switch(status) {
-                case 'granted':
-                    el.classList.add('granted');
-                    icon.className = 'fas fa-check-circle';
-                    span.textContent = device === 'mic' ? 'Micrófono listo' : 'Cámara lista';
-                    break;
-                case 'denied':
-                    el.classList.add('denied');
-                    icon.className = 'fas fa-times-circle';
-                    span.textContent = device === 'mic' ? 'Micrófono denegado' : 'Cámara denegada';
-                    break;
-                case 'unavailable':
-                    el.classList.add('unavailable');
-                    icon.className = 'fas fa-exclamation-circle';
-                    span.textContent = device === 'mic' ? 'Sin micrófono' : 'Sin cámara';
-                    break;
-                case 'in-use':
-                    el.classList.add('in-use');
-                    icon.className = 'fas fa-exclamation-triangle';
-                    span.textContent = 'En uso por otra app';
-                    break;
-            }
-        }
-        
-        // ============ POPULATE DEVICES ============
-        async function populateDevices() {
-            try {
-                const devices = await navigator.mediaDevices.enumerateDevices();
-                
-                const mics = devices.filter(d => d.kind === 'audioinput');
-                const cams = devices.filter(d => d.kind === 'videoinput');
-                const speakers = devices.filter(d => d.kind === 'audiooutput');
-                
-                // Populate microphone select
-                if (lobbyMicSelect) {
-                    lobbyMicSelect.innerHTML = mics.map((m, i) => 
-                        `<option value="${m.deviceId}">${m.label || 'Micrófono ' + (i+1)}</option>`
-                    ).join('');
-                    
-                    // Select current device
-                    if (lobbyStream) {
-                        const audioTrack = lobbyStream.getAudioTracks()[0];
-                        if (audioTrack) {
-                            const settings = audioTrack.getSettings();
-                            selectedMicId = settings.deviceId;
-                            lobbyMicSelect.value = selectedMicId;
+
+            // ============ REQUEST PERMISSIONS ============
+            async function requestMediaPermissions() {
+                try {
+                    // Request permissions with constraints
+                    lobbyStream = await navigator.mediaDevices.getUserMedia({
+                        video: {
+                            width: { ideal: 640, max: 1280 },
+                            height: { ideal: 480, max: 720 },
+                            frameRate: { ideal: 15, max: 30 }
+                        },
+                        audio: {
+                            echoCancellation: true,
+                            noiseSuppression: true,
+                            autoGainControl: true
                         }
-                    }
-                }
-                
-                // Populate camera select
-                if (lobbyCamSelect) {
-                    lobbyCamSelect.innerHTML = cams.length > 0 
-                        ? cams.map((c, i) => `<option value="${c.deviceId}">${c.label || 'Cámara ' + (i+1)}</option>`).join('')
-                        : '<option value="">Sin cámara disponible</option>';
-                    
-                    if (lobbyStream) {
-                        const videoTrack = lobbyStream.getVideoTracks()[0];
-                        if (videoTrack) {
-                            const settings = videoTrack.getSettings();
-                            selectedCamId = settings.deviceId;
-                            lobbyCamSelect.value = selectedCamId;
-                        }
-                    }
-                }
-                
-                // Populate speaker select
-                if (lobbySpeakerSelect) {
-                    lobbySpeakerSelect.innerHTML = speakers.length > 0
-                        ? speakers.map((s, i) => `<option value="${s.deviceId}">${s.label || 'Altavoz ' + (i+1)}</option>`).join('')
-                        : '<option value="">Altavoz predeterminado</option>';
-                }
-                
-            } catch (err) {
-                // Error enumerando dispositivos
-            }
-        }
-        
-        // ============ CHANGE DEVICE ============
-        async function changeDevice(type, deviceId) {
-            if (!lobbyStream) return;
-            
-            try {
-                const constraints = {};
-                if (type === 'mic') {
-                    constraints.audio = { deviceId: { exact: deviceId } };
-                    constraints.video = false;
-                } else if (type === 'cam') {
-                    constraints.video = { deviceId: { exact: deviceId } };
-                    constraints.audio = false;
-                }
-                
-                const newStream = await navigator.mediaDevices.getUserMedia(constraints);
-                const newTrack = type === 'mic' 
-                    ? newStream.getAudioTracks()[0] 
-                    : newStream.getVideoTracks()[0];
-                
-                if (newTrack) {
-                    // Stop old track
-                    const oldTracks = type === 'mic' 
-                        ? lobbyStream.getAudioTracks() 
-                        : lobbyStream.getVideoTracks();
-                    oldTracks.forEach(t => t.stop());
-                    
-                    // Remove old and add new
-                    oldTracks.forEach(t => lobbyStream.removeTrack(t));
-                    lobbyStream.addTrack(newTrack);
-                    
-                    // Update preview if camera
-                    if (type === 'cam' && lobbyVideo) {
+                    });
+
+                    permissionsGranted = true;
+
+                    // Update permission indicators
+                    updatePermissionStatus('mic', 'granted');
+                    updatePermissionStatus('cam', 'granted');
+
+                    // Set video preview
+                    if (lobbyVideo) {
                         lobbyVideo.srcObject = lobbyStream;
+                        lobbyVideo.play().catch(e => console.warn('[LOBBY] Autoplay warning:', e));
                     }
-                    
-                    // Update selected ID
-                    if (type === 'mic') selectedMicId = deviceId;
-                    else selectedCamId = deviceId;
-                }
-            } catch (err) {
-                showLobbyError(`Error al cambiar ${type === 'mic' ? 'micrófono' : 'cámara'}`);
-            }
-        }
-        
-        // ============ TOGGLE MIC ============
-        function toggleLobbyMic() {
-            if (!lobbyStream) return;
-            
-            lobbyMicEnabled = !lobbyMicEnabled;
-            lobbyStream.getAudioTracks().forEach(t => t.enabled = lobbyMicEnabled);
-            
-            if (lobbyToggleMic) {
-                lobbyToggleMic.classList.toggle('active', lobbyMicEnabled);
-                const icon = lobbyToggleMic.querySelector('i');
-                if (icon) {
-                    icon.className = lobbyMicEnabled ? 'fas fa-microphone' : 'fas fa-microphone-slash';
-                }
-            }
-        }
-        
-        // ============ TOGGLE CAM ============
-        function toggleLobbyCam() {
-            if (!lobbyStream) return;
-            
-            lobbyCamEnabled = !lobbyCamEnabled;
-            
-            const videoTracks = lobbyStream.getVideoTracks();
-            if (lobbyCamEnabled) {
-                // Reactivar cámara
-                videoTracks.forEach(t => t.enabled = true);
-            } else {
-                // Desactivar cámara (pero no hacer stop para poder reactivar)
-                videoTracks.forEach(t => t.enabled = false);
-            }
-            
-            updateCameraUI();
-        }
-        
-        // ============ UPDATE CAMERA UI ============
-        function updateCameraUI() {
-            if (lobbyToggleCam) {
-                lobbyToggleCam.classList.toggle('active', lobbyCamEnabled);
-                const icon = lobbyToggleCam.querySelector('i');
-                if (icon) {
-                    icon.className = lobbyCamEnabled ? 'fas fa-video' : 'fas fa-video-slash';
+
+                    // Enumerate and populate devices
+                    await populateDevices();
+
+                    // Enable join button
+                    if (lobbyJoinBtn) {
+                        lobbyJoinBtn.disabled = false;
+                        lobbyJoinBtn.classList.add('ready');
+                    }
+
+                } catch (err) {
+                    // Handle specific errors
+                    if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                        updatePermissionStatus('mic', 'denied');
+                        updatePermissionStatus('cam', 'denied');
+                        showLobbyError('Permisos denegados. Habilita cámara y micrófono en la configuración del navegador.');
+                    } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+                        updatePermissionStatus('cam', 'unavailable');
+                        // Try audio only
+                        await tryAudioOnly();
+                    } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+                        updatePermissionStatus('cam', 'in-use');
+                        showLobbyError('La cámara está siendo usada por otra aplicación.');
+                        await tryAudioOnly();
+                    } else {
+                        showLobbyError('Error al acceder a los dispositivos: ' + err.message);
+                    }
                 }
             }
-            
-            if (lobbyVideoPlaceholder) {
-                lobbyVideoPlaceholder.classList.toggle('hidden', lobbyCamEnabled);
-            }
-            
-            if (lobbyVideo) {
-                lobbyVideo.style.opacity = lobbyCamEnabled ? '1' : '0';
-            }
-        }
-        
-        // ============ SHOW DEVICE SELECTOR MODAL ============
-        function showDeviceSelector(type) {
-            if (!deviceSelectorModal || !deviceSelectorList) return;
-            
-            let devices = [];
-            let title = '';
-            let currentId = null;
-            
-            navigator.mediaDevices.enumerateDevices().then(allDevices => {
-                if (type === 'mic') {
-                    devices = allDevices.filter(d => d.kind === 'audioinput');
-                    title = 'Seleccionar micrófono';
-                    currentId = selectedMicId;
-                } else if (type === 'cam') {
-                    devices = allDevices.filter(d => d.kind === 'videoinput');
-                    title = 'Seleccionar cámara';
-                    currentId = selectedCamId;
-                } else if (type === 'speaker') {
-                    devices = allDevices.filter(d => d.kind === 'audiooutput');
-                    title = 'Seleccionar altavoz';
-                    currentId = selectedSpeakerId;
+
+            // ============ TRY AUDIO ONLY ============
+            async function tryAudioOnly() {
+                try {
+                    lobbyStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                    updatePermissionStatus('mic', 'granted');
+                    lobbyCamEnabled = false;
+                    updateCameraUI();
+                    await populateDevices();
+                    if (lobbyJoinBtn) {
+                        lobbyJoinBtn.disabled = false;
+                        lobbyJoinBtn.classList.add('ready');
+                    }
+                } catch (e) {
+                    updatePermissionStatus('mic', 'denied');
                 }
-                
-                deviceSelectorTitle.textContent = title;
-                deviceSelectorList.innerHTML = devices.map((d, i) => `
+            }
+
+            // ============ UPDATE PERMISSION STATUS ============
+            function updatePermissionStatus(device, status) {
+                const el = device === 'mic' ? permMic : permCam;
+                if (!el) return;
+
+                const icon = el.querySelector('i');
+                const span = el.querySelector('span');
+
+                // Remove all status classes
+                el.classList.remove('granted', 'denied', 'unavailable', 'in-use');
+
+                switch (status) {
+                    case 'granted':
+                        el.classList.add('granted');
+                        icon.className = 'fas fa-check-circle';
+                        span.textContent = device === 'mic' ? 'Micrófono listo' : 'Cámara lista';
+                        break;
+                    case 'denied':
+                        el.classList.add('denied');
+                        icon.className = 'fas fa-times-circle';
+                        span.textContent = device === 'mic' ? 'Micrófono denegado' : 'Cámara denegada';
+                        break;
+                    case 'unavailable':
+                        el.classList.add('unavailable');
+                        icon.className = 'fas fa-exclamation-circle';
+                        span.textContent = device === 'mic' ? 'Sin micrófono' : 'Sin cámara';
+                        break;
+                    case 'in-use':
+                        el.classList.add('in-use');
+                        icon.className = 'fas fa-exclamation-triangle';
+                        span.textContent = 'En uso por otra app';
+                        break;
+                }
+            }
+
+            // ============ POPULATE DEVICES ============
+            async function populateDevices() {
+                try {
+                    const devices = await navigator.mediaDevices.enumerateDevices();
+
+                    const mics = devices.filter(d => d.kind === 'audioinput');
+                    const cams = devices.filter(d => d.kind === 'videoinput');
+                    const speakers = devices.filter(d => d.kind === 'audiooutput');
+
+                    // Populate microphone select
+                    if (lobbyMicSelect) {
+                        lobbyMicSelect.innerHTML = mics.map((m, i) =>
+                            `<option value="${m.deviceId}">${m.label || 'Micrófono ' + (i + 1)}</option>`
+                        ).join('');
+
+                        // Select current device
+                        if (lobbyStream) {
+                            const audioTrack = lobbyStream.getAudioTracks()[0];
+                            if (audioTrack) {
+                                const settings = audioTrack.getSettings();
+                                selectedMicId = settings.deviceId;
+                                lobbyMicSelect.value = selectedMicId;
+                            }
+                        }
+                    }
+
+                    // Populate camera select
+                    if (lobbyCamSelect) {
+                        lobbyCamSelect.innerHTML = cams.length > 0
+                            ? cams.map((c, i) => `<option value="${c.deviceId}">${c.label || 'Cámara ' + (i + 1)}</option>`).join('')
+                            : '<option value="">Sin cámara disponible</option>';
+
+                        if (lobbyStream) {
+                            const videoTrack = lobbyStream.getVideoTracks()[0];
+                            if (videoTrack) {
+                                const settings = videoTrack.getSettings();
+                                selectedCamId = settings.deviceId;
+                                lobbyCamSelect.value = selectedCamId;
+                            }
+                        }
+                    }
+
+                    // Populate speaker select
+                    if (lobbySpeakerSelect) {
+                        lobbySpeakerSelect.innerHTML = speakers.length > 0
+                            ? speakers.map((s, i) => `<option value="${s.deviceId}">${s.label || 'Altavoz ' + (i + 1)}</option>`).join('')
+                            : '<option value="">Altavoz predeterminado</option>';
+                    }
+
+                } catch (err) {
+                    // Error enumerando dispositivos
+                }
+            }
+
+            // ============ CHANGE DEVICE ============
+            async function changeDevice(type, deviceId) {
+                if (!lobbyStream) return;
+
+                try {
+                    const constraints = {};
+                    if (type === 'mic') {
+                        constraints.audio = { deviceId: { exact: deviceId } };
+                        constraints.video = false;
+                    } else if (type === 'cam') {
+                        constraints.video = { deviceId: { exact: deviceId } };
+                        constraints.audio = false;
+                    }
+
+                    const newStream = await navigator.mediaDevices.getUserMedia(constraints);
+                    const newTrack = type === 'mic'
+                        ? newStream.getAudioTracks()[0]
+                        : newStream.getVideoTracks()[0];
+
+                    if (newTrack) {
+                        // Stop old track
+                        const oldTracks = type === 'mic'
+                            ? lobbyStream.getAudioTracks()
+                            : lobbyStream.getVideoTracks();
+                        oldTracks.forEach(t => t.stop());
+
+                        // Remove old and add new
+                        oldTracks.forEach(t => lobbyStream.removeTrack(t));
+                        lobbyStream.addTrack(newTrack);
+
+                        // Update preview if camera
+                        if (type === 'cam' && lobbyVideo) {
+                            lobbyVideo.srcObject = lobbyStream;
+                        }
+
+                        // Update selected ID
+                        if (type === 'mic') selectedMicId = deviceId;
+                        else selectedCamId = deviceId;
+                    }
+                } catch (err) {
+                    showLobbyError(`Error al cambiar ${type === 'mic' ? 'micrófono' : 'cámara'}`);
+                }
+            }
+
+            // ============ TOGGLE MIC ============
+            function toggleLobbyMic() {
+                if (!lobbyStream) return;
+
+                lobbyMicEnabled = !lobbyMicEnabled;
+                lobbyStream.getAudioTracks().forEach(t => t.enabled = lobbyMicEnabled);
+
+                if (lobbyToggleMic) {
+                    lobbyToggleMic.classList.toggle('active', lobbyMicEnabled);
+                    const icon = lobbyToggleMic.querySelector('i');
+                    if (icon) {
+                        icon.className = lobbyMicEnabled ? 'fas fa-microphone' : 'fas fa-microphone-slash';
+                    }
+                }
+            }
+
+            // ============ TOGGLE CAM ============
+            function toggleLobbyCam() {
+                if (!lobbyStream) return;
+
+                lobbyCamEnabled = !lobbyCamEnabled;
+
+                const videoTracks = lobbyStream.getVideoTracks();
+                if (lobbyCamEnabled) {
+                    // Reactivar cámara
+                    videoTracks.forEach(t => t.enabled = true);
+                } else {
+                    // Desactivar cámara (pero no hacer stop para poder reactivar)
+                    videoTracks.forEach(t => t.enabled = false);
+                }
+
+                updateCameraUI();
+            }
+
+            // ============ UPDATE CAMERA UI ============
+            function updateCameraUI() {
+                if (lobbyToggleCam) {
+                    lobbyToggleCam.classList.toggle('active', lobbyCamEnabled);
+                    const icon = lobbyToggleCam.querySelector('i');
+                    if (icon) {
+                        icon.className = lobbyCamEnabled ? 'fas fa-video' : 'fas fa-video-slash';
+                    }
+                }
+
+                if (lobbyVideoPlaceholder) {
+                    lobbyVideoPlaceholder.classList.toggle('hidden', lobbyCamEnabled);
+                }
+
+                if (lobbyVideo) {
+                    lobbyVideo.style.opacity = lobbyCamEnabled ? '1' : '0';
+                }
+            }
+
+            // ============ SHOW DEVICE SELECTOR MODAL ============
+            function showDeviceSelector(type) {
+                if (!deviceSelectorModal || !deviceSelectorList) return;
+
+                let devices = [];
+                let title = '';
+                let currentId = null;
+
+                navigator.mediaDevices.enumerateDevices().then(allDevices => {
+                    if (type === 'mic') {
+                        devices = allDevices.filter(d => d.kind === 'audioinput');
+                        title = 'Seleccionar micrófono';
+                        currentId = selectedMicId;
+                    } else if (type === 'cam') {
+                        devices = allDevices.filter(d => d.kind === 'videoinput');
+                        title = 'Seleccionar cámara';
+                        currentId = selectedCamId;
+                    } else if (type === 'speaker') {
+                        devices = allDevices.filter(d => d.kind === 'audiooutput');
+                        title = 'Seleccionar altavoz';
+                        currentId = selectedSpeakerId;
+                    }
+
+                    deviceSelectorTitle.textContent = title;
+                    deviceSelectorList.innerHTML = devices.map((d, i) => `
                     <div class="device-option ${d.deviceId === currentId ? 'selected' : ''}" 
                          data-device-id="${d.deviceId}" data-type="${type}">
                         <i class="fas fa-${type === 'mic' ? 'microphone' : type === 'cam' ? 'video' : 'volume-up'}"></i>
-                        <span>${d.label || (type === 'mic' ? 'Micrófono' : type === 'cam' ? 'Cámara' : 'Altavoz') + ' ' + (i+1)}</span>
+                        <span>${d.label || (type === 'mic' ? 'Micrófono' : type === 'cam' ? 'Cámara' : 'Altavoz') + ' ' + (i + 1)}</span>
                     </div>
                 `).join('');
-                
-                // Add click handlers
-                deviceSelectorList.querySelectorAll('.device-option').forEach(opt => {
-                    opt.addEventListener('click', () => {
-                        const deviceId = opt.dataset.deviceId;
-                        const deviceType = opt.dataset.type;
-                        
-                        if (deviceType === 'speaker') {
-                            selectedSpeakerId = deviceId;
-                            if (lobbySpeakerSelect) lobbySpeakerSelect.value = deviceId;
-                        } else {
-                            changeDevice(deviceType, deviceId);
-                            if (deviceType === 'mic' && lobbyMicSelect) lobbyMicSelect.value = deviceId;
-                            if (deviceType === 'cam' && lobbyCamSelect) lobbyCamSelect.value = deviceId;
-                        }
-                        
-                        deviceSelectorModal.style.display = 'none';
+
+                    // Add click handlers
+                    deviceSelectorList.querySelectorAll('.device-option').forEach(opt => {
+                        opt.addEventListener('click', () => {
+                            const deviceId = opt.dataset.deviceId;
+                            const deviceType = opt.dataset.type;
+
+                            if (deviceType === 'speaker') {
+                                selectedSpeakerId = deviceId;
+                                if (lobbySpeakerSelect) lobbySpeakerSelect.value = deviceId;
+                            } else {
+                                changeDevice(deviceType, deviceId);
+                                if (deviceType === 'mic' && lobbyMicSelect) lobbyMicSelect.value = deviceId;
+                                if (deviceType === 'cam' && lobbyCamSelect) lobbyCamSelect.value = deviceId;
+                            }
+
+                            deviceSelectorModal.style.display = 'none';
+                        });
                     });
+
+                    deviceSelectorModal.style.display = 'flex';
                 });
-                
-                deviceSelectorModal.style.display = 'flex';
-            });
-        }
-        
-        // ============ SHOW LOBBY ERROR ============
-        function showLobbyError(message) {
-            // Use existing showError if available, or create a toast
-            if (typeof window.showError === 'function') {
-                window.showError(message, 5000);
-            } else {
-                const toast = document.createElement('div');
-                toast.className = 'lobby-toast';
-                toast.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${message}`;
-                toast.style.cssText = `
+            }
+
+            // ============ SHOW LOBBY ERROR ============
+            function showLobbyError(message) {
+                // Use existing showError if available, or create a toast
+                if (typeof window.showError === 'function') {
+                    window.showError(message, 5000);
+                } else {
+                    const toast = document.createElement('div');
+                    toast.className = 'lobby-toast';
+                    toast.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${message}`;
+                    toast.style.cssText = `
                     position: fixed;
                     bottom: 20px;
                     left: 50%;
@@ -12250,156 +12723,363 @@
                     gap: 8px;
                     font-size: 14px;
                 `;
-                document.body.appendChild(toast);
-                setTimeout(() => toast.remove(), 5000);
+                    document.body.appendChild(toast);
+                    setTimeout(() => toast.remove(), 5000);
+                }
             }
-        }
-        
-        // ==============================
-        // COPY ROOM LINK - init
-        // Adds a small "copiar enlace" button that copies an index URL prefilled with the room code
-        // ==============================
-        (function initCopyRoomLink() {
-            document.addEventListener('DOMContentLoaded', () => {
-                const btn = document.getElementById('copyRoomLinkBtn');
-                if (!btn) return;
 
-                function showCopied(message) {
-                    if (typeof window.showLobbyError === 'function') {
-                        showLobbyError(message);
-                    } else if (typeof window.showError === 'function') {
-                        showError(message, 3000);
-                    } else {
-                        const toast = document.createElement('div');
-                        toast.className = 'lobby-toast';
-                        toast.textContent = message;
-                        toast.style.cssText = `position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: white; padding: 8px 14px; border-radius: 8px; z-index:100000;`;
-                        document.body.appendChild(toast);
-                        setTimeout(() => toast.remove(), 3000);
-                    }
-                }
+            // ==============================
+            // COPY ROOM LINK - init
+            // Adds a small "copiar enlace" button that copies an index URL prefilled with the room code
+            // ==============================
+            (function initCopyRoomLink() {
+                document.addEventListener('DOMContentLoaded', () => {
+                    const btn = document.getElementById('copyRoomLinkBtn');
+                    if (!btn) return;
 
-                function fallbackCopy(text) {
-                    const ta = document.createElement('textarea');
-                    ta.value = text;
-                    ta.style.position = 'fixed';
-                    ta.style.left = '-9999px';
-                    document.body.appendChild(ta);
-                    ta.select();
-                    try {
-                        document.execCommand('copy');
-                        showCopied('Enlace copiado al portapapeles');
-                    } catch (e) {
-                        showCopied('No se pudo copiar el enlace');
-                    }
-                    ta.remove();
-                }
-
-                btn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    const codeEl = document.getElementById('roomCode');
-                    let code = codeEl ? codeEl.textContent.trim() : '';
-                    if (!code) {
-                        code = (new URLSearchParams(window.location.search)).get('room') || '';
-                    }
-                    if (!code) {
-                        showCopied('Código de sala no disponible');
-                        return;
+                    function showCopied(message) {
+                        if (typeof window.showLobbyError === 'function') {
+                            showLobbyError(message);
+                        } else if (typeof window.showError === 'function') {
+                            showError(message, 3000);
+                        } else {
+                            const toast = document.createElement('div');
+                            toast.className = 'lobby-toast';
+                            toast.textContent = message;
+                            toast.style.cssText = `position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: white; padding: 8px 14px; border-radius: 8px; z-index:100000;`;
+                            document.body.appendChild(toast);
+                            setTimeout(() => toast.remove(), 3000);
+                        }
                     }
 
-                    // Build an index URL that pre-fills the room code on the landing page
-                    const indexUrl = `${window.location.origin}/?room=${encodeURIComponent(code)}`;
-
-                    if (navigator.clipboard && navigator.clipboard.writeText) {
-                        navigator.clipboard.writeText(indexUrl).then(() => {
+                    function fallbackCopy(text) {
+                        const ta = document.createElement('textarea');
+                        ta.value = text;
+                        ta.style.position = 'fixed';
+                        ta.style.left = '-9999px';
+                        document.body.appendChild(ta);
+                        ta.select();
+                        try {
+                            document.execCommand('copy');
                             showCopied('Enlace copiado al portapapeles');
-                        }).catch(() => fallbackCopy(indexUrl));
-                    } else {
-                        fallbackCopy(indexUrl);
+                        } catch (e) {
+                            showCopied('No se pudo copiar el enlace');
+                        }
+                        ta.remove();
                     }
+
+                    btn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        const codeEl = document.getElementById('roomCode');
+                        let code = codeEl ? codeEl.textContent.trim() : '';
+                        if (!code) {
+                            code = (new URLSearchParams(window.location.search)).get('room') || '';
+                        }
+                        if (!code) {
+                            showCopied('Código de sala no disponible');
+                            return;
+                        }
+
+                        // Build an index URL that pre-fills the room code on the landing page
+                        const indexUrl = `${window.location.origin}/?room=${encodeURIComponent(code)}`;
+
+                        if (navigator.clipboard && navigator.clipboard.writeText) {
+                            navigator.clipboard.writeText(indexUrl).then(() => {
+                                showCopied('Enlace copiado al portapapeles');
+                            }).catch(() => fallbackCopy(indexUrl));
+                        } else {
+                            fallbackCopy(indexUrl);
+                        }
+                    });
                 });
+            })();
+
+            // ============ JOIN MEETING ============
+            function joinMeeting() {
+                // Store settings for main app
+                window.lobbySettings = {
+                    stream: lobbyStream,
+                    micEnabled: lobbyMicEnabled,
+                    camEnabled: lobbyCamEnabled,
+                    selectedMicId: selectedMicId,
+                    selectedCamId: selectedCamId,
+                    selectedSpeakerId: selectedSpeakerId
+                };
+
+                // Hide lobby
+                if (lobbyScreen) {
+                    lobbyScreen.classList.add('lobby-exiting');
+                    setTimeout(() => {
+                        lobbyScreen.style.display = 'none';
+                        lobbyScreen.classList.remove('lobby-exiting');
+                    }, 300);
+                }
+
+                // Signal that lobby is complete
+                window.lobbyComplete = true;
+
+                // Dispatch custom event
+                document.dispatchEvent(new CustomEvent('lobbyComplete', {
+                    detail: window.lobbySettings
+                }));
+                // Persist acceptance so reloads on the same device can skip the lobby
+                try {
+                    const key = `lobbyAccepted:${roomCode}`;
+                    localStorage.setItem(key, JSON.stringify({ ts: Date.now() }));
+                } catch (err) {
+                    // Ignore storage errors
+                }
+            }
+
+            // ============ SETUP EVENT LISTENERS ============
+            function setupLobbyEventListeners() {
+                // Toggle mic
+                lobbyToggleMic?.addEventListener('click', toggleLobbyMic);
+
+                // Toggle cam
+                lobbyToggleCam?.addEventListener('click', toggleLobbyCam);
+
+                // Join button
+                lobbyJoinBtn?.addEventListener('click', joinMeeting);
+
+                // Device selectors (small buttons)
+                lobbyMicSelector?.addEventListener('click', () => showDeviceSelector('mic'));
+                lobbyCamSelector?.addEventListener('click', () => showDeviceSelector('cam'));
+                lobbySpeakerSelector?.addEventListener('click', () => showDeviceSelector('speaker'));
+
+                // Device select dropdowns
+                lobbyMicSelect?.addEventListener('change', (e) => changeDevice('mic', e.target.value));
+                lobbyCamSelect?.addEventListener('change', (e) => changeDevice('cam', e.target.value));
+                lobbySpeakerSelect?.addEventListener('change', (e) => {
+                    selectedSpeakerId = e.target.value;
+                });
+
+                // Close device selector modal
+                closeDeviceSelector?.addEventListener('click', () => {
+                    if (deviceSelectorModal) deviceSelectorModal.style.display = 'none';
+                });
+                deviceSelectorModal?.addEventListener('click', (e) => {
+                    if (e.target === deviceSelectorModal) deviceSelectorModal.style.display = 'none';
+                });
+
+                // Handle device changes
+                navigator.mediaDevices.addEventListener('devicechange', populateDevices);
+            }
+
+            // ============ INIT ON DOM READY ============
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initLobby);
+            } else {
+                initLobby();
+            }
+
+            // ============ EXPOSE FOR MAIN SCRIPT ============
+            window.lobbySystem = {
+                getSettings: () => window.lobbySettings,
+                isComplete: () => window.lobbyComplete === true
+            };
+
+        })();
+    </script>
+
+    <!-- ============================================ -->
+    <!-- MOBILE CONTROLS SIDEBAR - SCREEN SHARE MODE -->
+    <!-- ============================================ -->
+    <script>
+        (function initMobileControlsSidebar() {
+            'use strict';
+
+            const sidebar = document.getElementById('mobileControlsSidebar');
+            const overlay = document.getElementById('mobileControlsOverlay');
+            const toggleBtn = document.getElementById('mobileControlsToggle');
+            const closeBtn = document.getElementById('closeMobileControlsSidebar');
+
+            // Sidebar buttons
+            const sidebarMic = document.getElementById('sidebarToggleMic');
+            const sidebarCam = document.getElementById('sidebarToggleCam');
+            const sidebarStopScreen = document.getElementById('sidebarStopScreenShare');
+            const sidebarRaiseHand = document.getElementById('sidebarRaiseHand');
+            const sidebarParticipants = document.getElementById('sidebarParticipants');
+            const sidebarChat = document.getElementById('sidebarChat');
+            const sidebarCreatePoll = document.getElementById('sidebarCreatePoll');
+            const sidebarViewControl = document.getElementById('sidebarViewControl');
+            const sidebarTheme = document.getElementById('sidebarThemeToggle');
+            const sidebarLeave = document.getElementById('sidebarLeave');
+
+            // Original header controls
+            const headerMic = document.getElementById('toggleMic');
+            const headerCam = document.getElementById('toggleCam');
+            const headerShareScreen = document.getElementById('shareScreen');
+            const headerRaiseHand = document.getElementById('raiseHand');
+            const headerParticipants = document.getElementById('participantsToggle');
+            const headerChat = document.getElementById('chatToggle');
+            const headerCreatePoll = document.getElementById('createPollBtn');
+            const headerViewControl = document.getElementById('viewControlToggle');
+            const headerTheme = document.getElementById('themeToggle');
+            const headerLeave = document.getElementById('leaveBtn');
+
+            function isMobileDevice() {
+                return window.innerWidth <= 900;
+            }
+
+            function openSidebar() {
+                if (sidebar) sidebar.classList.add('active');
+                if (overlay) overlay.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            }
+
+            function closeSidebar() {
+                if (sidebar) sidebar.classList.remove('active');
+                if (overlay) overlay.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+
+            // Toggle sidebar
+            toggleBtn?.addEventListener('click', openSidebar);
+            closeBtn?.addEventListener('click', closeSidebar);
+            overlay?.addEventListener('click', closeSidebar);
+
+            // Sidebar button actions - delegate to original header buttons
+            sidebarMic?.addEventListener('click', () => {
+                headerMic?.click();
+                syncButtonStates();
+            });
+
+            sidebarCam?.addEventListener('click', () => {
+                headerCam?.click();
+                syncButtonStates();
+            });
+
+            sidebarStopScreen?.addEventListener('click', () => {
+                // Call stopScreenSharing directly from script.js
+                if (typeof stopScreenSharing === 'function') {
+                    stopScreenSharing();
+                } else {
+                    headerShareScreen?.click();
+                }
+                closeSidebar();
+            });
+
+            sidebarRaiseHand?.addEventListener('click', () => {
+                headerRaiseHand?.click();
+                syncButtonStates();
+            });
+
+            sidebarParticipants?.addEventListener('click', () => {
+                headerParticipants?.click();
+                closeSidebar();
+            });
+
+            sidebarChat?.addEventListener('click', () => {
+                headerChat?.click();
+                closeSidebar();
+            });
+
+            sidebarCreatePoll?.addEventListener('click', () => {
+                headerCreatePoll?.click();
+                closeSidebar();
+            });
+
+            sidebarViewControl?.addEventListener('click', () => {
+                headerViewControl?.click();
+                closeSidebar();
+            });
+
+            sidebarTheme?.addEventListener('click', () => {
+                headerTheme?.click();
+                syncButtonStates();
+            });
+
+            sidebarLeave?.addEventListener('click', () => {
+                headerLeave?.click();
+                closeSidebar();
+            });
+
+            // Sync button active states from header to sidebar
+            function syncButtonStates() {
+                if (sidebarMic && headerMic) {
+                    sidebarMic.classList.toggle('active', headerMic.classList.contains('active'));
+                    const icon = sidebarMic.querySelector('i');
+                    if (icon) {
+                        icon.className = headerMic.classList.contains('active') 
+                            ? 'fas fa-microphone' 
+                            : 'fas fa-microphone-slash';
+                    }
+                }
+                if (sidebarCam && headerCam) {
+                    sidebarCam.classList.toggle('active', headerCam.classList.contains('active'));
+                    const icon = sidebarCam.querySelector('i');
+                    if (icon) {
+                        icon.className = headerCam.classList.contains('active') 
+                            ? 'fas fa-video' 
+                            : 'fas fa-video-slash';
+                    }
+                }
+                if (sidebarRaiseHand && headerRaiseHand) {
+                    sidebarRaiseHand.classList.toggle('active', headerRaiseHand.classList.contains('active'));
+                }
+                // Theme icon sync
+                if (sidebarTheme && headerTheme) {
+                    const headerIcon = headerTheme.querySelector('i');
+                    const sidebarIcon = sidebarTheme.querySelector('i');
+                    if (headerIcon && sidebarIcon) {
+                        sidebarIcon.className = headerIcon.className;
+                    }
+                }
+                // Show create poll button if moderator
+                if (sidebarCreatePoll && headerCreatePoll) {
+                    sidebarCreatePoll.style.display = headerCreatePoll.style.display;
+                }
+            }
+
+            // Detect screen share status and toggle mobile-screenshare-mode
+            function checkScreenShareMode() {
+                const hasScreenShare = document.querySelector('.screen-share, .screen-share-preview');
+                const isMobile = isMobileDevice();
+
+                if (hasScreenShare && isMobile) {
+                    document.body.classList.add('mobile-screenshare-mode');
+                } else {
+                    document.body.classList.remove('mobile-screenshare-mode');
+                    closeSidebar();
+                }
+            }
+
+            // MutationObserver to watch for screen share elements
+            const videoGrid = document.getElementById('videoGrid');
+            if (videoGrid) {
+                const observer = new MutationObserver(() => {
+                    checkScreenShareMode();
+                    syncButtonStates();
+                });
+                observer.observe(videoGrid, { childList: true, subtree: true });
+            }
+
+            // Also check on window resize
+            let resizeTimeout;
+            window.addEventListener('resize', () => {
+                clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(() => {
+                    checkScreenShareMode();
+                }, 150);
+            });
+
+            // Initial checks
+            setTimeout(() => {
+                checkScreenShareMode();
+                syncButtonStates();
+            }, 500);
+
+            // Periodic sync for button states
+            setInterval(syncButtonStates, 2000);
+
+            // Close sidebar on Escape key
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && sidebar?.classList.contains('active')) {
+                    closeSidebar();
+                }
             });
         })();
-
-        // ============ JOIN MEETING ============
-        function joinMeeting() {
-            // Store settings for main app
-            window.lobbySettings = {
-                stream: lobbyStream,
-                micEnabled: lobbyMicEnabled,
-                camEnabled: lobbyCamEnabled,
-                selectedMicId: selectedMicId,
-                selectedCamId: selectedCamId,
-                selectedSpeakerId: selectedSpeakerId
-            };
-            
-            // Hide lobby
-            if (lobbyScreen) {
-                lobbyScreen.classList.add('lobby-exiting');
-                setTimeout(() => {
-                    lobbyScreen.style.display = 'none';
-                    lobbyScreen.classList.remove('lobby-exiting');
-                }, 300);
-            }
-            
-            // Signal that lobby is complete
-            window.lobbyComplete = true;
-            
-            // Dispatch custom event
-            document.dispatchEvent(new CustomEvent('lobbyComplete', {
-                detail: window.lobbySettings
-            }));
-        }
-        
-        // ============ SETUP EVENT LISTENERS ============
-        function setupLobbyEventListeners() {
-            // Toggle mic
-            lobbyToggleMic?.addEventListener('click', toggleLobbyMic);
-            
-            // Toggle cam
-            lobbyToggleCam?.addEventListener('click', toggleLobbyCam);
-            
-            // Join button
-            lobbyJoinBtn?.addEventListener('click', joinMeeting);
-            
-            // Device selectors (small buttons)
-            lobbyMicSelector?.addEventListener('click', () => showDeviceSelector('mic'));
-            lobbyCamSelector?.addEventListener('click', () => showDeviceSelector('cam'));
-            lobbySpeakerSelector?.addEventListener('click', () => showDeviceSelector('speaker'));
-            
-            // Device select dropdowns
-            lobbyMicSelect?.addEventListener('change', (e) => changeDevice('mic', e.target.value));
-            lobbyCamSelect?.addEventListener('change', (e) => changeDevice('cam', e.target.value));
-            lobbySpeakerSelect?.addEventListener('change', (e) => {
-                selectedSpeakerId = e.target.value;
-            });
-            
-            // Close device selector modal
-            closeDeviceSelector?.addEventListener('click', () => {
-                if (deviceSelectorModal) deviceSelectorModal.style.display = 'none';
-            });
-            deviceSelectorModal?.addEventListener('click', (e) => {
-                if (e.target === deviceSelectorModal) deviceSelectorModal.style.display = 'none';
-            });
-            
-            // Handle device changes
-            navigator.mediaDevices.addEventListener('devicechange', populateDevices);
-        }
-        
-        // ============ INIT ON DOM READY ============
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initLobby);
-        } else {
-            initLobby();
-        }
-        
-        // ============ EXPOSE FOR MAIN SCRIPT ============
-        window.lobbySystem = {
-            getSettings: () => window.lobbySettings,
-            isComplete: () => window.lobbyComplete === true
-        };
-        
-    })();
     </script>
 
     <!-- Sistema de Control de Vistas - Totalmente Independiente -->
