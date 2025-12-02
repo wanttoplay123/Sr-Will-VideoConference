@@ -4933,6 +4933,27 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ============ ESPERAR A QUE EL LOBBY COMPLETE ============
     // Si hay un sistema de lobby, esperar hasta que el usuario haga click en "Unirme"
     const lobbyScreen = document.getElementById('lobbyScreen');
+
+    // Check for a recent local acceptance to skip lobby on reload
+    try {
+        const key = `lobbyAccepted:${roomCode}`;
+        const raw = localStorage.getItem(key);
+        if (raw) {
+            const parsed = JSON.parse(raw);
+            const TTL = 60 * 60 * 1000; // 1 hour
+            if (parsed && parsed.ts && (Date.now() - parsed.ts) < TTL) {
+                // Hide lobby UI if present
+                if (lobbyScreen) {
+                    lobbyScreen.style.display = 'none';
+                }
+                // Signal that lobby is complete so the rest of the init flows
+                window.lobbyComplete = true;
+                document.dispatchEvent(new CustomEvent('lobbyComplete', { detail: {} }));
+            }
+        }
+    } catch (e) {
+        // Ignore parse/storage errors and fall back to normal lobby flow
+    }
     if (lobbyScreen && lobbyScreen.style.display !== 'none') {
         await new Promise((resolve) => {
             document.addEventListener('lobbyComplete', (e) => {
@@ -5079,6 +5100,14 @@ document.getElementById('leaveBtn')?.addEventListener('click', () => {
     // Cerrar WebSocket
     if (ws) {
         ws.close(1000, 'Usuario salió de la sala');
+    }
+
+    // Remove persisted lobby acceptance for this room
+    try {
+        const key = `lobbyAccepted:${roomCode}`;
+        localStorage.removeItem(key);
+    } catch (e) {
+        // ignore
     }
 
     showError('Saliendo de la sala...', 2000);
