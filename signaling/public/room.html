@@ -2123,10 +2123,12 @@
 
         .minimized-details {
             display: flex;
-            flex-direction: column;
-            gap: 2px;
+            flex-direction: row;
+            align-items: center;
+            gap: 8px;
             font-size: 14px;
             font-weight: 600;
+            white-space: nowrap;
         }
 
         #minimizedVoteCount {
@@ -2134,10 +2136,12 @@
             align-items: center;
             gap: 6px;
             background: rgba(255, 255, 255, 0.15);
-            padding: 4px 12px;
+            padding: 4px 10px;
             border-radius: 12px;
             font-weight: 700;
             backdrop-filter: blur(10px);
+            white-space: nowrap;
+            font-size: 13px;
         }
 
         body.light-theme #minimizedVoteCount {
@@ -2146,13 +2150,15 @@
 
         #minimizedVoteCount::before {
             content: '👥';
-            font-size: 14px;
+            font-size: 12px;
         }
 
         #minimizedTimer {
             display: flex;
             align-items: center;
             gap: 4px;
+            white-space: nowrap;
+            font-size: 13px;
             animation: pulse-timer 2s ease-in-out infinite;
         }
 
@@ -2171,7 +2177,7 @@
         }
 
         .modal.minimized .minimized-results-view .restore-modal {
-            display: flex;
+            display: flex !important;
             align-items: center;
             justify-content: center;
             width: 36px;
@@ -2185,6 +2191,7 @@
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             backdrop-filter: blur(10px);
             margin-left: 8px;
+            flex-shrink: 0;
         }
 
         body.light-theme .modal.minimized .minimized-results-view .restore-modal {
@@ -3510,6 +3517,18 @@
         #pollResultsPanel button:hover {
             transform: translateY(-2px);
             box-shadow: var(--shadow-lg);
+        }
+
+        /* Botón verde de Mostrar a Todos */
+        #pollResultsPanel #shareResultsBtn,
+        #pollResultsPanel .share-results-btn {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+        }
+
+        #pollResultsPanel #shareResultsBtn:hover,
+        #pollResultsPanel .share-results-btn:hover {
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
         }
 
         #pollResultsPanel #endPollBtn {
@@ -9070,10 +9089,12 @@
             }
 
             #pollResultsPanel.minimized .minimized-results-view .restore-modal {
+                display: flex !important;
                 width: 28px !important;
                 height: 28px !important;
                 min-width: 28px !important;
                 font-size: 12px !important;
+                flex-shrink: 0 !important;
             }
 
             #pollResultsPanel.minimized .minimized-details {
@@ -9124,35 +9145,54 @@
         /* Mejoras para dispositivos muy pequeños */
         @media screen and (max-width: 480px) {
             .modal.minimized .modal-content {
-                min-width: 180px !important;
-                padding: 12px 18px !important;
+                min-width: auto !important;
+                max-width: 90vw !important;
+                padding: 10px 14px !important;
             }
 
             .minimized-icon {
-                font-size: 24px !important;
+                font-size: 20px !important;
             }
 
             .minimized-title {
-                font-size: 14px !important;
+                font-size: 13px !important;
             }
 
             .minimized-details {
-                font-size: 12px !important;
+                font-size: 11px !important;
+                flex-direction: row !important;
+                gap: 6px !important;
             }
 
             #minimizedVoteCount {
-                padding: 3px 10px !important;
-                font-size: 12px !important;
+                padding: 2px 8px !important;
+                font-size: 11px !important;
+            }
+
+            #minimizedVoteCount::before {
+                font-size: 10px !important;
+            }
+
+            #minimizedTimer {
+                font-size: 11px !important;
             }
 
             .modal.minimized .minimized-results-view {
-                gap: 12px !important;
+                gap: 8px !important;
+                flex-wrap: nowrap !important;
+            }
+
+            .minimized-separator {
+                display: none !important;
             }
 
             .modal.minimized .minimized-results-view .restore-modal {
-                width: 32px !important;
-                height: 32px !important;
-                font-size: 14px !important;
+                display: flex !important;
+                width: 30px !important;
+                height: 30px !important;
+                min-width: 30px !important;
+                font-size: 12px !important;
+                flex-shrink: 0 !important;
             }
 
             #pollResultsPanel .header-controls-results button {
@@ -9379,17 +9419,41 @@
            ============================================ */
         @media screen and (max-width: 900px) {
             /* Cuando hay screen share activo en móvil */
+            body.mobile-screenshare-mode {
+                overflow: hidden !important;
+            }
+
             body.mobile-screenshare-mode #header {
                 display: none !important;
+                height: 0 !important;
+                min-height: 0 !important;
+                overflow: hidden !important;
             }
 
             body.mobile-screenshare-mode #main {
+                position: fixed !important;
+                top: 0 !important;
+                left: 0 !important;
+                right: 0 !important;
+                bottom: 0 !important;
+                width: 100vw !important;
+                height: 100vh !important;
                 height: 100dvh !important;
+                margin: 0 !important;
+                padding: 0 !important;
             }
 
             body.mobile-screenshare-mode #videoSection {
+                position: fixed !important;
+                top: 0 !important;
+                left: 0 !important;
+                right: 0 !important;
+                bottom: 0 !important;
+                width: 100vw !important;
+                height: 100vh !important;
                 height: 100dvh !important;
                 padding: 0 !important;
+                margin: 0 !important;
             }
 
             /* Ocultar cámaras de participantes cuando hay screen share */
@@ -9397,43 +9461,83 @@
                 display: none !important;
             }
 
-            body.mobile-screenshare-mode #videoGrid .video-container:not(.screen-share):not(.screen-share-preview) {
+            body.mobile-screenshare-mode #videoGrid > .video-container:not(.screen-share):not(.screen-share-preview) {
                 display: none !important;
             }
 
             /* Pantalla compartida a pantalla completa */
             body.mobile-screenshare-mode #videoGrid {
-                display: flex !important;
-                flex-direction: column !important;
+                position: fixed !important;
+                top: 0 !important;
+                left: 0 !important;
+                right: 0 !important;
+                bottom: 0 !important;
+                width: 100vw !important;
+                height: 100vh !important;
+                height: 100dvh !important;
                 padding: 0 !important;
-                gap: 0 !important;
+                margin: 0 !important;
+                display: block !important;
+                background: #000 !important;
             }
 
             body.mobile-screenshare-mode #videoGrid .video-container.screen-share,
             body.mobile-screenshare-mode #videoGrid .screen-share-preview {
-                flex: 1 !important;
-                width: 100% !important;
+                position: fixed !important;
+                top: 0 !important;
+                left: 0 !important;
+                right: 0 !important;
+                bottom: 0 !important;
+                width: 100vw !important;
+                height: 100vh !important;
                 height: 100dvh !important;
-                max-height: 100dvh !important;
-                min-height: 100dvh !important;
+                max-width: 100vw !important;
+                max-height: 100vh !important;
+                min-width: 100vw !important;
+                min-height: 100vh !important;
                 border-radius: 0 !important;
                 margin: 0 !important;
+                padding: 0 !important;
                 aspect-ratio: unset !important;
+                z-index: 9998 !important;
+                background: #000 !important;
             }
 
             body.mobile-screenshare-mode #videoGrid .video-container.screen-share video,
             body.mobile-screenshare-mode #videoGrid .screen-share-preview video {
                 object-fit: contain !important;
                 background: #000 !important;
+                width: 100vw !important;
+                height: 100vh !important;
+                height: 100dvh !important;
+                position: absolute !important;
+                top: 0 !important;
+                left: 0 !important;
+            }
+
+            /* Ocultar el label de info del video en fullscreen */
+            body.mobile-screenshare-mode #videoGrid .video-container.screen-share .video-info,
+            body.mobile-screenshare-mode #videoGrid .screen-share-preview .screen-share-info-overlay {
+                position: fixed !important;
+                bottom: 80px !important;
+                left: 10px !important;
+                right: auto !important;
+                top: auto !important;
+                background: rgba(0,0,0,0.7) !important;
+                padding: 8px 16px !important;
+                border-radius: 8px !important;
+                z-index: 9999 !important;
             }
 
             /* Mostrar botón flotante y sidebar solo en móvil con screen share */
             body.mobile-screenshare-mode #mobileControlsToggle {
                 display: flex !important;
+                z-index: 10000 !important;
             }
 
             body.mobile-screenshare-mode #mobileControlsSidebar {
                 display: block;
+                z-index: 10001 !important;
             }
 
             /* Ocultar menú hamburguesa normal durante screen share */
@@ -9444,6 +9548,39 @@
             body.mobile-screenshare-mode .mobile-menu,
             body.mobile-screenshare-mode .mobile-menu-overlay {
                 display: none !important;
+            }
+
+            /* ✅ OPTIMIZACIÓN: Reducir animaciones en móvil para ahorrar batería */
+            body.mobile-screenshare-mode * {
+                animation-duration: 0s !important;
+                animation-delay: 0s !important;
+                transition-duration: 0.1s !important;
+            }
+        }
+
+        /* ✅ OPTIMIZACIÓN GLOBAL: Reducir animaciones en móviles para ahorrar batería */
+        @media screen and (max-width: 900px) {
+            /* Desactivar animaciones innecesarias que consumen CPU */
+            .control-btn.has-notification::after,
+            .hand-count-badge,
+            .video-container.active-speaker {
+                animation: none !important;
+            }
+            
+            /* Usar transform en lugar de animaciones complejas */
+            .control-btn:hover {
+                transform: none !important;
+            }
+        }
+
+        /* Respetar preferencias de movimiento reducido del usuario */
+        @media (prefers-reduced-motion: reduce) {
+            *,
+            *::before,
+            *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
             }
         }
 
@@ -11448,6 +11585,9 @@
                     <ul id="votesList"></ul>
 
                     <div class="action-buttons-results">
+                        <button id="shareResultsBtn" class="share-results-btn" style="display: none;" aria-label="Mostrar votación a todos">
+                            <i class="fas fa-broadcast-tower"></i> Mostrar a Todos
+                        </button>
                         <button id="endPollBtn" style="display: none;" aria-label="Finalizar votación">
                             <i class="fas fa-stop"></i> Finalizar Votación
                         </button>
@@ -13046,13 +13186,23 @@
             }
 
             // MutationObserver to watch for screen share elements
+            let screenShareCheckTimeout;
             const videoGrid = document.getElementById('videoGrid');
             if (videoGrid) {
-                const observer = new MutationObserver(() => {
-                    checkScreenShareMode();
-                    syncButtonStates();
+                const observer = new MutationObserver((mutations) => {
+                    // Only react to actual element additions/removals
+                    const hasRealChanges = mutations.some(m => 
+                        m.type === 'childList' && (m.addedNodes.length > 0 || m.removedNodes.length > 0)
+                    );
+                    if (!hasRealChanges) return;
+                    
+                    // Debounce to avoid rapid-fire checks
+                    clearTimeout(screenShareCheckTimeout);
+                    screenShareCheckTimeout = setTimeout(() => {
+                        checkScreenShareMode();
+                    }, 300);
                 });
-                observer.observe(videoGrid, { childList: true, subtree: true });
+                observer.observe(videoGrid, { childList: true, subtree: false });
             }
 
             // Also check on window resize
@@ -13070,8 +13220,12 @@
                 syncButtonStates();
             }, 500);
 
-            // Periodic sync for button states
-            setInterval(syncButtonStates, 2000);
+            // Periodic sync for button states - only when sidebar is visible and tab is active
+            setInterval(() => {
+                if (!document.hidden && sidebar?.classList.contains('active')) {
+                    syncButtonStates();
+                }
+            }, 3000);
 
             // Close sidebar on Escape key
             document.addEventListener('keydown', (e) => {

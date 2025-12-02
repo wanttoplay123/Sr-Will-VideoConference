@@ -519,7 +519,9 @@ let audioContext = null;
 let audioAnalysers = {}; // Map<peerId, {analyser, source, stream}>
 let activeSpeakerInterval = null;
 const AUDIO_LEVEL_THRESHOLD = 15; // Umbral mínimo para considerar "hablando"
-const ACTIVE_SPEAKER_CHECK_INTERVAL = 1000; // ✅ Optimizado: 1 segundo para reducir CPU en móviles
+// ✅ OPTIMIZACIÓN: Intervalo más largo en móviles para ahorrar batería
+const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 900;
+const ACTIVE_SPEAKER_CHECK_INTERVAL = isMobileDevice ? 2000 : 1000; // 2s en móvil, 1s en desktop
 let lastActiveSpeaker = null; // Cache para evitar notificaciones repetidas
 let audioDataBuffer = null; // ✅ Buffer reutilizable para análisis de audio
 
@@ -4636,10 +4638,20 @@ function displayPollResults(results, question, options, votes) {
                 endPollBtn.style.display = 'none';
             }
         }
+        
+        // Mostrar botón de compartir resultados para moderadores
+        const shareResultsBtn = document.getElementById('shareResultsBtn');
+        if (shareResultsBtn) {
+            shareResultsBtn.style.display = 'block';
+        }
+        
         document.getElementById('closePollResultsPanel').style.display = 'block';
     } else if (!isModerator) {
         document.getElementById('closeResultsBtn').style.display = 'block';
         document.getElementById('endPollBtn').style.display = 'none';
+        // Ocultar botón de compartir para no-moderadores
+        const shareResultsBtn = document.getElementById('shareResultsBtn');
+        if (shareResultsBtn) shareResultsBtn.style.display = 'none';
     }
 }
 
