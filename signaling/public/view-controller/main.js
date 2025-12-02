@@ -8,10 +8,8 @@ const VIEW_CONTAINER_ID = 'video-grid-container';
 let container = null;
 
 function init() {
-    console.log('[VC] Initializing New View Controller');
     container = document.getElementById(VIEW_CONTAINER_ID);
     if (!container) {
-        console.error(`[VC] Fatal Error: Container with id #${VIEW_CONTAINER_ID} not found.`);
         return;
     }
 
@@ -29,13 +27,10 @@ function init() {
 
     // 5. Subscribe to events
     subscribeToEvents();
-
-    console.log('[VC] New View Controller Initialized Successfully');
 }
 
 function render() {
     if (!container) return;
-    console.log('[VC] Rendering layout for view mode:', state.viewMode);
     applyLayout(container, state);
 }
 

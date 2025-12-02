@@ -293,6 +293,25 @@
             font-weight: 700;
         }
 
+        .copy-room-link {
+            margin-left: 8px;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 6px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.15s ease, color 0.15s ease;
+        }
+
+        .copy-room-link:hover {
+            background: rgba(255,255,255,0.03);
+            color: var(--primary-color);
+        }
+
         #participantCount {
             color: var(--secondary-light);
             font-weight: 700;
@@ -3117,6 +3136,10 @@
             position: relative;
             flex-shrink: 0;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
         }
 
         body.light-theme #pollResultsPanel .poll-results-header {
@@ -3133,13 +3156,16 @@
 
         #pollResultsPanel .header-top-results {
             display: flex;
-            justify-content: space-between;
             align-items: center;
             gap: 16px;
-            flex-wrap: wrap;
+            flex: 1;
         }
 
         #pollResultsPanel .poll-timer-results {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
             display: inline-flex;
             align-items: center;
             gap: 10px;
@@ -3566,6 +3592,8 @@
         #pollResultsPanel .minimized-results-view .minimized-icon {
             font-size: clamp(18px, 3vw, 22px);
             animation: pulse 2s infinite;
+            font-family: "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", sans-serif;
+            line-height: 1;
         }
 
         #pollResultsPanel .minimized-results-text .minimized-details,
@@ -3576,6 +3604,7 @@
             font-size: clamp(13px, 2.5vw, 14px);
             font-weight: 500;
             opacity: 0.95;
+            font-family: "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         }
 
         #pollResultsPanel .minimized-results-text .minimized-separator,
@@ -6047,6 +6076,7 @@
                 flex: 1;
                 overflow-y: auto;
                 padding: 12px;
+                padding-bottom: 120px !important;
                 max-height: calc(50vh - 140px);
             }
 
@@ -6097,6 +6127,7 @@
 
             .chat-messages {
                 padding: 12px;
+                padding-bottom: 120px !important;
                 max-height: calc(50vh - 150px) !important;
             }
 
@@ -6867,7 +6898,7 @@
                 height: auto !important;
                 max-height: none !important;
                 padding: 12px;
-                padding-bottom: 80px;
+                padding-bottom: 100px;
             }
 
             .chat-input-container {
@@ -6876,10 +6907,11 @@
                 left: 0;
                 right: 0;
                 padding: 12px 16px;
-                padding-bottom: max(12px, env(safe-area-inset-bottom));
+                padding-bottom: max(16px, env(safe-area-inset-bottom));
                 background: var(--bg-tertiary);
                 border-top: 1px solid var(--glass-border);
                 z-index: 501;
+                min-height: 70px;
             }
 
             body.light-theme .chat-input-container {
@@ -7015,7 +7047,7 @@
             }
 
             .chat-messages {
-                padding-bottom: 90px;
+                padding-bottom: 120px !important;
             }
 
             /* Menú móvil ajustes */
@@ -7796,7 +7828,7 @@
 
             .chat-messages {
                 padding: 6px;
-                padding-bottom: 60px;
+                padding-bottom: 120px !important;
             }
 
             .chat-input-container {
@@ -9271,7 +9303,9 @@
             display: flex;
             gap: 40px;
             width: 100%;
+            max-width: 100%;
             align-items: flex-start;
+            overflow: hidden;
         }
 
         /* Preview de video */
@@ -9484,9 +9518,11 @@
         /* Sección de información */
         .lobby-info-section {
             width: 320px;
+            max-width: 100%;
             display: flex;
             flex-direction: column;
             gap: 24px;
+            flex-shrink: 0;
         }
 
         /* Panel de dispositivos */
@@ -9496,6 +9532,8 @@
             border: 1px solid var(--glass-border);
             border-radius: 16px;
             padding: 20px;
+            max-width: 100%;
+            overflow: hidden;
         }
 
         body.light-theme .lobby-devices-panel {
@@ -9544,6 +9582,7 @@
 
         .device-row select {
             flex: 1;
+            min-width: 0;
             background: var(--bg-secondary);
             border: 1px solid var(--glass-border);
             border-radius: 8px;
@@ -9552,6 +9591,9 @@
             font-size: 13px;
             cursor: pointer;
             transition: all 0.2s ease;
+            text-overflow: ellipsis;
+            overflow: hidden;
+            white-space: nowrap;
         }
 
         body.light-theme .device-row select {
@@ -10295,6 +10337,9 @@
                 <div class="room-code-badge">
                     <i class="fas fa-door-open"></i>
                     <span>Sala: <strong id="roomCode"></strong></span>
+                    <button id="copyRoomLinkBtn" class="copy-room-link" title="Copiar enlace de sala" aria-label="Copiar enlace de sala">
+                        <i class="fas fa-link"></i>
+                    </button>
                 </div>
                 <div class="participants-badge">
                     <i class="fas fa-users"></i>
@@ -10941,12 +10986,12 @@
             </div>
 
             <div class="minimized-results-view">
-                <span class="minimized-icon">📊</span>
+                <span class="minimized-icon">&#128202;</span>
                 <span class="minimized-title">Resultados</span>
                 <span class="minimized-separator"></span>
                 <span class="minimized-details">
                     <span id="minimizedVoteCount">0 votos</span>
-                    <span id="minimizedTimer" style="display: none;">⏱️ <span
+                    <span id="minimizedTimer" style="display: none;">&#9201; <span
                             id="minimizedTimerValue">0:00</span></span>
                 </span>
                 <button class="restore-modal" title="Restaurar" aria-label="Restaurar panel de resultados">
@@ -11072,7 +11117,6 @@
                 notificationsList.style.display = isNotificationsModalMinimized ? 'none' : 'block';
                 debugLog(`Mini modal mostrado con ${count} solicitudes, minimizado: ${isNotificationsModalMinimized}`);
             } else {
-                console.error('Error: #notificationsMiniModal, #joinRequestCount o #notificationsList no encontrado.');
                 showError('Error al mostrar notificaciones.', 3000);
             }
         }
@@ -11084,7 +11128,7 @@
                 isNotificationsModalMinimized = false;
                 debugLog('Mini modal oculto.');
             } else {
-                console.error('Error: #notificationsMiniModal no encontrado.');
+                // Modal no encontrado
             }
         }
 
@@ -11095,7 +11139,6 @@
                 notificationsList.style.display = 'none';
                 debugLog('Mini modal minimizado.');
             } else {
-                console.error('Error: #notificationsList no encontrado.');
                 showError('No se pudo minimizar notificaciones.', 3000);
             }
         }
@@ -11107,7 +11150,6 @@
                 notificationsList.style.display = isNotificationsModalMinimized ? 'none' : 'block';
                 debugLog(`Mini modal toggled, minimizado: ${isNotificationsModalMinimized}`);
             } else {
-                console.error('Error: #notificationsList no encontrado.');
                 showError('No se pudo expandir notificaciones.', 3000);
             }
         }
@@ -11121,7 +11163,6 @@
                 isNotificationsModalMinimized = false;
                 debugLog('Mini modal cerrado.');
             } else {
-                console.error('Error: #notificationsList o #notificationsMiniModal no encontrado.');
                 showError('No se pudo cerrar notificaciones.', 3000);
             }
         }
@@ -11200,16 +11241,7 @@
             const mobileMenuOverlay = document.getElementById('mobileMenuOverlay');
             const closeMobileMenuBtn = document.getElementById('closeMobileMenu');
 
-            // Debug: verificar que los elementos existen
-            console.log('[MOBILE MENU] Inicializando...', {
-                hamburgerBtn: !!hamburgerBtn,
-                mobileMenu: !!mobileMenu,
-                mobileMenuOverlay: !!mobileMenuOverlay,
-                closeMobileMenuBtn: !!closeMobileMenuBtn
-            });
-
             if (!hamburgerBtn || !mobileMenu || !mobileMenuOverlay) {
-                console.error('[MOBILE MENU] Faltan elementos del menú móvil');
                 return;
             }
 
@@ -11249,7 +11281,6 @@
 
             // Función para abrir menú
             function openMobileMenu() {
-                console.log('[MOBILE MENU] Abriendo menú...');
                 mobileMenu.classList.add('active');
                 mobileMenuOverlay.classList.add('active');
                 hamburgerBtn.classList.add('active');
@@ -11267,7 +11298,6 @@
 
             // Función para cerrar menú
             function closeMobileMenu() {
-                console.log('[MOBILE MENU] Cerrando menú...');
                 mobileMenu.classList.remove('active');
                 mobileMenuOverlay.classList.remove('active');
                 hamburgerBtn.classList.remove('active');
@@ -11278,7 +11308,6 @@
             hamburgerBtn.addEventListener('click', function(e) {
                 e.preventDefault();
                 e.stopPropagation();
-                console.log('[MOBILE MENU] Click en hamburguesa');
                 openMobileMenu();
             });
             
@@ -11319,7 +11348,6 @@
             // Crear encuesta - llamar directamente a la función de apertura
             if (mobileCreatePoll) {
                 mobileCreatePoll.addEventListener('click', () => {
-                    console.log('[MOBILE MENU] Click en crear encuesta');
                     // Llamar directamente a la función de apertura del modal
                     if (typeof openPollCreationModalUI === 'function') {
                         openPollCreationModalUI();
@@ -11412,8 +11440,6 @@
                     closeMobileMenu();
                 }
             });
-
-            console.log('[MOBILE MENU] Sistema de menú hamburguesa inicializado');
         })();
 
         // Modal drag functionality
@@ -11487,7 +11513,6 @@
                     sidebar.classList.add('sidebar-collapsed');
                     if (participantsToggleBtn) participantsToggleBtn.classList.remove('active');
                     if (chatToggleBtn) chatToggleBtn.classList.remove('active');
-                    console.log('[SIDEBAR] Cerrado desde botón X');
                 }
             });
         }
@@ -11520,13 +11545,10 @@
                         participantsTab.classList.add('active');
                         participantsContent.classList.add('active');
                     }
-
-                    console.log('[SIDEBAR] Abierto - Participantes activos');
                 } else {
                     // Si ya está abierto con participantes activos, cerrar
                     sidebar.classList.add('sidebar-collapsed');
                     toggleBtn.classList.remove('active');
-                    console.log('[SIDEBAR] Cerrado');
                 }
             }
         });
@@ -11565,8 +11587,6 @@
                         chatBadge.textContent = '0';
                     }
                 }
-
-                console.log('[SIDEBAR] Tab cambiado a:', targetTab);
             });
         });
 
@@ -11605,14 +11625,11 @@
                             chatBadge.style.display = 'none';
                             chatBadge.textContent = '0';
                         }
-
-                        console.log('[CHAT] Panel abierto desde toggle');
                     } else {
                         // Si ya está abierto con chat activo, cerrar
                         sidebar.classList.add('sidebar-collapsed');
                         chatToggleBtn.classList.remove('active');
                         if (participantsToggleBtn) participantsToggleBtn.classList.remove('active');
-                        console.log('[CHAT] Panel cerrado desde toggle');
                     }
                 }
             });
@@ -11631,7 +11648,6 @@
                 if (chatToggle) {
                     chatToggle.classList.remove('active');
                 }
-                console.log('[CHAT] Panel cerrado');
             });
         }
 
@@ -11646,9 +11662,6 @@
             sendChatBtn.addEventListener('click', () => {
                 if (typeof sendChatMessage === 'function') {
                     sendChatMessage();
-                    console.log('[CHAT] Mensaje enviado desde botón');
-                } else {
-                    console.error('[CHAT] ❌ Función sendChatMessage no encontrada');
                 }
             });
         }
@@ -11662,9 +11675,6 @@
                     e.preventDefault();
                     if (typeof sendChatMessage === 'function') {
                         sendChatMessage();
-                        console.log('[CHAT] Mensaje enviado con Enter');
-                    } else {
-                        console.error('[CHAT] ❌ Función sendChatMessage no encontrada');
                     }
                 }
             });
@@ -11699,7 +11709,6 @@
                 if (modalContent) {
                     modalContent.style.transform = 'translate(0, 0)';
                 }
-                console.log('[POLL] Modal de creación abierto');
             }
         };
         // Alias local
@@ -11719,7 +11728,6 @@
                 if (typeof clearPollCreationForm === 'function') {
                     clearPollCreationForm();
                 }
-                console.log('[POLL] Modal de creación cerrado');
             }
         };
         // Alias local
@@ -11739,6 +11747,10 @@
         // ✅ Botón de crear encuesta (mobile) - protegido por rol
         const mobileCreatePollBtn = document.getElementById('mobileCreatePollBtn');
         if (mobileCreatePollBtn) {
+            // Obtener si es moderador desde URL params
+            const urlParamsCheck = new URLSearchParams(window.location.search);
+            const isModerator = urlParamsCheck.has('moderator');
+            
             // Marcar como solo para moderadores (atributo para CSS/identificación)
             mobileCreatePollBtn.setAttribute('data-moderator-only', 'true');
 
@@ -11882,8 +11894,6 @@
         
         // ============ INITIALIZE LOBBY ============
         function initLobby() {
-            console.log('[LOBBY] Inicializando lobby...');
-            
             // Set user info
             if (lobbyUserName) lobbyUserName.textContent = userName;
             if (lobbyRoomCode) lobbyRoomCode.textContent = roomCode;
@@ -11902,8 +11912,6 @@
         
         // ============ REQUEST PERMISSIONS ============
         async function requestMediaPermissions() {
-            console.log('[LOBBY] Solicitando permisos de media...');
-            
             try {
                 // Request permissions with constraints
                 lobbyStream = await navigator.mediaDevices.getUserMedia({
@@ -11919,7 +11927,6 @@
                     }
                 });
                 
-                console.log('[LOBBY] ✅ Stream obtenido:', lobbyStream);
                 permissionsGranted = true;
                 
                 // Update permission indicators
@@ -11942,8 +11949,6 @@
                 }
                 
             } catch (err) {
-                console.error('[LOBBY] ❌ Error obteniendo permisos:', err);
-                
                 // Handle specific errors
                 if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
                     updatePermissionStatus('mic', 'denied');
@@ -11965,7 +11970,6 @@
         
         // ============ TRY AUDIO ONLY ============
         async function tryAudioOnly() {
-            console.log('[LOBBY] Intentando solo audio...');
             try {
                 lobbyStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
                 updatePermissionStatus('mic', 'granted');
@@ -11977,7 +11981,6 @@
                     lobbyJoinBtn.classList.add('ready');
                 }
             } catch (e) {
-                console.error('[LOBBY] Error en audio only:', e);
                 updatePermissionStatus('mic', 'denied');
             }
         }
@@ -12021,7 +12024,6 @@
         async function populateDevices() {
             try {
                 const devices = await navigator.mediaDevices.enumerateDevices();
-                console.log('[LOBBY] Dispositivos encontrados:', devices);
                 
                 const mics = devices.filter(d => d.kind === 'audioinput');
                 const cams = devices.filter(d => d.kind === 'videoinput');
@@ -12068,15 +12070,13 @@
                 }
                 
             } catch (err) {
-                console.error('[LOBBY] Error enumerando dispositivos:', err);
+                // Error enumerando dispositivos
             }
         }
         
         // ============ CHANGE DEVICE ============
         async function changeDevice(type, deviceId) {
             if (!lobbyStream) return;
-            
-            console.log(`[LOBBY] Cambiando ${type} a:`, deviceId);
             
             try {
                 const constraints = {};
@@ -12112,11 +12112,8 @@
                     // Update selected ID
                     if (type === 'mic') selectedMicId = deviceId;
                     else selectedCamId = deviceId;
-                    
-                    console.log(`[LOBBY] ✅ ${type} cambiado exitosamente`);
                 }
             } catch (err) {
-                console.error(`[LOBBY] Error cambiando ${type}:`, err);
                 showLobbyError(`Error al cambiar ${type === 'mic' ? 'micrófono' : 'cámara'}`);
             }
         }
@@ -12135,8 +12132,6 @@
                     icon.className = lobbyMicEnabled ? 'fas fa-microphone' : 'fas fa-microphone-slash';
                 }
             }
-            
-            console.log(`[LOBBY] Micrófono: ${lobbyMicEnabled ? 'ON' : 'OFF'}`);
         }
         
         // ============ TOGGLE CAM ============
@@ -12155,7 +12150,6 @@
             }
             
             updateCameraUI();
-            console.log(`[LOBBY] Cámara: ${lobbyCamEnabled ? 'ON' : 'OFF'}`);
         }
         
         // ============ UPDATE CAMERA UI ============
@@ -12261,10 +12255,74 @@
             }
         }
         
+        // ==============================
+        // COPY ROOM LINK - init
+        // Adds a small "copiar enlace" button that copies an index URL prefilled with the room code
+        // ==============================
+        (function initCopyRoomLink() {
+            document.addEventListener('DOMContentLoaded', () => {
+                const btn = document.getElementById('copyRoomLinkBtn');
+                if (!btn) return;
+
+                function showCopied(message) {
+                    if (typeof window.showLobbyError === 'function') {
+                        showLobbyError(message);
+                    } else if (typeof window.showError === 'function') {
+                        showError(message, 3000);
+                    } else {
+                        const toast = document.createElement('div');
+                        toast.className = 'lobby-toast';
+                        toast.textContent = message;
+                        toast.style.cssText = `position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: white; padding: 8px 14px; border-radius: 8px; z-index:100000;`;
+                        document.body.appendChild(toast);
+                        setTimeout(() => toast.remove(), 3000);
+                    }
+                }
+
+                function fallbackCopy(text) {
+                    const ta = document.createElement('textarea');
+                    ta.value = text;
+                    ta.style.position = 'fixed';
+                    ta.style.left = '-9999px';
+                    document.body.appendChild(ta);
+                    ta.select();
+                    try {
+                        document.execCommand('copy');
+                        showCopied('Enlace copiado al portapapeles');
+                    } catch (e) {
+                        showCopied('No se pudo copiar el enlace');
+                    }
+                    ta.remove();
+                }
+
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const codeEl = document.getElementById('roomCode');
+                    let code = codeEl ? codeEl.textContent.trim() : '';
+                    if (!code) {
+                        code = (new URLSearchParams(window.location.search)).get('room') || '';
+                    }
+                    if (!code) {
+                        showCopied('Código de sala no disponible');
+                        return;
+                    }
+
+                    // Build an index URL that pre-fills the room code on the landing page
+                    const indexUrl = `${window.location.origin}/?room=${encodeURIComponent(code)}`;
+
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText(indexUrl).then(() => {
+                            showCopied('Enlace copiado al portapapeles');
+                        }).catch(() => fallbackCopy(indexUrl));
+                    } else {
+                        fallbackCopy(indexUrl);
+                    }
+                });
+            });
+        })();
+
         // ============ JOIN MEETING ============
         function joinMeeting() {
-            console.log('[LOBBY] ✅ Uniéndose a la reunión...');
-            
             // Store settings for main app
             window.lobbySettings = {
                 stream: lobbyStream,
@@ -12314,7 +12372,6 @@
             lobbyCamSelect?.addEventListener('change', (e) => changeDevice('cam', e.target.value));
             lobbySpeakerSelect?.addEventListener('change', (e) => {
                 selectedSpeakerId = e.target.value;
-                console.log('[LOBBY] Altavoz seleccionado:', selectedSpeakerId);
             });
             
             // Close device selector modal

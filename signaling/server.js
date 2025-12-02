@@ -14,6 +14,16 @@ const activePolls = new Map();
 const activeScreenShares = new Map(); // Rastrear quién está compartiendo pantalla en cada sala
 const waitingRoom = new Map(); // Map<room, Map<userName, ws>> - Cola de espera por sala
 
+// ============= CONFIGURACIÓN DE LOGGING =============
+// Poner en false para producción (mejora rendimiento)
+const DEBUG_MODE = false;
+
+// Wrapper para logs que respeta DEBUG_MODE
+const devLog = DEBUG_MODE ? console.log.bind(console) : () => {};
+// Solo errores críticos se muestran siempre
+const criticalLog = console.error.bind(console);
+// ====================================================
+
 // ============ FUNCIÓN DE VALIDACIÓN DE APROBACIÓN ============
 function isUserApproved(ws) {
   return ws.approved === true || ws.isModerator === true;
@@ -25,7 +35,7 @@ function requireApproval(ws, action = 'esta acción') {
       type: "error",
       message: `No tienes permiso para ${action}. Debes ser aprobado primero.`
     }));
-    console.log(`[SERVER] ⛔ ${ws.userName || 'unknown'} intentó ${action} sin aprobación`);
+    devLog(`[SERVER] ⛔ ${ws.userName || 'unknown'} intentó ${action} sin aprobación`);
     return false;
   }
   return true;
@@ -74,13 +84,10 @@ app.get('/generate-join-url', (req, res) => {
         const config = JSON.parse(configData);
         if (config.wsUrl) {
           baseUrl = config.wsUrl.replace('wss://', 'https://').replace('ws://', 'http://');
-          console.log('[SERVER] ✅ Using ngrok URL from config:', baseUrl);
         }
       } else {
-        console.warn('[SERVER] ⚠️ frontendConfig.json no existe');
       }
     } catch (err) {
-      console.error('[SERVER] ❌ Error leyendo frontendConfig.json:', err.message);
     }
 
     // Construir URL completa
@@ -88,9 +95,6 @@ app.get('/generate-join-url', (req, res) => {
     if (moderator) {
       url += `&moderator=${moderator}`;
     }
-
-    console.log('[SERVER] 🔗 URL generada:', url);
-
     res.json({
       success: true,
       url: url,
@@ -99,7 +103,6 @@ app.get('/generate-join-url', (req, res) => {
     });
 
   } catch (error) {
-    console.error('[SERVER] Error generando URL:', error);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
@@ -111,8 +114,6 @@ wss.on('connection', (ws) => {
   ws.on('message', (data) => {
     try {
       const msg = JSON.parse(data);
-      console.log(`[SERVER] Message received from ${userName || 'unknown'}:`, msg.type);
-
       switch (msg.type) {
         case 'join':
           room = msg.room;
@@ -122,7 +123,6 @@ wss.on('connection', (ws) => {
           // ✅ VALIDAR que el nombre no esté vacío
           if (!userName || userName.trim() === '') {
             userName = 'Usuario-' + Math.random().toString(36).substr(2, 6);
-            console.warn(`[SERVER] ⚠️ Usuario sin nombre detectado, asignando: ${userName}`);
           }
 
           ws.userName = userName;
@@ -136,14 +136,12 @@ wss.on('connection', (ws) => {
               ws.approved = true; // Moderador aprobado automáticamente
               activeRooms.set(room, new Set([ws]));
               ws.send(JSON.stringify({ type: "joined", exists: true, isRoomAdmin: true }));
-              console.log(`[SERVER] ✅ Room '${room}' created by ${userName} (admin).`);
             } else {
               ws.send(JSON.stringify({ 
                 type: "joined", 
                 exists: false, 
                 message: "La sala no existe. Solo un moderador puede crearla." 
               }));
-              console.log(`[SERVER] ❌ User ${userName} tried to join non-existent room '${room}'.`);
               ws.close(1008, "Room does not exist");
               return;
             }
@@ -158,7 +156,6 @@ wss.on('connection', (ws) => {
                 exists: true, 
                 error: "Ya existe un usuario con este nombre en la sala." 
               }));
-              console.log(`[SERVER] ❌ User ${userName} tried to join room '${room}' but name is already in use.`);
               ws.close(1008, "Username already in use");
               return;
             }
@@ -168,7 +165,6 @@ wss.on('connection', (ws) => {
               ws.approved = true;
               roomClients.add(ws);
               ws.send(JSON.stringify({ type: "joined", exists: true }));
-              console.log(`[SERVER] ✅ Moderator ${userName} joined room '${room}'.`);
               notifyNewPeer(roomClients, ws, userName, msg.micActive, msg.camActive);
             } else {
               // Participante regular - Debe esperar aprobación
@@ -197,13 +193,11 @@ wss.on('connection', (ws) => {
                   type: "waiting-for-approval",
                   message: "Esperando aprobación del moderador..." 
                 }));
-                console.log(`[SERVER] ⏳ ${userName} waiting for approval in room '${room}'.`);
               } else {
                 // No hay moderadores - Entrar directamente
                 ws.approved = true;
                 roomClients.add(ws);
                 ws.send(JSON.stringify({ type: "joined", exists: true }));
-                console.log(`[SERVER] ✅ User ${userName} joined room '${room}' (no moderators present).`);
                 notifyNewPeer(roomClients, ws, userName, msg.micActive, msg.camActive);
               }
             }
@@ -216,7 +210,6 @@ wss.on('connection', (ws) => {
             const waiting = waitingRoom.get(room);
             
             if (!waiting || !waiting.has(msg.userId)) {
-              console.log(`[SERVER] ⚠️ User ${msg.userId} not in waiting room`);
               break;
             }
             
@@ -238,9 +231,6 @@ wss.on('connection', (ws) => {
                 exists: true,
                 message: "Has sido aceptado en la reunión"
               }));
-              
-              console.log(`[SERVER] ✅ User ${msg.userId} approved to join room '${room}' by ${userName}.`);
-              
               // Notificar a todos sobre el nuevo participante
               notifyNewPeer(roomClients, pendingClient, msg.userId, true, true);
               
@@ -263,7 +253,6 @@ wss.on('connection', (ws) => {
             const waiting = waitingRoom.get(room);
             
             if (!waiting || !waiting.has(msg.userId)) {
-              console.log(`[SERVER] ⚠️ User ${msg.userId} not in waiting room`);
               break;
             }
             
@@ -289,9 +278,6 @@ wss.on('connection', (ws) => {
                   pendingClient.close(1008, "Join request rejected");
                 }
               }, 1000);
-              
-              console.log(`[SERVER] ❌ User ${msg.userId} rejected from room '${room}' by ${userName}.`);
-              
               // Notificar a todos los moderadores que se eliminó la solicitud
               if (roomClients) {
                 Array.from(roomClients)
@@ -347,7 +333,6 @@ wss.on('connection', (ws) => {
         case 'give-word':
           if (room && msg.target) {
             const roomClients = activeRooms.get(room);
-            console.log(`[SERVER] Room clients count: ${roomClients ? roomClients.size : 0}`);
             if (roomClients) {
               let sentCount = 0;
               roomClients.forEach(client => {
@@ -362,10 +347,7 @@ wss.on('connection', (ws) => {
                   sentCount++;
                 }
               });
-              console.log(`[SERVER] Word given to ${msg.target} by ${userName} in room '${room}' for ${msg.duration || 60} seconds. Sent to ${sentCount} clients.`);
             }
-          } else {
-            console.log(`[SERVER] Cannot give word - missing requirements (room: ${!!room}, target: ${!!msg.target})`);
           }
           break;
 
@@ -385,8 +367,6 @@ wss.on('connection', (ws) => {
                   }));
                 }
               });
-              console.log(`[SERVER] 🔇 ${msg.target} muted automatically when word taken in room '${room}'.`);
-
               // 📢 SEGUNDO: Notificar que se quitó la palabra
               roomClients.forEach(client => {
                 if (client.readyState === 1) {
@@ -397,7 +377,6 @@ wss.on('connection', (ws) => {
                   }));
                 }
               });
-              console.log(`[SERVER] Word taken from ${msg.target} by ${userName} in room '${room}'.`);
             }
           }
           break;
@@ -419,7 +398,6 @@ wss.on('connection', (ws) => {
                   }));
                 }
               });
-              console.log(`[SERVER] Floor granted to ${msg.target} by ${userName} in room '${room}'. Hand lowered for ${msg.target}.`);
             }
           }
           break;
@@ -440,7 +418,6 @@ wss.on('connection', (ws) => {
                   }));
                 }
               });
-              console.log(`[SERVER] Floor ended for ${msg.name} in room '${room}'. Hand lowered.`);
             }
           }
           break;
@@ -457,7 +434,6 @@ wss.on('connection', (ws) => {
                   }));
                 }
               });
-              console.log(`[SERVER] Hand lowered for ${msg.name} in room '${room}' (distributed to all clients).`);
             }
           }
           break;
@@ -476,11 +452,8 @@ wss.on('connection', (ws) => {
             });
 
             activePolls.set(room, pollData);
-            console.log(`[SERVER] Poll started in room '${room}' by ${userName}:`, pollData.question);
-
             setTimeout(() => {
               if (activePolls.has(room) && activePolls.get(room).id === pollData.id) {
-                console.log(`[SERVER] Automatically ending poll for room '${room}'.`);
                 const endedPoll = activePolls.get(room);
                 activePolls.delete(room);
 
@@ -512,10 +485,8 @@ wss.on('connection', (ws) => {
                   }));
                 }
               });
-              console.log(`[SERVER] Sent 'poll-started' to ${roomClients.size} clients in room '${room}'.`);
             }
           } else {
-            console.warn(`[SERVER] Failed attempt to start poll. Room: ${room}, Moderator: ${ws.isModerator}, Poll data present: ${!!msg.poll}`);
           }
           break;
 
@@ -527,7 +498,6 @@ wss.on('connection', (ws) => {
               if (ws.readyState === 1) {
                 ws.send(JSON.stringify({ type: "vote-submitted", status: "poll_ended", message: "The poll has ended and cannot be voted on." }));
               }
-              console.log(`[SERVER] ${userName} tried to vote in an ended poll in room '${room}'.`);
               return;
             }
 
@@ -538,7 +508,6 @@ wss.on('connection', (ws) => {
               if (ws.readyState === 1) {
                 ws.send(JSON.stringify({ type: "vote-submitted", status: "already_voted", message: "You have already voted in this poll." }));
               }
-              console.log(`[SERVER] ${userName} tried to vote again in room '${room}'.`);
               return;
             }
 
@@ -546,8 +515,6 @@ wss.on('connection', (ws) => {
               currentPoll.results[msg.vote.optionId]++;
               currentPoll.votedUsers.add(userName);
               currentPoll.votes.push({ voter: userName, optionId: msg.vote.optionId, optionText: msg.vote.optionText });
-              console.log(`[SERVER] Vote received from ${userName} in room '${room}' for option '${msg.vote.optionText}'.`);
-
               if (ws.readyState === 1) {
                 ws.send(JSON.stringify({ type: "vote-submitted", status: "success", message: "Your vote has been recorded." }));
               }
@@ -565,18 +532,15 @@ wss.on('connection', (ws) => {
                       options: currentPoll.options,
                       endTime: currentPoll.endTime
                     }));
-                    console.log(`[SERVER] Sent poll-update to moderator ${client.userName} in room '${room}'.`);
                   }
                 });
               }
             } else {
-              console.warn(`[SERVER] Invalid vote option received from ${userName} in room '${room}':`, msg.vote.optionId);
               if (ws.readyState === 1) {
                 ws.send(JSON.stringify({ type: "vote-submitted", status: "error", message: "Invalid vote option." }));
               }
             }
           } else {
-            console.warn(`[SERVER] Failed attempt to submit vote. Room: ${room}, User: ${userName}, Vote: ${!!msg.vote}, Active poll: ${activePolls.has(room)}`);
             if (ws.readyState === 1) {
               ws.send(JSON.stringify({ type: "vote-submitted", status: "error", message: "Could not record vote." }));
             }
@@ -588,9 +552,6 @@ wss.on('connection', (ws) => {
             const endedPoll = activePolls.get(room);
             activePolls.delete(room);
             const results = endedPoll.results;
-
-            console.log(`[SERVER] Poll ended in room '${room}'. Question: ${endedPoll.question}, Results:`, results);
-
             const roomClients = activeRooms.get(room);
             if (roomClients) {
               roomClients.forEach(client => {
@@ -606,8 +567,32 @@ wss.on('connection', (ws) => {
                 }
               });
             }
+          }
+          break;
+
+        // ✅ Compartir resultados de encuesta con todos los participantes
+        case 'broadcast-results':
+          if (room && ws.isModerator && msg.poll) {
+            const roomClients = activeRooms.get(room);
+            if (roomClients) {
+              roomClients.forEach(client => {
+                // Enviar a todos EXCEPTO al moderador que compartió (él ya los ve)
+                if (client.readyState === 1 && !client.isModerator) {
+                  client.send(JSON.stringify({
+                    type: "poll-results-shared",
+                    pollId: msg.poll.id,
+                    question: msg.poll.question,
+                    options: msg.poll.options,
+                    results: msg.poll.results,
+                    totalVotes: msg.poll.totalVotes || 0,
+                    voters: msg.poll.voters || [],
+                    ended: msg.poll.ended || false,
+                    sharedBy: userName
+                  }));
+                }
+              });
+            }
           } else {
-            console.warn(`[SERVER] Failed attempt to end poll. Room: ${room}, Moderator: ${ws.isModerator}, Active poll: ${activePolls.has(room)}`);
           }
           break;
 
@@ -622,7 +607,6 @@ wss.on('connection', (ws) => {
                   type: "error",
                   message: `${msg.target} is already a moderator.`
                 }));
-                console.log(`[SERVER] Failed attempt to assign moderator role: ${msg.target} is already a moderator in room '${room}'.`);
                 return;
               }
 
@@ -646,15 +630,11 @@ wss.on('connection', (ws) => {
                   }));
                 }
               });
-
-              console.log(`[SERVER] ${msg.target} assigned as moderator in room '${room}' by ${userName}.`);
-
             } else {
               ws.send(JSON.stringify({
                 type: "error",
                 message: `User ${msg.target} not found in the room.`
               }));
-              console.log(`[SERVER] Failed attempt to assign moderator role: ${msg.target} not found in room '${room}'.`);
             }
 
           } else {
@@ -662,7 +642,6 @@ wss.on('connection', (ws) => {
               type: "error",
               message: "Only moderators can assign moderator roles."
             }));
-            console.log(`[SERVER] Failed attempt to assign moderator role. Room: ${room}, Moderator: ${ws.isModerator}, Target: ${msg.target}`);
           }
           break;
 
@@ -677,7 +656,6 @@ wss.on('connection', (ws) => {
                   type: "error",
                   message: `${msg.target} is not a moderator.`
                 }));
-                console.log(`[SERVER] Failed attempt to revoke moderator role: ${msg.target} is not a moderator in room '${room}'.`);
                 return;
               }
 
@@ -701,15 +679,11 @@ wss.on('connection', (ws) => {
                   }));
                 }
               });
-
-              console.log(`[SERVER] ${msg.target} moderator role revoked in room '${room}' by ${userName}.`);
-
             } else {
               ws.send(JSON.stringify({
                 type: "error",
                 message: `User ${msg.target} not found in the room.`
               }));
-              console.log(`[SERVER] Failed attempt to revoke moderator role: ${msg.target} not found in room '${room}'.`);
             }
 
           } else {
@@ -717,7 +691,6 @@ wss.on('connection', (ws) => {
               type: "error",
               message: "Only moderators can revoke moderator roles."
             }));
-            console.log(`[SERVER] Failed attempt to revoke moderator role. Room: ${room}, Moderator: ${ws.isModerator}, Target: ${msg.target}`);
           }
           break;
 
@@ -737,14 +710,11 @@ wss.on('connection', (ws) => {
                   }));
                 }
               });
-              console.log(`[SERVER] ${msg.target} microphone set to ${msg.micActive ? 'active' : 'muted'} by ${userName} in room '${room}'.`);
             } else {
               ws.send(JSON.stringify({ type: "error", message: `User ${msg.target} not found in the room.` }));
-              console.log(`[SERVER] Failed attempt to mute/unmute: ${msg.target} not found in room '${room}'.`);
             }
           } else {
             ws.send(JSON.stringify({ type: "error", message: "Only moderators can mute participants." }));
-            console.log(`[SERVER] Failed attempt to mute participant. Room: ${room}, Moderator: ${ws.isModerator}, Target: ${msg.target}`);
           }
           break;
 
@@ -765,15 +735,11 @@ wss.on('connection', (ws) => {
                     }));
                   }
                 });
-                console.log(`[SERVER] Silencing ${clientToMute.userName} as part of mute-all by ${userName} in room '${room}'.`);
               } else if (clientToMute.isRoomAdmin) {
-                console.log(`[SERVER] Skipping admin ${clientToMute.userName} from mute-all in room '${room}'.`);
               }
             });
-            console.log(`[SERVER] Mute-all action by ${userName} in room '${room}' completed.`);
           } else {
             ws.send(JSON.stringify({ type: "error", message: "Only moderators can mute all participants." }));
-            console.log(`[SERVER] Failed attempt to mute all participants. Room: ${room}, Moderator: ${ws.isModerator}`);
           }
           break;
 
@@ -806,27 +772,21 @@ wss.on('connection', (ws) => {
                   }));
                 }
               });
-              console.log(`[SERVER] ${msg.target} kicked from room '${room}' by ${userName}.`);
               if (roomClients.size === 0) {
                 activeRooms.delete(room);
                 activePolls.delete(room);
-                console.log(`[SERVER] Room '${room}' is empty and deleted.`);
               }
             } else {
               ws.send(JSON.stringify({ type: "error", message: `User ${msg.target} not found in the room.` }));
-              console.log(`[SERVER] Failed attempt to kick: ${msg.target} not found in room '${room}'.`);
             }
           } else {
             ws.send(JSON.stringify({ type: "error", message: "Only moderators can kick participants." }));
-            console.log(`[SERVER] Failed attempt to kick participant. Room: ${room}, Moderator: ${ws.isModerator}, Target: ${msg.target}`);
           }
           break;
 
         case 'chat':
-          console.log(`[SERVER] Chat message received. Room: ${room}, User: ${userName}, Message: ${msg.message}`);
           if (room && userName && msg.message) {
             const roomClients = activeRooms.get(room);
-            console.log(`[SERVER] Room clients count: ${roomClients ? roomClients.size : 0}`);
             if (roomClients) {
               let sentCount = 0;
               roomClients.forEach(client => {
@@ -839,15 +799,11 @@ wss.on('connection', (ws) => {
                   };
                   client.send(JSON.stringify(chatMsg));
                   sentCount++;
-                  console.log(`[SERVER] Chat message sent to ${client.userName}`);
                 }
               });
-              console.log(`[SERVER] Chat message from ${userName} in room '${room}' sent to ${sentCount} clients: ${msg.message}`);
             } else {
-              console.log(`[SERVER] No room clients found for room '${room}'`);
             }
           } else {
-            console.log(`[SERVER] Chat message rejected. Room: ${!!room}, User: ${!!userName}, Message: ${!!msg.message}`);
           }
           break;
 
@@ -865,7 +821,6 @@ wss.on('connection', (ws) => {
                   }));
                 }
               });
-              console.log(`[SERVER] Participant state update for ${userName} in room '${room}': mic=${msg.micActive}, cam=${msg.camActive}`);
             }
           }
           break;
@@ -878,8 +833,6 @@ wss.on('connection', (ws) => {
               streamId: msg.streamId,
               timestamp: Date.now()
             });
-            console.log(`[SERVER] Screen share state saved for room '${room}': ${userName}`);
-            
             const roomClients = activeRooms.get(room);
             if (roomClients) {
               // ✅ Si hay targetUser, solo enviar a ese usuario específico
@@ -892,7 +845,6 @@ wss.on('connection', (ws) => {
                     streamId: msg.streamId,
                     isSync: true
                   }));
-                  console.log(`[SERVER] screen-share-started sent to specific user ${msg.targetUser}`);
                 }
               } else {
                 // Enviar a todos (comportamiento normal)
@@ -905,7 +857,6 @@ wss.on('connection', (ws) => {
                     }));
                   }
                 });
-                console.log(`[SERVER] screen-share-started by ${userName} in room '${room}'.`);
               }
             }
           }
@@ -918,7 +869,6 @@ wss.on('connection', (ws) => {
               const currentShare = activeScreenShares.get(room);
               if (currentShare.userId === userName) {
                 activeScreenShares.delete(room);
-                console.log(`[SERVER] Screen share state cleared for room '${room}'`);
               }
             }
             
@@ -933,7 +883,6 @@ wss.on('connection', (ws) => {
                   }));
                 }
               });
-              console.log(`[SERVER] screen-share-stopped by ${userName} in room '${room}'.`);
             }
           }
           break;
@@ -955,27 +904,22 @@ wss.on('connection', (ws) => {
                   }));
                 }
               });
-              console.log(`[SERVER] ${userName} left room '${room}'.`);
               if (roomClients.size === 0) {
                 activeRooms.delete(room);
                 activePolls.delete(room);
-                console.log(`[SERVER] Room '${room}' is empty and deleted.`);
               }
             }
           }
           break;
 
         default:
-          console.warn(`[SERVER] Unknown message type: ${msg.type}`);
           break;
       }
     } catch (error) {
-      console.error('[SERVER] Error processing message:', error);
     }
   });
 
   ws.on('close', () => {
-    console.log(`[SERVER] Client ${userName || 'unknown'} disconnected.`);
     if (room && activeRooms.has(room)) {
       const roomClients = activeRooms.get(room);
       roomClients.delete(ws);
@@ -985,8 +929,6 @@ wss.on('connection', (ws) => {
         const screenShare = activeScreenShares.get(room);
         if (screenShare.userId === userName) {
           activeScreenShares.delete(room);
-          console.log(`[SERVER] Screen share cleared: ${userName} disconnected from room '${room}'`);
-          
           // Notificar a todos que el screen share terminó
           roomClients.forEach(client => {
             if (client.readyState === 1) {
@@ -1003,7 +945,6 @@ wss.on('connection', (ws) => {
         activeRooms.delete(room);
         activePolls.delete(room);
         activeScreenShares.delete(room); // También limpiar screen share
-        console.log(`[SERVER] Room '${room}' is empty and deleted.`);
       } else {
         roomClients.forEach(client => {
           if (client.readyState === 1) {
@@ -1017,21 +958,17 @@ wss.on('connection', (ws) => {
             }));
           }
         });
-        console.log(`[SERVER] Notified room '${room}' that ${userName} disconnected and lowered their hand.`);
       }
     }
   });
 
   ws.on('error', (error) => {
-    console.error(`[SERVER] WebSocket connection error for ${userName || 'unknown'}:`, error);
   });
 
   function notifyNewPeer(roomClients, newClient, newUserName, micActive, camActive) {
     // ✅ Notificar al nuevo participante sobre pantalla compartida activa
     if (activeScreenShares.has(room)) {
       const screenShare = activeScreenShares.get(room);
-      console.log(`[SERVER] Sending active screen share info to ${newUserName}: ${screenShare.userId}`);
-      
       // Enviar después de un pequeño delay para que el cliente esté listo
       setTimeout(() => {
         if (newClient.readyState === 1) {
@@ -1041,7 +978,6 @@ wss.on('connection', (ws) => {
             streamId: screenShare.streamId,
             isSync: true // Marcar que es una sincronización
           }));
-          console.log(`[SERVER] ✅ Screen share sync sent to ${newUserName}`);
         }
       }, 500);
     }
@@ -1071,20 +1007,16 @@ wss.on('connection', (ws) => {
 });
 
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`WebSocket server running at http://0.0.0.0:${PORT}`);
 });
 
 server.on('error', (e) => {
   if (e.code === 'EADDRINUSE') {
-    console.error(`ERROR: Port ${PORT} is already in use`);
     process.exit(1);
   }
 });
 
 process.on('SIGINT', () => {
-  console.log('\nShutting down server...');
   server.close(() => {
-    console.log('Server shut down successfully');
     process.exit(0);
   });
 });

@@ -138,7 +138,6 @@
       
       const room = generateRoomCode();
       const url = `/room.html?room=${room}&name=${encodeURIComponent(name)}&moderator=1`;
-      console.log('[INDEX] Creando sala. Código:', room, 'URL:', url);
       
       setButtonLoading(button, true);
       setTimeout(() => {
@@ -186,9 +185,18 @@
       }
     });
 
-    // Auto-focus on name input
+    // Auto-focus on name input and auto-fill room code from URL
     window.addEventListener('load', () => {
-      document.getElementById('userName').focus();
+      // Leer parámetro 'room' de la URL si existe
+      const urlParams = new URLSearchParams(window.location.search);
+      const roomFromUrl = urlParams.get('room');
+      
+      if (roomFromUrl) {
+        document.getElementById('roomCode').value = roomFromUrl;
+        document.getElementById('userName').focus();
+      } else {
+        document.getElementById('userName').focus();
+      }
     });
   </script>
 

@@ -30,6 +30,18 @@
     };
 })();
 
+// ============= CONFIGURACIÓN DE LOGGING =============
+// Poner en false para producción (mejora rendimiento)
+const DEBUG_MODE = false;
+
+// Wrapper para console.log que respeta DEBUG_MODE
+const devLog = DEBUG_MODE ? console.log.bind(console) : () => {};
+const devWarn = DEBUG_MODE ? console.warn.bind(console) : () => {};
+
+// Solo errores críticos se muestran siempre
+const criticalLog = console.error.bind(console);
+// ====================================================
+
 const iceServers = [
     // Servidores STUN de Google (para NAT traversal)
     { urls: 'stun:stun.l.google.com:19302' },
@@ -104,10 +116,7 @@ const iceServers = [
 // ============= FUNCIÓN DE DIAGNÓSTICO DE CONECTIVIDAD =============
 // Llamar desde la consola: diagnosticarConexion()
 async function diagnosticarConexion() {
-    console.log('\n========== DIAGNÓSTICO DE CONECTIVIDAD WEBRTC ==========\n');
-    
     // 1. Verificar servidores TURN
-    console.log('📡 1. VERIFICANDO SERVIDORES TURN...');
     for (const server of iceServers) {
         if (server.urls && server.urls.includes('turn')) {
             try {
@@ -125,23 +134,14 @@ async function diagnosticarConexion() {
                         }
                     };
                 });
-                
-                console.log(`   ✅ ${server.urls} - FUNCIONANDO`);
                 testPc.close();
             } catch (err) {
-                console.log(`   ❌ ${server.urls} - FALLIDO (${err})`);
             }
         }
     }
     
     // 2. Verificar conexiones peer activas
-    console.log('\n👥 2. CONEXIONES PEER ACTIVAS:');
     for (const [userId, pc] of Object.entries(peerConnections)) {
-        console.log(`\n   Usuario: ${userId}`);
-        console.log(`   - Estado ICE: ${pc.iceConnectionState}`);
-        console.log(`   - Estado conexión: ${pc.connectionState}`);
-        console.log(`   - Estado señalización: ${pc.signalingState}`);
-        
         // Verificar tipo de conexión
         const stats = await pc.getStats();
         let connectionType = 'DESCONOCIDO';
@@ -156,38 +156,23 @@ async function diagnosticarConexion() {
                 });
             }
         });
-        console.log(`   - Tipo de conexión: ${connectionType}`);
-        
         // Verificar tracks
         const senders = pc.getSenders();
         const receivers = pc.getReceivers();
-        console.log(`   - Tracks enviando: ${senders.filter(s => s.track).length}`);
-        console.log(`   - Tracks recibiendo: ${receivers.filter(r => r.track).length}`);
     }
     
     // 3. Estado del localStream
-    console.log('\n📹 3. ESTADO DEL STREAM LOCAL:');
     if (localStream) {
-        console.log(`   - Activo: ${localStream.active}`);
-        console.log(`   - Tracks: ${localStream.getTracks().length}`);
         localStream.getTracks().forEach(t => {
-            console.log(`     * ${t.kind}: enabled=${t.enabled}, readyState=${t.readyState}`);
         });
     } else {
-        console.log('   ❌ NO HAY STREAM LOCAL');
     }
     
     // 4. Estado del WebSocket
-    console.log('\n🔌 4. ESTADO DEL WEBSOCKET:');
     if (ws) {
         const states = ['CONNECTING', 'OPEN', 'CLOSING', 'CLOSED'];
-        console.log(`   - Estado: ${states[ws.readyState]}`);
     } else {
-        console.log('   ❌ NO HAY WEBSOCKET');
     }
-    
-    console.log('\n========== FIN DEL DIAGNÓSTICO ==========\n');
-    
     return 'Diagnóstico completado. Revisa la consola para más detalles.';
 }
 
@@ -214,12 +199,14 @@ function unlockAudio() {
     
     audioContext.resume().then(() => {
         audioUnlocked = true;
-        console.log('[🔊] Audio desbloqueado correctamente');
+        if (DEBUG_MODE) console.log('[🔊] Audio desbloqueado correctamente');
         
         // Intentar reproducir todos los videos que estén pausados
         document.querySelectorAll('video').forEach(video => {
             if (video.paused && video.srcObject) {
-                video.play().catch(e => console.log('Video aún no puede reproducirse:', e));
+                video.play().catch(e => {
+                    if (DEBUG_MODE) console.log('Video aún no puede reproducirse:', e);
+                });
             }
         });
     });
@@ -239,27 +226,26 @@ async function ensureVideoPlaying(videoElement, userId) {
     
     try {
         await videoElement.play();
-        console.log(`[🔊] Video de ${userId} reproduciendo correctamente`);
+        if (DEBUG_MODE) console.log(`[🔊] Video de ${userId} reproduciendo correctamente`);
     } catch (e) {
-        console.warn(`[⚠️] Autoplay bloqueado para ${userId}, intentando con muted primero...`);
+        if (DEBUG_MODE) console.warn(`[⚠️] Autoplay bloqueado para ${userId}, intentando con muted primero...`);
         
         // Estrategia: reproducir muted, luego unmute después de interacción
         videoElement.muted = true;
         try {
             await videoElement.play();
-            console.log(`[🔊] Video de ${userId} reproduciendo (muted temporalmente)`);
+            if (DEBUG_MODE) console.log(`[🔊] Video de ${userId} reproduciendo (muted temporalmente)`);
             
             // Intentar unmute después de un breve delay
             setTimeout(async () => {
                 try {
                     videoElement.muted = false;
-                    console.log(`[🔊] Audio de ${userId} activado`);
+                    if (DEBUG_MODE) console.log(`[🔊] Audio de ${userId} activado`);
                 } catch (e2) {
-                    console.warn(`[⚠️] No se pudo activar audio de ${userId}`);
+                    if (DEBUG_MODE) console.warn(`[⚠️] No se pudo activar audio de ${userId}`);
                 }
             }, 100);
         } catch (e2) {
-            console.error(`[❌] No se puede reproducir video de ${userId}:`, e2);
         }
     }
 }
@@ -275,32 +261,107 @@ async function forceSpeakerOutput(mediaEl) {
 
         if (speaker) {
             await mediaEl.setSinkId(speaker.deviceId);
-            console.log('[🔊] Audio forzado al altavoz:', speaker.label);
+            if (DEBUG_MODE) console.log('[🔊] Audio forzado al altavoz:', speaker.label);
         }
     } catch (err) {
-        console.warn('[⚠️] No se pudo forzar el altavoz:', err);
+        if (DEBUG_MODE) console.warn('[⚠️] No se pudo forzar el altavoz:', err);
     }
 }
 
 
 function debugLog(...messages) {
-    console.log('[DEBUG]', new Date().toISOString(), ...messages);
+    if (DEBUG_MODE) {
+    }
 }
 
 function showError(message, duration = 5000) {
     const errorPanel = document.getElementById('errorPanel');
     if (!errorPanel) {
-        console.error('Error: #errorPanel no encontrado en el DOM.', message);
         return;
     }
     errorPanel.textContent = message;
     errorPanel.style.display = 'block';
+    errorPanel.style.cursor = 'default';
+    errorPanel.onclick = null;
     debugLog('ERROR UI:', message);
 
     if (duration > 0) {
         setTimeout(() => {
             errorPanel.style.display = 'none';
         }, duration);
+    }
+}
+
+// ✅ Función especial para notificaciones de chat (clickeables para abrir chat)
+function showChatNotification(author, messagePreview, duration = 4000) {
+    const errorPanel = document.getElementById('errorPanel');
+    if (!errorPanel) return;
+    
+    const message = `💬 ${author}: ${messagePreview}`;
+    errorPanel.textContent = message;
+    errorPanel.style.display = 'block';
+    errorPanel.style.cursor = 'pointer';
+    
+    // Al hacer click, abrir el chat
+    errorPanel.onclick = function() {
+        errorPanel.style.display = 'none';
+        openChatPanel();
+    };
+    
+    if (duration > 0) {
+        setTimeout(() => {
+            errorPanel.style.display = 'none';
+            errorPanel.onclick = null;
+            errorPanel.style.cursor = 'default';
+        }, duration);
+    }
+}
+
+// ✅ Función para abrir el panel de chat
+function openChatPanel() {
+    const sidebar = document.getElementById('sidebar');
+    const chatTab = document.querySelector('.sidebar-tab[data-tab="chat"]');
+    const chatToggleBtn = document.getElementById('chatToggle');
+    const participantsToggleBtn = document.getElementById('participantsToggle');
+    
+    if (sidebar && chatTab) {
+        // Abrir sidebar
+        sidebar.classList.remove('sidebar-collapsed');
+        
+        // Activar tab de chat
+        document.querySelectorAll('.sidebar-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.sidebar-content').forEach(c => c.classList.remove('active'));
+        
+        chatTab.classList.add('active');
+        const chatContent = document.getElementById('chatContent');
+        if (chatContent) chatContent.classList.add('active');
+        
+        if (chatToggleBtn) {
+            chatToggleBtn.classList.add('active');
+            chatToggleBtn.classList.remove('has-notification');
+        }
+        if (participantsToggleBtn) participantsToggleBtn.classList.remove('active');
+        
+        // Remover badge
+        const chatBadge = document.getElementById('sidebarChatBadge');
+        if (chatBadge) {
+            chatBadge.style.display = 'none';
+            chatBadge.textContent = '0';
+        }
+        
+        // Scroll al final del chat al abrir
+        const chatMessages = document.getElementById('chatMessages');
+        if (chatMessages) {
+            requestAnimationFrame(() => {
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            });
+        }
+        
+        // Enfocar el input del chat después de abrir
+        setTimeout(() => {
+            const chatInput = document.getElementById('chatInput');
+            if (chatInput) chatInput.focus();
+        }, 100);
     }
 }
 
@@ -332,17 +393,12 @@ let userName = urlParams.get('name') || 'Invitado';
 // ✅ ASEGURAR que userName nunca esté vacío
 if (!userName || userName.trim() === '') {
     userName = 'Usuario-' + Math.random().toString(36).substr(2, 6);
-    console.warn('⚠️ Nombre de usuario vacío, asignando nombre aleatorio:', userName);
 }
 let isModerator = urlParams.has('moderator');
 let isRoomAdmin = false; // ✅ Flag para identificar al admin de la sala
 
-console.log('[INIT] URL completa:', window.location.href);
-console.log('[INIT] Parámetros URL:', {
-    room: roomCode,
-    name: userName,
-    moderator: isModerator
-});
+if (DEBUG_MODE) {
+}
 
 let isMicActive = true;
 let isCamActive = true;
@@ -376,27 +432,27 @@ let pollChart = null;
  * Debe llamarse en: end-poll, poll-ended (WS), hidePollForParticipant, closePollResultsPanel
  */
 function stopAllPollTimers(markAsEnded = true) {
-    console.log('[POLL-TIMER] 🛑 Limpiando TODOS los temporizadores de encuesta...');
+    if (DEBUG_MODE) console.log('[POLL-TIMER] 🛑 Limpiando TODOS los temporizadores de encuesta...');
     
     if (currentPoll) {
         // Limpiar timer principal
         if (currentPoll.timerInterval) {
             clearInterval(currentPoll.timerInterval);
             currentPoll.timerInterval = null;
-            console.log('[POLL-TIMER] ✅ Timer principal limpiado');
+            if (DEBUG_MODE) console.log('[POLL-TIMER] ✅ Timer principal limpiado');
         }
         
         // Limpiar timer de resultados
         if (currentPoll.resultsTimerInterval) {
             clearInterval(currentPoll.resultsTimerInterval);
             currentPoll.resultsTimerInterval = null;
-            console.log('[POLL-TIMER] ✅ Timer de resultados limpiado');
+            if (DEBUG_MODE) console.log('[POLL-TIMER] ✅ Timer de resultados limpiado');
         }
         
         // Marcar como finalizada solo si se solicita
         if (markAsEnded) {
             currentPoll.ended = true;
-            console.log('[POLL-TIMER] 📌 Encuesta marcada como terminada');
+            if (DEBUG_MODE) console.log('[POLL-TIMER] 📌 Encuesta marcada como terminada');
         }
     }
     
@@ -412,7 +468,7 @@ function stopAllPollTimers(markAsEnded = true) {
         pollResultsTimer.textContent = '¡Votación terminada!';
     }
     
-    console.log('[POLL-TIMER] ✅ Todos los temporizadores limpiados');
+    if (DEBUG_MODE) console.log('[POLL-TIMER] ✅ Todos los temporizadores limpiados');
 }
 
 // ======================= SISTEMA DE SALA DE ESPERA =======================
@@ -439,7 +495,7 @@ function showWaitingRoom() {
         if (waitingRoomCode) waitingRoomCode.textContent = roomCode || '---';
         if (waitingUserName) waitingUserName.textContent = userName || '---';
         
-        console.log('[WAITING-ROOM] 🚪 Sala de espera mostrada');
+        if (DEBUG_MODE) console.log('[WAITING-ROOM] 🚪 Sala de espera mostrada');
     }
 }
 
@@ -450,7 +506,7 @@ function hideWaitingRoom() {
     const waitingRoomScreen = document.getElementById('waitingRoomScreen');
     if (waitingRoomScreen) {
         waitingRoomScreen.style.display = 'none';
-        console.log('[WAITING-ROOM] ✅ Sala de espera ocultada');
+        if (DEBUG_MODE) console.log('[WAITING-ROOM] ✅ Sala de espera ocultada');
     }
 }
 
@@ -463,7 +519,9 @@ let audioContext = null;
 let audioAnalysers = {}; // Map<peerId, {analyser, source, stream}>
 let activeSpeakerInterval = null;
 const AUDIO_LEVEL_THRESHOLD = 15; // Umbral mínimo para considerar "hablando"
-const ACTIVE_SPEAKER_CHECK_INTERVAL = 200; // Verificar cada 200ms
+const ACTIVE_SPEAKER_CHECK_INTERVAL = 1000; // ✅ Optimizado: 1 segundo para reducir CPU en móviles
+let lastActiveSpeaker = null; // Cache para evitar notificaciones repetidas
+let audioDataBuffer = null; // ✅ Buffer reutilizable para análisis de audio
 
 /**
  * Inicializa el AudioContext para análisis de audio
@@ -473,9 +531,8 @@ function initAudioContext() {
     
     try {
         audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        console.log('[AUDIO-DETECT] 🎤 AudioContext inicializado');
+        if (DEBUG_MODE) console.log('[AUDIO-DETECT] 🎤 AudioContext inicializado');
     } catch (err) {
-        console.error('[AUDIO-DETECT] ❌ Error creando AudioContext:', err);
     }
 }
 
@@ -496,7 +553,7 @@ function addAudioStreamForAnalysis(peerId, stream) {
     
     const audioTracks = stream.getAudioTracks();
     if (audioTracks.length === 0) {
-        console.log(`[AUDIO-DETECT] ⚠️ ${peerId} no tiene tracks de audio`);
+        if (DEBUG_MODE) console.log(`[AUDIO-DETECT] ⚠️ ${peerId} no tiene tracks de audio`);
         return;
     }
     
@@ -515,12 +572,11 @@ function addAudioStreamForAnalysis(peerId, stream) {
         // NO conectar al destino (no queremos reproducir el audio aquí, solo analizar)
         
         audioAnalysers[peerId] = { analyser, source, stream };
-        console.log(`[AUDIO-DETECT] ✅ Analyser agregado para ${peerId}`);
+        if (DEBUG_MODE) console.log(`[AUDIO-DETECT] ✅ Analyser agregado para ${peerId}`);
         
         // Iniciar el intervalo de detección si no está corriendo
         startActiveSpeakerDetection();
     } catch (err) {
-        console.error(`[AUDIO-DETECT] ❌ Error agregando analyser para ${peerId}:`, err);
     }
 }
 
@@ -535,7 +591,7 @@ function removeAudioStreamFromAnalysis(peerId) {
             analyserData.source.disconnect();
         } catch (e) {}
         delete audioAnalysers[peerId];
-        console.log(`[AUDIO-DETECT] 🗑️ Analyser removido para ${peerId}`);
+        if (DEBUG_MODE) console.log(`[AUDIO-DETECT] 🗑️ Analyser removido para ${peerId}`);
     }
 }
 
@@ -545,9 +601,11 @@ function removeAudioStreamFromAnalysis(peerId) {
 function startActiveSpeakerDetection() {
     if (activeSpeakerInterval) return; // Ya está corriendo
     
-    console.log('[AUDIO-DETECT] 🎯 Iniciando detección de hablante activo');
+    if (DEBUG_MODE) console.log('[AUDIO-DETECT] 🎯 Iniciando detección de hablante activo');
     
     activeSpeakerInterval = setInterval(() => {
+        // ✅ OPTIMIZACIÓN: No ejecutar si la pestaña está oculta
+        if (document.hidden) return;
         detectActiveSpeaker();
     }, ACTIVE_SPEAKER_CHECK_INTERVAL);
 }
@@ -559,18 +617,24 @@ function stopActiveSpeakerDetection() {
     if (activeSpeakerInterval) {
         clearInterval(activeSpeakerInterval);
         activeSpeakerInterval = null;
-        console.log('[AUDIO-DETECT] ⏹️ Detección de hablante activo detenida');
+        if (DEBUG_MODE) console.log('[AUDIO-DETECT] ⏹️ Detección de hablante activo detenida');
     }
 }
 
 /**
  * Detecta quién está hablando basándose en niveles de audio
+ * ✅ OPTIMIZADO: Cache de speaker, salida temprana, buffer reutilizable
  */
 function detectActiveSpeaker() {
+    const analysersEntries = Object.entries(audioAnalysers);
+    
+    // ✅ Salida temprana si no hay analysers
+    if (analysersEntries.length === 0) return;
+    
     let maxLevel = 0;
     let activePeerId = null;
     
-    for (const [peerId, data] of Object.entries(audioAnalysers)) {
+    for (const [peerId, data] of analysersEntries) {
         const level = getAudioLevel(data.analyser);
         
         if (level > AUDIO_LEVEL_THRESHOLD && level > maxLevel) {
@@ -579,9 +643,12 @@ function detectActiveSpeaker() {
         }
     }
     
-    // Solo notificar si hay un cambio significativo
-    if (activePeerId && window.ViewControl && typeof window.ViewControl.markActiveSpeaker === 'function') {
-        window.ViewControl.markActiveSpeaker(activePeerId);
+    // ✅ OPTIMIZACIÓN: Solo notificar si cambió el speaker activo
+    if (activePeerId !== lastActiveSpeaker) {
+        lastActiveSpeaker = activePeerId;
+        if (activePeerId && window.ViewControl && typeof window.ViewControl.markActiveSpeaker === 'function') {
+            window.ViewControl.markActiveSpeaker(activePeerId);
+        }
     }
 }
 
@@ -589,17 +656,26 @@ function detectActiveSpeaker() {
  * Obtiene el nivel de audio actual de un analyser
  * @param {AnalyserNode} analyser - El nodo analyser
  * @returns {number} - Nivel de audio (0-255)
+ * ✅ OPTIMIZADO: Reutiliza buffer, solo analiza frecuencias de voz (85-255 = 300Hz-3400Hz aprox)
  */
 function getAudioLevel(analyser) {
-    const dataArray = new Uint8Array(analyser.frequencyBinCount);
-    analyser.getByteFrequencyData(dataArray);
-    
-    // Calcular el promedio de las frecuencias
-    let sum = 0;
-    for (let i = 0; i < dataArray.length; i++) {
-        sum += dataArray[i];
+    // ✅ Reutilizar buffer si ya existe y es del tamaño correcto
+    if (!audioDataBuffer || audioDataBuffer.length !== analyser.frequencyBinCount) {
+        audioDataBuffer = new Uint8Array(analyser.frequencyBinCount);
     }
-    return sum / dataArray.length;
+    analyser.getByteFrequencyData(audioDataBuffer);
+    
+    // ✅ OPTIMIZACIÓN: Solo analizar rango de voz humana (bins 10-100 aprox = 300Hz-3400Hz)
+    // Esto reduce significativamente el procesamiento
+    const startBin = Math.floor(analyser.frequencyBinCount * 0.02); // ~300Hz
+    const endBin = Math.floor(analyser.frequencyBinCount * 0.25);   // ~3400Hz
+    
+    let sum = 0;
+    const binCount = endBin - startBin;
+    for (let i = startBin; i < endBin; i++) {
+        sum += audioDataBuffer[i];
+    }
+    return binCount > 0 ? sum / binCount : 0;
 }
 // ===========================================================================
 
@@ -683,14 +759,13 @@ function setTranslate(xPos, yPos, el) {
 }
 
 function giveWordToParticipant(participantName, duration = 60) {
-    console.log('[GIVE-WORD-FUNC] 📢 Función llamada');
-    console.log('[GIVE-WORD-FUNC] participantName:', participantName);
-    console.log('[GIVE-WORD-FUNC] duration:', duration);
+    if (DEBUG_MODE) {
+    }
 
     // Si ya hay alguien con la palabra, quitársela primero
     if (currentSpeaker) {
-        console.log('[GIVE-WORD-FUNC] ⚠️ Ya hay alguien con la palabra:', currentSpeaker.name);
-        console.log('[GIVE-WORD-FUNC] Quitando palabra primero...');
+        if (DEBUG_MODE) {
+        }
         takeWordFromParticipant();
     }
 
@@ -699,7 +774,7 @@ function giveWordToParticipant(participantName, duration = 60) {
         timeLeft: duration,
         totalTime: duration
     };
-    console.log('[GIVE-WORD-FUNC] ✅ currentSpeaker actualizado:', currentSpeaker);
+    if (DEBUG_MODE) console.log('[GIVE-WORD-FUNC] ✅ currentSpeaker actualizado:', currentSpeaker);
 
     // Mostrar panel
     const speakingPanel = document.getElementById('speakingPanel');
@@ -708,18 +783,14 @@ function giveWordToParticipant(participantName, duration = 60) {
     const timerProgressBar = document.getElementById('timerProgressBar');
     const speakingActions = document.getElementById('speakingActions');
 
-    console.log('[GIVE-WORD-FUNC] Elementos DOM:', {
-        speakingPanel: !!speakingPanel,
-        speakingPersonName: !!speakingPersonName,
-        timerDisplay: !!timerDisplay,
-        speakingActions: !!speakingActions
-    });
+    if (DEBUG_MODE) {
+    }
 
     if (speakingPanel && speakingPersonName && timerDisplay) {
         // ✅ ASEGURAR que el panel esté en el body
         if (speakingPanel.parentNode !== document.body) {
             document.body.appendChild(speakingPanel);
-            console.log('[GIVE-WORD-FUNC] Panel movido al body');
+            if (DEBUG_MODE) console.log('[GIVE-WORD-FUNC] Panel movido al body');
         }
 
         speakingPersonName.textContent = participantName;
@@ -729,19 +800,19 @@ function giveWordToParticipant(participantName, duration = 60) {
 
         // ✅ FORZAR VISIBILIDAD TOTAL con estilos inline importantes
         speakingPanel.style.cssText = 'display: block !important; opacity: 1 !important; visibility: visible !important; z-index: 10000 !important;';
-        console.log('[GIVE-WORD-FUNC] ✅ Panel mostrado localmente');
+        if (DEBUG_MODE) console.log('[GIVE-WORD-FUNC] ✅ Panel mostrado localmente');
 
         // Mostrar botón de quitar palabra solo si eres moderador
         if (speakingActions) {
             speakingActions.style.display = isModerator ? 'flex' : 'none';
-            console.log('[GIVE-WORD-FUNC] Botones de acción:', isModerator ? 'VISIBLES' : 'OCULTOS');
+            if (DEBUG_MODE) console.log('[GIVE-WORD-FUNC] Botones de acción:', isModerator ? 'VISIBLES' : 'OCULTOS');
         }
     }
 
     // ❌ NO iniciar temporizador LOCAL aquí para evitar duplicados
     // El temporizador se iniciará cuando llegue el mensaje 'give-word' del servidor
     // Así todos los clientes están sincronizados
-    console.log('[GIVE-WORD-FUNC] ⏰ Temporizador se iniciará al recibir confirmación del servidor');
+    if (DEBUG_MODE) console.log('[GIVE-WORD-FUNC] ⏰ Temporizador se iniciará al recibir confirmación del servidor');
 
     // Notificar al servidor que se dio la palabra
     if (ws && ws.readyState === WebSocket.OPEN) {
@@ -751,9 +822,10 @@ function giveWordToParticipant(participantName, duration = 60) {
             target: participantName,
             duration: duration
         };
-        console.log('[GIVE-WORD-FUNC] 📤 Enviando mensaje al servidor:', message);
+        if (DEBUG_MODE) {
+        }
         ws.send(JSON.stringify(message));
-        console.log('[GIVE-WORD-FUNC] ✅ Mensaje enviado al servidor');
+        if (DEBUG_MODE) console.log('[GIVE-WORD-FUNC] ✅ Mensaje enviado al servidor');
 
         // También activar el micrófono del participante
         ws.send(JSON.stringify({
@@ -762,23 +834,22 @@ function giveWordToParticipant(participantName, duration = 60) {
             target: participantName,
             micActive: true
         }));
-        console.log('[GIVE-WORD-FUNC] ✅ Solicitud de activación de micrófono enviada');
+        if (DEBUG_MODE) console.log('[GIVE-WORD-FUNC] ✅ Solicitud de activación de micrófono enviada');
     } else {
-        console.error('[GIVE-WORD-FUNC] ❌ ERROR: WebSocket no está abierto');
-        console.error('[GIVE-WORD-FUNC] ws:', ws);
-        console.error('[GIVE-WORD-FUNC] readyState:', ws?.readyState);
+        if (DEBUG_MODE) {
+        }
     }
 
     showError(`${participantName} tiene la palabra (${duration}s)`, 3000);
-    console.log(`[GIVE-WORD-FUNC] ✅ Función completada. ${participantName} tiene la palabra por ${duration} segundos`);
+    if (DEBUG_MODE) console.log(`[GIVE-WORD-FUNC] ✅ Función completada. ${participantName} tiene la palabra por ${duration} segundos`);
 }
 
 function handleTimeExpired(participantName) {
-    console.log('[TIME-EXPIRED] ⏰ Tiempo expirado para:', participantName);
+    if (DEBUG_MODE) console.log('[TIME-EXPIRED] ⏰ Tiempo expirado para:', participantName);
 
     // 🔇 PASO 1: Silenciar inmediatamente al participante
     if (ws && ws.readyState === WebSocket.OPEN) {
-        console.log('[TIME-EXPIRED] 📤 Enviando mute-participant (micActive: false)');
+        if (DEBUG_MODE) console.log('[TIME-EXPIRED] 📤 Enviando mute-participant (micActive: false)');
         ws.send(JSON.stringify({
             type: 'mute-participant',
             room: roomCode,
@@ -789,7 +860,7 @@ function handleTimeExpired(participantName) {
 
     // 📢 PASO 2: Quitar la palabra
     if (ws && ws.readyState === WebSocket.OPEN) {
-        console.log('[TIME-EXPIRED] 📤 Enviando take-word');
+        if (DEBUG_MODE) console.log('[TIME-EXPIRED] 📤 Enviando take-word');
         ws.send(JSON.stringify({
             type: 'take-word',
             room: roomCode,
@@ -819,26 +890,26 @@ function handleTimeExpired(participantName) {
     }
 
     showError(`⏰ Tiempo agotado: ${participantName} fue silenciado`, 3000);
-    console.log('[TIME-EXPIRED] ✅ Proceso completado');
+    if (DEBUG_MODE) console.log('[TIME-EXPIRED] ✅ Proceso completado');
 }
 
 function takeWordFromParticipant() {
-    console.log('[TAKE-WORD-FUNC] 📢 Función llamada');
-    console.log('[TAKE-WORD-FUNC] currentSpeaker:', currentSpeaker);
+    if (DEBUG_MODE) {
+    }
 
     if (!currentSpeaker) {
-        console.log('[TAKE-WORD-FUNC] ❌ No hay nadie con la palabra, abortando');
+        if (DEBUG_MODE) console.log('[TAKE-WORD-FUNC] ❌ No hay nadie con la palabra, abortando');
         return;
     }
 
     const participantName = currentSpeaker.name;
-    console.log('[TAKE-WORD-FUNC] 🎯 Quitando palabra a:', participantName);
+    if (DEBUG_MODE) console.log('[TAKE-WORD-FUNC] 🎯 Quitando palabra a:', participantName);
 
     // Detener temporizador
     if (speakingTimerInterval) {
         clearInterval(speakingTimerInterval);
         speakingTimerInterval = null;
-        console.log('[TAKE-WORD-FUNC] ⏰ Temporizador detenido');
+        if (DEBUG_MODE) console.log('[TAKE-WORD-FUNC] ⏰ Temporizador detenido');
     }
 
     // ✅ Ocultar panel con animación para TODOS
@@ -853,7 +924,7 @@ function takeWordFromParticipant() {
             xOffset = 0;
             yOffset = 0;
         }, 400);
-        console.log('[TAKE-WORD-FUNC] ✅ Panel ocultado localmente');
+        if (DEBUG_MODE) console.log('[TAKE-WORD-FUNC] ✅ Panel ocultado localmente');
     }
 
     // 📢 Notificar al servidor que se quitó la palabra
@@ -864,18 +935,17 @@ function takeWordFromParticipant() {
             room: roomCode,
             target: participantName
         };
-        console.log('[TAKE-WORD-FUNC] 📤 Enviando mensaje al servidor:', message);
+        if (DEBUG_MODE) console.log('[TAKE-WORD-FUNC] 📤 Enviando mensaje al servidor:', message);
         ws.send(JSON.stringify(message));
-        console.log('[TAKE-WORD-FUNC] ✅ Mensaje enviado al servidor');
+        if (DEBUG_MODE) console.log('[TAKE-WORD-FUNC] ✅ Mensaje enviado al servidor');
     } else {
-        console.error('[TAKE-WORD-FUNC] ❌ ERROR: WebSocket no está abierto');
-        console.error('[TAKE-WORD-FUNC] ws:', ws);
-        console.error('[TAKE-WORD-FUNC] readyState:', ws?.readyState);
+        if (DEBUG_MODE) {
+        }
     }
 
     currentSpeaker = null;
     showError(`Se quitó la palabra a ${participantName}`, 2000);
-    console.log(`[TAKE-WORD-FUNC] ✅ Función completada. Palabra quitada a ${participantName}`);
+    if (DEBUG_MODE) console.log(`[TAKE-WORD-FUNC] ✅ Función completada. Palabra quitada a ${participantName}`);
 }
 
 function updateTimerDisplay() {
@@ -905,6 +975,8 @@ function updateTimerDisplay() {
 }
 
 // ======================= CHAT FUNCTIONS =======================
+const MAX_CHAT_MESSAGES = 100; // Límite de mensajes para evitar memory leaks
+
 function addChatMessage(authorName, message, timestamp, isOwn = false) {
     const chatMessages = document.getElementById('chatMessages');
     if (!chatMessages) return;
@@ -924,7 +996,16 @@ function addChatMessage(authorName, message, timestamp, isOwn = false) {
     `;
 
     chatMessages.appendChild(messageDiv);
-    chatMessages.scrollTop = chatMessages.scrollHeight;
+    
+    // Limitar número de mensajes para evitar memory leaks y congelamiento
+    while (chatMessages.children.length > MAX_CHAT_MESSAGES) {
+        chatMessages.removeChild(chatMessages.firstChild);
+    }
+    
+    // Usar requestAnimationFrame para scroll suave sin bloquear el render
+    requestAnimationFrame(() => {
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    });
 }
 
 function escapeHtml(text) {
@@ -947,6 +1028,15 @@ function sendChatMessage() {
         }));
         chatInput.value = '';
         chatInput.style.height = 'auto';
+        
+        // ✅ FIX MOBILE: Mantener focus y prevenir freeze
+        // Usar requestAnimationFrame para evitar bloqueos de render
+        requestAnimationFrame(() => {
+            // En móvil, no hacer blur para evitar el cierre/apertura del teclado
+            if (window.innerWidth > 768) {
+                chatInput.blur();
+            }
+        });
     }
 }
 // ======================= END CHAT FUNCTIONS =======================
@@ -1063,7 +1153,6 @@ function updateHandList() {
                     try {
                         handleHandLowered(targetName);
                     } catch (e) {
-                        console.warn('Optimistic handleHandLowered failed for', targetName, e);
                     }
                 }
             });
@@ -1155,27 +1244,25 @@ document.getElementById('lowerAllBtn')?.addEventListener('click', () => {
         handsToLower.forEach(name => {
             ws.send(JSON.stringify({ type: 'hand-lowered', name: name }));
         });
-        console.log('[LOWER-ALL] Bajando todas las manos:', handsToLower);
+        if (DEBUG_MODE) console.log('[LOWER-ALL] Bajando todas las manos:', handsToLower);
         // Optimistic update: limpiar localmente la lista de manos levantadas
         try {
             raisedHands.clear();
             updateHandList();
             updateHandNotification();
         } catch (e) {
-            console.warn('Error applying optimistic lower-all update:', e);
         }
     }
 });
 
 
 function handleHandLowered(name) {
-    console.log(`[HAND-LOWERED] 📥 Mensaje recibido para: ${name}`);
-    console.log(`[HAND-LOWERED] userName actual: ${userName}`);
-    console.log(`[HAND-LOWERED] raisedHands antes:`, Array.from(raisedHands));
+    if (DEBUG_MODE) {
+    }
 
     raisedHands.delete(name);
 
-    console.log(`[HAND-LOWERED] raisedHands después:`, Array.from(raisedHands));
+    if (DEBUG_MODE) console.log(`[HAND-LOWERED] raisedHands después:`, Array.from(raisedHands));
 
     updateHandList();
     updateHandNotification();
@@ -1183,14 +1270,15 @@ function handleHandLowered(name) {
     if (name === userName) {
         showError('Tu mano ha sido bajada.', 3000);
         const raiseHandBtn = document.getElementById('raiseHand');
-        console.log(`[HAND-LOWERED] Botón encontrado:`, !!raiseHandBtn);
+        if (DEBUG_MODE) {
+            if (raiseHandBtn) {
+            }
+        }
         if (raiseHandBtn) {
-            console.log(`[HAND-LOWERED] Classes antes:`, raiseHandBtn.className);
             raiseHandBtn.classList.remove('active');
-            console.log(`[HAND-LOWERED] Classes después:`, raiseHandBtn.className);
-            console.log(`[HAND-LOWERED] ✅ Clase 'active' removida del botón`);
+            if (DEBUG_MODE) {
+            }
         } else {
-            console.error(`[HAND-LOWERED] ❌ No se encontró el botón raiseHand`);
         }
     }
 
@@ -1275,10 +1363,16 @@ function updateParticipantCount() {
         navbarCount.textContent = count;
     }
 
-    // Actualizar contador en el sidebar
+    // Actualizar contador en el sidebar (texto)
     const sidebarCount = document.getElementById('sidebarParticipantCountText');
     if (sidebarCount) {
         sidebarCount.textContent = count;
+    }
+    
+    // Actualizar badge del sidebar
+    const sidebarBadge = document.getElementById('sidebarParticipantCount');
+    if (sidebarBadge) {
+        sidebarBadge.textContent = count;
     }
 
     debugLog(`📊 Contador actualizado: ${count} participantes`);
@@ -1515,7 +1609,6 @@ function updateParticipantList() {
                 camStatus.textContent = participantStates[name]?.camActive ? '📹' : '📴';
             }
         } else {
-            console.warn(`⚠️ Nombre de participante vacío o inválido, saltando actualización de estado`);
         }
 
         const muteBtn = item.querySelector('.participant-control-btn.mute');
@@ -1559,19 +1652,16 @@ function removeParticipant(userId) {
 
 function addVideoElement(userId, stream) {
     debugLog(`📺 addVideoElement llamado para ${userId}`);
-    console.log(`Stream recibido:`, stream);
-    console.log(`  - ID: ${stream.id}`);
-    console.log(`  - Active: ${stream.active}`);
-    console.log(`  - Tracks:`, stream.getTracks().map(t => `${t.kind} (enabled=${t.enabled}, readyState=${t.readyState})`));
+    if (DEBUG_MODE) {
+    };
 
     // ✅ SIEMPRE agregar videos a #videoGrid (donde está el sistema de vistas)
     const videoGrid = document.getElementById('videoGrid');
     if (!videoGrid) {
-        console.error('❌ ERROR CRÍTICO: No se puede encontrar el contenedor #videoGrid');
         return;
     }
 
-    console.log(`✅ videoGrid encontrado. Videos actuales:`, videoGrid.querySelectorAll('.video-container').length);
+    if (DEBUG_MODE) console.log(`✅ videoGrid encontrado. Videos actuales:`, videoGrid.querySelectorAll('.video-container').length);
 
     let videoContainer = document.getElementById(`video-container-${userId}`);
     let videoElement = null;
@@ -1580,13 +1670,13 @@ function addVideoElement(userId, stream) {
         videoElement = videoContainer.querySelector('video');
         debugLog(`🔄 Actualizando video existente para ${userId}.`);
     } else {
-        console.log(`🆕 CREANDO NUEVO VIDEO CONTAINER para ${userId}`);
+        if (DEBUG_MODE) console.log(`🆕 CREANDO NUEVO VIDEO CONTAINER para ${userId}`);
         videoContainer = document.createElement('div');
         videoContainer.className = 'video-container remote-video';
         videoContainer.id = `video-container-${userId}`;
         videoContainer.style.display = 'block'; // FORZAR VISIBLE
         videoGrid.appendChild(videoContainer); // ✅ AGREGAR A #videoGrid
-        console.log(`✅ CONTENEDOR AGREGADO! Total videos ahora:`, videoGrid.querySelectorAll('.video-container').length);
+        if (DEBUG_MODE) console.log(`✅ CONTENEDOR AGREGADO! Total videos ahora:`, videoGrid.querySelectorAll('.video-container').length);
 
         videoElement = document.createElement('video');
         videoElement.autoplay = true;
@@ -1628,7 +1718,7 @@ function addVideoElement(userId, stream) {
     }
 
     if (videoElement) {
-        console.log(`🎥 Asignando stream al elemento <video> de ${userId}`);
+        if (DEBUG_MODE) console.log(`🎥 Asignando stream al elemento <video> de ${userId}`);
         videoElement.srcObject = stream;
         videoElement.style.width = '100%';
         videoElement.style.height = '100%';
@@ -1647,16 +1737,13 @@ function addVideoElement(userId, stream) {
 
         // Verificar estado después de 1 segundo
         setTimeout(() => {
-            debugLog(`📊 Estado de video para ${userId} después de 1s:`);
-            console.log(`  - srcObject:`, videoElement.srcObject);
-            console.log(`  - readyState:`, videoElement.readyState);
-            console.log(`  - paused:`, videoElement.paused);
-            console.log(`  - muted:`, videoElement.muted);
-            console.log(`  - volume:`, videoElement.volume);
+            if (DEBUG_MODE) {
+                debugLog(`📊 Estado de video para ${userId} después de 1s:`);
+            }
             
             // ✅ Si está pausado, intentar reproducir de nuevo
             if (videoElement.paused && videoElement.srcObject) {
-                console.log(`[🔄] Reintentando reproducir video de ${userId}...`);
+                if (DEBUG_MODE) console.log(`[🔄] Reintentando reproducir video de ${userId}...`);
                 ensureVideoPlaying(videoElement, userId);
             }
         }, 1000);
@@ -1664,12 +1751,11 @@ function addVideoElement(userId, stream) {
         // ✅ Reintentar después de 3 segundos si aún está pausado
         setTimeout(() => {
             if (videoElement.paused && videoElement.srcObject) {
-                console.log(`[🔄] Segundo intento de reproducir video de ${userId}...`);
+                if (DEBUG_MODE) console.log(`[🔄] Segundo intento de reproducir video de ${userId}...`);
                 ensureVideoPlaying(videoElement, userId);
             }
         }, 3000);
     } else {
-        console.error('❌ No se pudo encontrar o crear elemento de video.');
     }
     // Si hay una pantalla compartida activa, re-aplicar layout para colocar este video en miniatura
     try {
@@ -1690,20 +1776,18 @@ function addVideoElement(userId, stream) {
  * @param {MediaStream} stream - Stream de pantalla compartida
  */
 function createScreenSharePreview(userId, stream) {
-    console.log(`[SCREEN-SHARE] 📺 Creando preview para ${userId}`);
-    console.log(`[SCREEN-SHARE] 🎵 Audio tracks en stream:`, stream.getAudioTracks().length);
-    console.log(`[SCREEN-SHARE] 📹 Video tracks en stream:`, stream.getVideoTracks().length);
+    if (DEBUG_MODE) {
+    }
 
     const videoGrid = document.getElementById('videoGrid');
     if (!videoGrid) {
-        console.error('[SCREEN-SHARE] ❌ #videoGrid no encontrado');
         return;
     }
 
     // Limpiar preview existente si hay
     const existingPreview = document.getElementById(`screen-preview-${userId}`);
     if (existingPreview) {
-        console.log(`[SCREEN-SHARE] 🗑️ Eliminando preview anterior de ${userId}`);
+        if (DEBUG_MODE) console.log(`[SCREEN-SHARE] 🗑️ Eliminando preview anterior de ${userId}`);
         // Detener stream anterior si existe
         const oldVideo = existingPreview.querySelector('video');
         if (oldVideo && oldVideo.srcObject) {
@@ -1742,20 +1826,19 @@ function createScreenSharePreview(userId, stream) {
 
     // ✅ Configurar audio para reproducción en altavoz (móviles)
     if (!isLocalShare && stream.getAudioTracks().length > 0) {
-        console.log(`[SCREEN-SHARE] 🔊 Configurando audio para reproducción...`);
+        if (DEBUG_MODE) console.log(`[SCREEN-SHARE] 🔊 Configurando audio para reproducción...`);
         forceSpeakerOutput(video);
     }
 
     // Intentar reproducir
     video.play()
         .then(() => {
-            console.log(`[SCREEN-SHARE] ✅ Video reproduciendo para ${userId}`);
-            if (!isLocalShare && stream.getAudioTracks().length > 0) {
-                console.log(`[SCREEN-SHARE] 🔊 Audio activo: muted=${video.muted}, volume=${video.volume}`);
+            if (DEBUG_MODE) {
+                if (!isLocalShare && stream.getAudioTracks().length > 0) {
+                }
             }
         })
         .catch(err => {
-            console.error(`[SCREEN-SHARE] ❌ Error reproduciendo video:`, err);
             // En móviles, a veces necesita interacción del usuario
             if (err.name === 'NotAllowedError') {
                 showError('Toca la pantalla compartida para activar el audio', 4000);
@@ -1788,10 +1871,6 @@ function createScreenSharePreview(userId, stream) {
     previewContainer.style.display = 'block';
     previewContainer.style.order = '-1'; // Siempre primero
     previewContainer.style.zIndex = '10';
-    
-    console.log(`[SCREEN-SHARE] 📺 Preview container creado:`, previewContainer.id);
-    console.log(`[SCREEN-SHARE] 📺 Preview tiene video con srcObject:`, !!video.srcObject);
-
     // Activar layout de grid para screen-share usando el sistema centralizado
     // ✅ Usar setTimeout para asegurar que el DOM está actualizado
     setTimeout(() => {
@@ -1800,12 +1879,10 @@ function createScreenSharePreview(userId, stream) {
         } else if (window.ViewControl && typeof window.ViewControl.setViewMode === 'function') {
             window.ViewControl.setViewMode('sidebar');
         } else {
-            console.warn('setViewMode no está disponible');
         }
     }, 100);
 
     // NOTA: No ocultamos la cámara del presentador, para que se vea en pequeño
-    console.log(`[SCREEN-SHARE] ✅ Preview creado exitosamente para ${userId}`);
 }
 
 /**
@@ -1813,22 +1890,19 @@ function createScreenSharePreview(userId, stream) {
  * Esta función conecta el evento ontrack con la UI
  */
 function handleRemoteScreenShare(userId, stream) {
-    console.log(`[SCREEN-SHARE] 🚀 handleRemoteScreenShare llamado para ${userId}`);
-    console.log(`[SCREEN-SHARE] 🆔 Stream ID: ${stream.id}`);
-    console.log(`[SCREEN-SHARE] 🎵 Audio tracks:`, stream.getAudioTracks().map(t => t.label));
-    console.log(`[SCREEN-SHARE] 📹 Video tracks:`, stream.getVideoTracks().map(t => t.label));
+    if (DEBUG_MODE) {
+    }
 
     // Si ya existe un preview, actualizar el stream
     const existingPreview = document.getElementById(`screen-preview-${userId}`);
     if (existingPreview) {
         const videoEl = existingPreview.querySelector('video');
         if (videoEl && videoEl.srcObject !== stream) {
-            console.log(`[SCREEN-SHARE] 🔄 Actualizando stream existente para ${userId}`);
+            if (DEBUG_MODE) console.log(`[SCREEN-SHARE] 🔄 Actualizando stream existente para ${userId}`);
             videoEl.srcObject = stream;
             videoEl.muted = false; // Asegurar que el audio esté activo
             videoEl.volume = 1;
             videoEl.play().catch(e => {
-                console.warn('[SCREEN-SHARE] Error reproduciendo:', e);
             });
             forceSpeakerOutput(videoEl);
         }
@@ -1840,7 +1914,7 @@ function handleRemoteScreenShare(userId, stream) {
 
     // Forzar actualización del layout
     if (typeof setViewMode === 'function') {
-        console.log('[SCREEN-SHARE] 📐 Forzando vista sidebar');
+        if (DEBUG_MODE) console.log('[SCREEN-SHARE] 📐 Forzando vista sidebar');
         setViewMode('sidebar');
     }
 }
@@ -1899,7 +1973,7 @@ function ensureScreenPreviewPlaceholder(userId) {
  * Elimina el preview de pantalla compartida y restaura el layout
  */
 function removeScreenSharePreview(userId) {
-    console.log(`[SCREEN-SHARE] 🗑️ Eliminando preview de ${userId}`);
+    if (DEBUG_MODE) console.log(`[SCREEN-SHARE] 🗑️ Eliminando preview de ${userId}`);
 
     const videoGrid = document.getElementById('videoGrid');
     const preview = document.getElementById(`screen-preview-${userId}`);
@@ -1910,7 +1984,7 @@ function removeScreenSharePreview(userId) {
         if (video && video.srcObject) {
             video.srcObject.getTracks().forEach(track => {
                 track.stop();
-                console.log(`[SCREEN-SHARE] ⏹️ Track detenido: ${track.kind}`);
+                if (DEBUG_MODE) console.log(`[SCREEN-SHARE] ⏹️ Track detenido: ${track.kind}`);
             });
         }
         preview.remove();
@@ -1924,14 +1998,13 @@ function removeScreenSharePreview(userId) {
         window.ViewControl.setViewMode('grid-auto');
     }
 
-    console.log('[SCREEN-SHARE] ✅ Preview eliminado y layout restaurado');
+    if (DEBUG_MODE) console.log('[SCREEN-SHARE] ✅ Preview eliminado y layout restaurado');
 }
 
 async function initMedia() {
     try {
         // ============ USAR STREAM DEL LOBBY SI EXISTE ============
         if (localStream && localStream.active) {
-            console.log('[INIT-MEDIA] ✅ Usando stream existente del lobby');
         } else {
             // Obtener nuevo stream si no hay uno del lobby
             const devices = await navigator.mediaDevices.enumerateDevices();
@@ -1962,20 +2035,16 @@ async function initMedia() {
         // =========================================================
         
         debugLog('✅ Stream local obtenido:', localStream);
-        console.log('LocalStream details:');
-        console.log('  - ID:', localStream.id);
-        console.log('  - Active:', localStream.active);
-        console.log('  - Tracks:', localStream.getTracks().length);
-        localStream.getTracks().forEach(track => {
-            console.log(`    * ${track.kind}: id=${track.id}, enabled=${track.enabled}, readyState=${track.readyState}, muted=${track.muted}`);
-        });
+        if (DEBUG_MODE) {
+            localStream.getTracks().forEach(track => {
+            });
+        }
 
         const localVideoElement = document.getElementById('localVideo');
         if (localVideoElement) {
             localVideoElement.srcObject = localStream;
             localVideoElement.muted = true;
             localVideoElement.play().catch(e => {
-                console.warn("Autoplay de video local falló:", e);
                 showError("No se pudo reproducir automáticamente tu video local. Haz clic para reproducir.", 5000);
             });
             debugLog('Video local cargado.');
@@ -1986,11 +2055,11 @@ async function initMedia() {
         // 🎤 Configurar estado inicial de audio/video
         localStream.getAudioTracks().forEach(track => {
             track.enabled = isMicActive;
-            console.log(`🎤 Audio track inicial: enabled=${track.enabled}, readyState=${track.readyState}, id=${track.id}`);
+            if (DEBUG_MODE) console.log(`🎤 Audio track inicial: enabled=${track.enabled}, readyState=${track.readyState}, id=${track.id}`);
         });
         localStream.getVideoTracks().forEach(track => {
             track.enabled = isCamActive;
-            console.log(`🎥 Video track inicial: enabled=${track.enabled}, readyState=${track.readyState}, id=${track.id}`);
+            if (DEBUG_MODE) console.log(`🎥 Video track inicial: enabled=${track.enabled}, readyState=${track.readyState}, id=${track.id}`);
         });
 
         userRoles[userName] = isModerator ? 'Organizador de la Reunión' : 'Participante';
@@ -2006,8 +2075,8 @@ async function initMedia() {
         document.getElementById('toggleMic')?.classList.toggle('active', isMicActive);
         document.getElementById('toggleCam')?.classList.toggle('active', isCamActive);
 
-        console.log(`✅ Micrófono inicial: ${isMicActive ? 'ACTIVADO' : 'DESACTIVADO'}`);
-        console.log(`✅ Cámara inicial: ${isCamActive ? 'ACTIVADA' : 'DESACTIVADA'}`);
+        if (DEBUG_MODE) {
+        }
 
         setInterval(async () => {
             // Sólo intentar re-obtener/reemplazar la pista de audio si la pista actual terminó
@@ -2053,7 +2122,6 @@ async function initMedia() {
             }
         }, 30000);
     } catch (err) {
-        console.error('Error inicializando medios:', err);
         let errorMessage = `Error de dispositivo: ${err.name}`;
         if (err.name === 'NotAllowedError') {
             errorMessage += ': Permiso denegado por el usuario o el sistema. Por favor, permite el acceso a la cámara y al micrófono en la configuración del navegador.';
@@ -2135,18 +2203,15 @@ function initWebSocket() {
 
                 switch (msg.type) {
                     case 'waiting-for-approval':
-                        console.log('[WAITING] ⏳ Esperando aprobación del moderador');
                         showWaitingRoom();
                         break;
                     
                     case 'join-approved':
-                        console.log('[WAITING] ✅ Aprobado para unirse');
                         hideWaitingRoom();
                         // Continuar con la inicialización normal
                         break;
                     
                     case 'join-rejected':
-                        console.log('[WAITING] ❌ Solicitud rechazada');
                         hideWaitingRoom();
                         showError('Tu solicitud fue rechazada por el moderador', 5000);
                         setTimeout(() => window.location.href = '/', 3000);
@@ -2163,7 +2228,6 @@ function initWebSocket() {
                             // ✅ Guardar si es admin de la sala
                             if (msg.isRoomAdmin) {
                                 isRoomAdmin = true;
-                                console.log('[ADMIN] Este usuario es el administrador de la sala');
                             }
                             debugLog('Unido a la sala exitosamente.');
                             const errorPanel = document.getElementById('errorPanel');
@@ -2247,7 +2311,6 @@ function initWebSocket() {
                                 notificationsList.appendChild(li);
                                 showNotificationsModal(notificationsList.children.length);
                             } else {
-                                console.error('Error: #notificationsList no encontrado.');
                                 showError('Error al mostrar solicitudes de unión.', 3000);
                             }
                         }
@@ -2255,9 +2318,6 @@ function initWebSocket() {
 
                     case 'new-peer':
                         debugLog(`Nuevo par detectado: ${msg.userId}`);
-                        console.log(`[NEW-PEER] 🆕 Nuevo participante: ${msg.userId}, initiateOffer: ${msg.initiateOffer}`);
-                        console.log(`[NEW-PEER] 📹 LocalStream activo: ${localStream?.active}, tracks: ${localStream?.getTracks()?.length}`);
-                        
                         if (msg.name && !userRoles[msg.name]) {
                             userRoles[msg.name] = msg.isModerator ? 'Organizador de la Reunión' : 'Participante';
                         }
@@ -2269,7 +2329,6 @@ function initWebSocket() {
                             // Bloque para scope de variables
                             // ✅ VERIFICAR QUE LOCALSTREAM ESTÉ LISTO ANTES DE CREAR CONEXIÓN
                             if (!localStream || !localStream.active || localStream.getTracks().length === 0) {
-                                console.warn(`[NEW-PEER] ⚠️ LocalStream no está listo aún, esperando...`);
                                 // Esperar un poco y reintentar
                                 await new Promise(resolve => setTimeout(resolve, 500));
                             }
@@ -2278,7 +2337,6 @@ function initWebSocket() {
                             
                             // ✅ Si tengo initiateOffer, crear oferta inmediatamente
                             if (peerConn && msg.initiateOffer && peerConn.signalingState === 'stable') {
-                                console.log(`[NEW-PEER] 📤 Creando oferta SDP para ${msg.userId}...`);
                                 try {
                                     // ✅ IMPORTANTE: Esperar a que los tracks estén agregados
                                     await new Promise(resolve => setTimeout(resolve, 100));
@@ -2287,11 +2345,7 @@ function initWebSocket() {
                                         offerToReceiveAudio: true,
                                         offerToReceiveVideo: true
                                     });
-                                    console.log(`[NEW-PEER] 📝 Oferta SDP creada para ${msg.userId}`);
-                                    
                                     await peerConn.setLocalDescription(offer);
-                                    console.log(`[NEW-PEER] ✅ LocalDescription establecida para ${msg.userId}`);
-                                    
                                     if (ws.readyState === WebSocket.OPEN) {
                                         ws.send(JSON.stringify({
                                             type: 'signal',
@@ -2299,26 +2353,20 @@ function initWebSocket() {
                                             target: msg.userId,
                                             payload: { sdp: peerConn.localDescription }
                                         }));
-                                        console.log(`[NEW-PEER] ✅ Oferta enviada a ${msg.userId}`);
                                     }
                                 } catch (e) {
-                                    console.error(`[NEW-PEER] ❌ Error negociando con ${msg.userId}:`, e);
                                     showError(`Error negociando con ${msg.userId}`, 5000);
                                     debugLog(`Error en la negociación WebRTC con ${msg.userId}:`, e);
                                 }
                             } else if (!msg.initiateOffer && isScreenSharing && localScreenStream && localScreenStream.active) {
                                 // ✅ Si estoy compartiendo pantalla pero NO tengo initiateOffer,
                                 // esperar a que el otro usuario negocie primero, luego forzar renegociación
-                                console.log(`[SCREEN-SHARE] 📤 Esperando para enviar tracks de pantalla a ${msg.userId}...`);
-                                
                                 const targetUserId = msg.userId;
                                 const targetPeerConn = peerConn;
                                 
                                 // Esperar a que la conexión esté establecida y luego renegociar
                                 const checkAndRenegotiate = () => {
                                     if (targetPeerConn.iceConnectionState === 'connected' || targetPeerConn.iceConnectionState === 'completed') {
-                                        console.log(`[SCREEN-SHARE] 🔄 Conexión establecida, renegociando para enviar pantalla a ${targetUserId}`);
-                                        
                                         // Forzar renegociación
                                         targetPeerConn.createOffer()
                                             .then(offer => targetPeerConn.setLocalDescription(offer))
@@ -2330,7 +2378,6 @@ function initWebSocket() {
                                                         target: targetUserId,
                                                         payload: { sdp: targetPeerConn.localDescription }
                                                     }));
-                                                    console.log(`[SCREEN-SHARE] ✅ Oferta de renegociación enviada a ${targetUserId}`);
                                                 }
                                             })
                                             .catch(e => console.error('[SCREEN-SHARE] Error renegociando:', e));
@@ -2378,7 +2425,6 @@ function initWebSocket() {
 
                     case 'give-word':
                         // Recibir notificación de que alguien tiene la palabra
-                        console.log('[GIVE-WORD] 📢 Mensaje recibido:', msg);
                         if (msg.target && msg.duration) {
                             // Si soy yo, activar micrófono automáticamente
                             if (msg.target === userName) {
@@ -2407,7 +2453,6 @@ function initWebSocket() {
 
                             // Si ya hay alguien con la palabra y es diferente, quitársela primero
                             if (currentSpeaker && currentSpeaker.name !== msg.target) {
-                                console.log('[GIVE-WORD] Ya hay un speaker diferente, cerrando panel anterior');
                                 if (speakingTimerInterval) {
                                     clearInterval(speakingTimerInterval);
                                     speakingTimerInterval = null;
@@ -2423,20 +2468,10 @@ function initWebSocket() {
                             const speakingPanel = document.getElementById('speakingPanel');
                             const speakingPersonName = document.getElementById('speakingPersonName');
                             const speakingActions = document.getElementById('speakingActions');
-
-                            console.log('[GIVE-WORD] Elementos DOM:', {
-                                panel: !!speakingPanel,
-                                name: !!speakingPersonName,
-                                actions: !!speakingActions,
-                                isModerator: isModerator,
-                                userName: userName
-                            });
-
                             if (speakingPanel && speakingPersonName) {
                                 // ✅ ASEGURAR que el panel esté en el body para evitar problemas de z-index/overflow
                                 if (speakingPanel.parentNode !== document.body) {
                                     document.body.appendChild(speakingPanel);
-                                    console.log('[GIVE-WORD] Panel movido al body');
                                 }
 
                                 // ✅ Actualizar contenido del panel
@@ -2447,20 +2482,11 @@ function initWebSocket() {
                                 speakingPanel.classList.remove('closing');
                                 speakingPanel.classList.add('visible');
                                 speakingPanel.style.cssText = 'display: block !important; opacity: 1 !important; visibility: visible !important; z-index: 10000 !important;';
-
-                                console.log('[GIVE-WORD] ✅✅✅ PANEL MOSTRADO PARA TODOS LOS PARTICIPANTES ✅✅✅');
-                                console.log('[GIVE-WORD] Classes:', speakingPanel.className);
-                                console.log('[GIVE-WORD] Display:', window.getComputedStyle(speakingPanel).display);
-                                console.log('[GIVE-WORD] Opacity:', window.getComputedStyle(speakingPanel).opacity);
-                                console.log('[GIVE-WORD] Z-index:', window.getComputedStyle(speakingPanel).zIndex);
-
                                 // ✅ TODOS pueden ver el panel, pero SOLO los moderadores ven los botones de control
                                 if (speakingActions) {
                                     speakingActions.style.display = isModerator ? 'flex' : 'none';
-                                    console.log('[GIVE-WORD] Botones de control:', isModerator ? 'VISIBLE (Moderador)' : 'OCULTOS (Participante)');
                                 }
                             } else {
-                                console.error('[GIVE-WORD] ❌ ERROR: No se encontró el panel o el nombre!');
                             }
 
                             // Iniciar temporizador sincronizado
@@ -2475,16 +2501,13 @@ function initWebSocket() {
 
                                     // Cuando el tiempo se acaba
                                     if (currentSpeaker.timeLeft <= 0) {
-                                        console.log('[GIVE-WORD] ⏰ Tiempo agotado en este cliente');
                                         const targetName = currentSpeaker.name;
 
                                         // 📢 SOLO EL MODERADOR ejecuta el cierre automático
                                         if (isModerator) {
-                                            console.log('[GIVE-WORD] 🔴 Moderador detectó expiración, ejecutando handleTimeExpired()');
                                             handleTimeExpired(targetName);
                                         } else {
                                             // Los participantes solo actualizan la UI localmente
-                                            console.log('[GIVE-WORD] ⏱️ Participante detectó expiración, esperando confirmación del servidor');
                                             if (speakingTimerInterval) {
                                                 clearInterval(speakingTimerInterval);
                                                 speakingTimerInterval = null;
@@ -2503,8 +2526,6 @@ function initWebSocket() {
 
                     case 'take-word':
                         // Recibir notificación de que se quitó la palabra
-                        console.log('[TAKE-WORD] 🔇 Mensaje recibido:', msg);
-
                         if (currentSpeaker || msg.target) {
                             const participantName = currentSpeaker?.name || msg.target;
 
@@ -2512,7 +2533,6 @@ function initWebSocket() {
                             if (speakingTimerInterval) {
                                 clearInterval(speakingTimerInterval);
                                 speakingTimerInterval = null;
-                                console.log('[TAKE-WORD] ⏰ Temporizador detenido');
                             }
 
                             // ✅ Ocultar panel con animación PARA TODOS LOS PARTICIPANTES
@@ -2527,45 +2547,44 @@ function initWebSocket() {
                                     xOffset = 0;
                                     yOffset = 0;
                                 }, 400);
-                                console.log('[TAKE-WORD] ✅ Panel ocultado para todos los participantes');
                             }
 
                             // ✅ Limpiar el speaker actual
                             currentSpeaker = null;
 
                             showError(`🔇 Se quitó la palabra a ${participantName}`, 2000);
-                            console.log(`[TAKE-WORD] ✅ Palabra quitada a ${participantName}`);
-
                             // NOTA: El silenciamiento del micrófono se maneja en el mensaje 'mute-participant' que el servidor envía
                         }
                         break;
 
                     case 'chat':
-                        console.log('[CHAT] Mensaje de chat recibido:', msg);
                         if (msg.author && msg.message) {
                             const isOwn = msg.author === userName;
-                            console.log('[CHAT] Procesando mensaje. Author:', msg.author, 'isOwn:', isOwn, 'userName:', userName);
                             // Mostrar todos los mensajes que vienen del servidor
                             addChatMessage(msg.author, msg.message, msg.timestamp, isOwn);
 
                             // Mostrar notificación si el mensaje es de otro usuario y el chat está cerrado
                             if (!isOwn) {
-                                const chatPanel = document.getElementById('chatPanel');
-                                const isChatOpen = chatPanel && chatPanel.classList.contains('visible');
+                                // Verificar si el sidebar está colapsado o chat no está activo
+                                const sidebar = document.getElementById('sidebar');
+                                const chatTab = document.querySelector('.sidebar-tab[data-tab="chat"]');
+                                const isSidebarCollapsed = sidebar && sidebar.classList.contains('sidebar-collapsed');
+                                const isChatActive = chatTab && chatTab.classList.contains('active');
+                                const isChatClosed = isSidebarCollapsed || !isChatActive;
 
-                                if (!isChatOpen) {
-                                    // Mostrar notificación emergente
-                                    showError(`💬 ${msg.author}: ${msg.message.substring(0, 50)}${msg.message.length > 50 ? '...' : ''}`, 4000);
+                                if (isChatClosed) {
+                                    // ✅ Usar notificación clickeable que abre el chat
+                                    const preview = msg.message.substring(0, 50) + (msg.message.length > 50 ? '...' : '');
+                                    showChatNotification(msg.author, preview, 4000);
                                 }
 
                                 // Agregar indicador visual en el botón de chat
                                 const chatToggleBtn = document.getElementById('chatToggle');
-                                if (chatToggleBtn && !isChatOpen) {
+                                if (chatToggleBtn && isChatClosed) {
                                     chatToggleBtn.classList.add('has-notification');
                                 }
                             }
                         } else {
-                            console.log('[CHAT] Mensaje de chat inválido - falta author o message');
                         }
                         break;
 
@@ -2587,10 +2606,8 @@ function initWebSocket() {
                         break;
 
                     case 'screen-share-started':
-                        console.log(`[SCREEN-SHARE] 📡 Notificación recibida de ${msg.userId}`);
-                        console.log(`[SCREEN-SHARE] 📦 Mensaje completo:`, msg);
-                        console.log(`[SCREEN-SHARE] 🆔 streamId recibido:`, msg.streamId);
-                        console.log(`[SCREEN-SHARE] 🔄 isSync:`, msg.isSync);
+                        if (DEBUG_MODE) {
+                        }
 
                         // ✅ FORZAR VISTA SIDEBAR INMEDIATAMENTE PARA TODOS
                         if (typeof setViewMode === 'function') {
@@ -2601,29 +2618,29 @@ function initWebSocket() {
 
                         if (msg.streamId) {
                             remoteScreenStreams[msg.userId] = msg.streamId;
-                            console.log(`[SCREEN-SHARE] ID registrado: ${msg.streamId}`);
+                            if (DEBUG_MODE) console.log(`[SCREEN-SHARE] ID registrado: ${msg.streamId}`);
 
                             // Crear un placeholder de preview para reservar el área principal
                             ensureScreenPreviewPlaceholder(msg.userId);
 
                             // 1. Verificar si el stream estaba esperando en pendingStreams
                             if (pendingStreams[msg.streamId]) {
-                                console.log(`[SCREEN-SHARE] 🔄 Recuperando stream pendiente para ${msg.userId} (por ID exacto)`);
+                                if (DEBUG_MODE) console.log(`[SCREEN-SHARE] 🔄 Recuperando stream pendiente para ${msg.userId} (por ID exacto)`);
                                 const pending = pendingStreams[msg.streamId];
                                 handleRemoteScreenShare(pending.userId, pending.stream);
                                 delete pendingStreams[msg.streamId];
                             } else {
                                 // Búsqueda flexible: buscar cualquier stream pendiente de este usuario
-                                console.log(`[SCREEN-SHARE] 🔍 Buscando streams pendientes por usuario ${msg.userId}...`);
+                                if (DEBUG_MODE) console.log(`[SCREEN-SHARE] 🔍 Buscando streams pendientes por usuario ${msg.userId}...`);
                                 const pendingKey = Object.keys(pendingStreams).find(key => pendingStreams[key].userId === msg.userId);
                                 if (pendingKey) {
-                                    console.log(`[SCREEN-SHARE] 🔄 Recuperando stream pendiente para ${msg.userId} (por coincidencia de usuario)`);
+                                    if (DEBUG_MODE) console.log(`[SCREEN-SHARE] 🔄 Recuperando stream pendiente para ${msg.userId} (por coincidencia de usuario)`);
                                     const pending = pendingStreams[pendingKey];
                                     handleRemoteScreenShare(pending.userId, pending.stream);
                                     delete pendingStreams[pendingKey];
                                 } else if (msg.isSync) {
                                     // ✅ Es una sincronización para nuevo usuario - esperar que llegue el stream por WebRTC
-                                    console.log(`[SCREEN-SHARE] ⏳ Sincronización: Esperando stream de ${msg.userId} por WebRTC...`);
+                                    if (DEBUG_MODE) console.log(`[SCREEN-SHARE] ⏳ Sincronización: Esperando stream de ${msg.userId} por WebRTC...`);
                                     // Registrar que esperamos un stream de este usuario
                                     // El stream llegará por ontrack y se procesará ahí con timeout
                                 }
@@ -2634,15 +2651,14 @@ function initWebSocket() {
                             if (existingVideoContainer) {
                                 // ✅ MEJORADO: Buscar todos los videos en el container y ver si hay más de uno
                                 const allVideos = existingVideoContainer.querySelectorAll('video');
-                                console.log(`[SCREEN-SHARE] 🔍 Videos encontrados en container de ${msg.userId}:`, allVideos.length);
-                                
-                                allVideos.forEach((videoEl, idx) => {
-                                    console.log(`[SCREEN-SHARE] Video ${idx}: srcObject=${videoEl.srcObject?.id}`);
-                                });
+                                if (DEBUG_MODE) {
+                                    allVideos.forEach((videoEl, idx) => {
+                                    });
+                                }
                                 
                                 const videoEl = existingVideoContainer.querySelector('video');
                                 if (videoEl && videoEl.srcObject && videoEl.srcObject.id === msg.streamId) {
-                                    console.log('[SCREEN-SHARE] ⚠️ Rectificando video asignado a cámara...');
+                                    if (DEBUG_MODE) console.log('[SCREEN-SHARE] ⚠️ Rectificando video asignado a cámara...');
 
                                     // Mover a screen share
                                     handleRemoteScreenShare(msg.userId, videoEl.srcObject);
@@ -2653,14 +2669,14 @@ function initWebSocket() {
                             }
                         } else {
                             // ⚠️ FALLBACK CRÍTICO: Si el servidor no envía streamId (versión vieja), asumimos que comparte
-                            console.warn(`[SCREEN-SHARE] ⚠️ streamId no recibido. Activando modo compatibilidad para ${msg.userId}`);
+                            if (DEBUG_MODE) console.warn(`[SCREEN-SHARE] ⚠️ streamId no recibido. Activando modo compatibilidad para ${msg.userId}`);
                             remoteScreenStreams[msg.userId] = 'unknown'; // Marcar como activo
                             ensureScreenPreviewPlaceholder(msg.userId);
 
                             // Buscar cualquier stream pendiente de este usuario
                             const pendingKey = Object.keys(pendingStreams).find(key => pendingStreams[key].userId === msg.userId);
                             if (pendingKey) {
-                                console.log(`[SCREEN-SHARE] 🔄 Fallback: Recuperando stream pendiente para ${msg.userId}`);
+                                if (DEBUG_MODE) console.log(`[SCREEN-SHARE] 🔄 Fallback: Recuperando stream pendiente para ${msg.userId}`);
                                 const pending = pendingStreams[pendingKey];
                                 handleRemoteScreenShare(pending.userId, pending.stream);
                                 delete pendingStreams[pendingKey];
@@ -2669,18 +2685,18 @@ function initWebSocket() {
                         
                         // ✅ Actualizar tracker de quién está compartiendo
                         currentScreenSharer = msg.userId;
-                        console.log(`[SCREEN-SHARE] 📺 Tracker actualizado: ${currentScreenSharer} está compartiendo`);
+                        if (DEBUG_MODE) console.log(`[SCREEN-SHARE] 📺 Tracker actualizado: ${currentScreenSharer} está compartiendo`);
                         break;
 
                     case 'screen-share-stopped':
-                        console.log(`[SCREEN-SHARE] 🛑 Notificación de parada de ${msg.userId}`);
+                        if (DEBUG_MODE) console.log(`[SCREEN-SHARE] 🛑 Notificación de parada de ${msg.userId}`);
                         delete remoteScreenStreams[msg.userId];
                         stopRemoteScreenShare(msg.userId);
                         
                         // ✅ Limpiar tracker si era el que estaba compartiendo
                         if (currentScreenSharer === msg.userId) {
                             currentScreenSharer = null;
-                            console.log(`[SCREEN-SHARE] 📺 Tracker limpiado: nadie está compartiendo`);
+                            if (DEBUG_MODE) console.log(`[SCREEN-SHARE] 📺 Tracker limpiado: nadie está compartiendo`);
                         }
                         break;
 
@@ -2770,11 +2786,11 @@ function initWebSocket() {
                             
                             if (!isPanelVisible) {
                                 // PRIMER VOTO: Abrir el panel automáticamente
-                                console.log('[POLL-UPDATE] 🎉 Primer voto recibido, abriendo panel de resultados');
+                                if (DEBUG_MODE) console.log('[POLL-UPDATE] 🎉 Primer voto recibido, abriendo panel de resultados');
                                 displayPollResults(msg.results, msg.question, msg.options, msg.votes);
                             } else if (isMinimized) {
                                 // Panel YA existe pero está minimizado: Solo notificar, no abrir
-                                console.log('[POLL-UPDATE] Panel minimizado, solo actualizando contador');
+                                if (DEBUG_MODE) console.log('[POLL-UPDATE] Panel minimizado, solo actualizando contador');
                                 
                                 const totalVotes = msg.options.reduce((sum, opt) => sum + (msg.results[opt.id] || 0), 0);
                                 const minimizedVoteCount = document.getElementById('minimizedVoteCount');
@@ -2790,7 +2806,7 @@ function initWebSocket() {
                                 }
                             } else {
                                 // Panel visible y expandido: Actualizar normalmente
-                                console.log('[POLL-UPDATE] Panel expandido, actualizando resultados');
+                                if (DEBUG_MODE) console.log('[POLL-UPDATE] Panel expandido, actualizando resultados');
                                 displayPollResults(msg.results, msg.question, msg.options, msg.votes);
                             }
                             
@@ -2805,9 +2821,32 @@ function initWebSocket() {
                         }
                         break;
 
-                    case 'moderator-assigned':
-                        console.log('[MODERATOR] Mensaje recibido:', msg);
+                    // ✅ Resultados compartidos por el moderador a todos los participantes
+                    case 'poll-results-shared':
+                        showError(`📊 ${msg.sharedBy || 'El moderador'} compartió los resultados de la encuesta.`, 4000);
+                        
+                        // Guardar la encuesta actual para mostrar resultados
+                        currentPoll = {
+                            id: msg.pollId,
+                            question: msg.question,
+                            options: msg.options,
+                            results: msg.results,
+                            totalVotes: msg.totalVotes,
+                            voters: msg.voters,
+                            ended: msg.ended
+                        };
+                        
+                        // Mostrar resultados al participante
+                        displayPollResults(msg.results, msg.question, msg.options, msg.voters || []);
+                        
+                        // Ocultar botones de moderador (compartir y finalizar) para participantes
+                        const shareBtn = document.getElementById('shareResultsBtn');
+                        const endBtn = document.getElementById('endPollBtn');
+                        if (shareBtn) shareBtn.style.display = 'none';
+                        if (endBtn) endBtn.style.display = 'none';
+                        break;
 
+                    case 'moderator-assigned':
                         if (msg.name && msg.role) {
                             userRoles[msg.name] = msg.role;
 
@@ -2824,13 +2863,10 @@ function initWebSocket() {
                             updateParticipantList();  // 🔁 refresca la lista para mostrar la corona
                             updateHandList?.();       // 👋 actualiza panel de manos si es necesario
                         } else {
-                            console.warn('[MODERATOR] ⚠️ Mensaje incompleto:', msg);
                         }
                         break;
 
                     case 'moderator-revoked':
-                        console.log('[MODERATOR] Mensaje de revocación recibido:', msg);
-
                         if (msg.name && msg.role) {
                             userRoles[msg.name] = msg.role;
 
@@ -2847,28 +2883,21 @@ function initWebSocket() {
                             updateParticipantList();  // 🔁 refresca la lista para quitar la corona
                             updateHandList?.();       // 👋 actualiza panel de manos si es necesario
                         } else {
-                            console.warn('[MODERATOR] ⚠️ Mensaje de revocación incompleto:', msg);
                         }
                         break;
 
                     case 'mute-participant':
-                        console.log('[MUTE-PARTICIPANT] 🔇 Mensaje recibido:', msg);
-
                         if (msg.target === userName) {
                             // ✅ Si es admin de la sala, ignorar orden de silencio
                             if (isRoomAdmin) {
-                                console.log('[ADMIN] Ignorando orden de silencio (el admin no puede ser silenciado)');
                                 return;
                             }
 
                             // 🎤 APLICAR EL CAMBIO DE ESTADO DEL MICRÓFONO
                             isMicActive = msg.micActive;
-                            console.log(`[MUTE-PARTICIPANT] Cambiando estado de micrófono a: ${isMicActive}`);
-
                             if (localStream) {
                                 localStream.getAudioTracks().forEach(track => {
                                     track.enabled = isMicActive;
-                                    console.log(`[MUTE-PARTICIPANT] Track ${track.id} enabled=${track.enabled}`);
                                 });
                             }
 
@@ -2882,11 +2911,9 @@ function initWebSocket() {
                                 } else {
                                     toggleMicBtn.classList.remove('active');
                                 }
-                                console.log(`[MUTE-PARTICIPANT] Botón actualizado: active=${toggleMicBtn.classList.contains('active')}`);
                             }
 
                             showError(isMicActive ? 'Tu micrófono ha sido activado por un moderador.' : 'Tu micrófono ha sido silenciado por un moderador.', 3000);
-                            console.log(`[MUTE-PARTICIPANT] ✅ Micrófono ${isMicActive ? 'ACTIVADO' : 'SILENCIADO'} para ${userName}`);
                         }
 
                         // 📊 Actualizar estado en la lista de participantes
@@ -2899,8 +2926,6 @@ function initWebSocket() {
                         if (muteBtn) {
                             muteBtn.title = msg.micActive ? 'Silenciar' : 'Activar Micrófono';
                         }
-
-                        console.log(`[MUTE-PARTICIPANT] ✅ Estado actualizado para ${msg.target}: micActive=${msg.micActive}`);
                         break;
 
                     case 'kick-participant':
@@ -2999,7 +3024,6 @@ function initWebSocket() {
             });
 
             ws.addEventListener('error', (err) => {
-                console.error('Error de WebSocket:', err);
                 showError('Error de conexión con el servidor. Intentando reconectar...', 5000);
                 updateConnectionStatus('disconnected');
             });
@@ -3024,10 +3048,6 @@ function createPeerConnection(userId) {
         rtcpMuxPolicy: 'require',
         iceCandidatePoolSize: 10
     });
-    
-    console.log(`[WEBRTC] 🔧 PeerConnection creada para ${userId} con política ICE: ${iceTransportPolicy}`);
-    console.log(`[WEBRTC] 📡 Usando ${iceServers.length} servidores ICE (STUN/TURN)`);
-    
     peerConnections[userId] = pc;
 
     // Agregar tracks locales si existen
@@ -3037,9 +3057,7 @@ function createPeerConnection(userId) {
             try {
                 const sender = pc.addTrack(track, localStream);
                 debugLog(`✅ Track ${track.kind} agregado a conexión con ${userId} (enabled: ${track.enabled}, readyState: ${track.readyState})`);
-                console.log(`Sender agregado para ${userId}:`, sender);
             } catch (e) {
-                console.error(`❌ Error agregando track ${track.kind} a ${userId}:`, e);
             }
         });
 
@@ -3052,21 +3070,16 @@ function createPeerConnection(userId) {
             }
         });
     } else {
-        console.error(`❌ No hay tracks locales disponibles para ${userId}. localStream:`, localStream);
         if (localStream) {
-            console.error(`LocalStream existe pero no tiene tracks:`, localStream.getTracks());
         }
     }
     
     // ✅ IMPORTANTE: Si estoy compartiendo pantalla, agregar también esos tracks al nuevo peer
     if (isScreenSharing && localScreenStream && localScreenStream.active) {
-        console.log(`[SCREEN-SHARE] 📤 Agregando tracks de pantalla compartida al nuevo peer ${userId}`);
         localScreenStream.getTracks().forEach(track => {
             try {
                 pc.addTrack(track, localScreenStream);
-                console.log(`[SCREEN-SHARE] ✅ Track ${track.kind} de pantalla agregado a ${userId}`);
             } catch (e) {
-                console.error(`[SCREEN-SHARE] ❌ Error agregando track de pantalla a ${userId}:`, e);
             }
         });
         
@@ -3080,7 +3093,6 @@ function createPeerConnection(userId) {
                     streamId: localScreenStream.id,
                     targetUser: userId // Para que el servidor sepa a quién enviar
                 }));
-                console.log(`[SCREEN-SHARE] 📡 Notificación enviada al nuevo peer ${userId}`);
             }
         }, 1000);
     }
@@ -3127,29 +3139,19 @@ function createPeerConnection(userId) {
     pc.ontrack = event => {
         const stream = event.streams[0];
         const track = event.track;
-
-        console.log(`[WEBRTC] 📥 Track recibido de ${userId}: ${track.kind} (${track.label})`);
-        console.log(`[WEBRTC] 🆔 Stream ID: ${stream.id}`);
-        console.log(`[WEBRTC] 🔍 Track enabled: ${track.enabled}, readyState: ${track.readyState}`);
-        console.log(`[WEBRTC] 🔍 remoteScreenStreams[${userId}]:`, remoteScreenStreams[userId]);
-        console.log(`[WEBRTC] 🔍 ¿Es pantalla compartida?:`, remoteScreenStreams[userId] === stream.id);
-
         // ✅ IMPORTANTE: ASEGURAR QUE EL TRACK ESTÉ HABILITADO
         if (!track.enabled) {
             track.enabled = true;
-            console.log(`[WEBRTC] 🔊 Track ${track.kind} habilitado forzosamente para ${userId}`);
         }
 
         // ✅ DETECCIÓN DE HABLANTE ACTIVO: Agregar stream de audio para análisis
         if (track.kind === 'audio' && !remoteScreenStreams[userId]) {
             // Solo analizar audio de cámaras, no de pantallas compartidas
             addAudioStreamForAnalysis(userId, stream);
-            console.log(`[WEBRTC] 🎤 Audio de ${userId} agregado para análisis de hablante activo`);
         }
 
         // Verificar si este stream corresponde a una pantalla compartida conocida
         if (remoteScreenStreams[userId] === stream.id) {
-            console.log(`[WEBRTC] 🖥️ Confirmado: Es stream de PANTALLA de ${userId}`);
             handleRemoteScreenShare(userId, stream);
         } else {
             // Si no coincide con el ID de pantalla, podría ser cámara O una pantalla que llegó antes del mensaje
@@ -3157,31 +3159,21 @@ function createPeerConnection(userId) {
             // Verificar si YA existe un video de cámara activo para este usuario
             const existingCameraContainer = document.getElementById(`video-container-${userId}`);
             const existingVideo = existingCameraContainer ? existingCameraContainer.querySelector('video') : null;
-
-            console.log(`[WEBRTC] 🔍 existingCameraContainer:`, !!existingCameraContainer);
-            console.log(`[WEBRTC] 🔍 existingVideo:`, !!existingVideo);
-            console.log(`[WEBRTC] 🔍 existingVideo.srcObject:`, existingVideo?.srcObject?.id);
-
             // Si ya tiene un video de cámara Y el stream ID es diferente, probablemente el nuevo es la pantalla
             // y aún no llegó el mensaje de señalización.
             if (existingVideo && existingVideo.srcObject && existingVideo.srcObject.id !== stream.id) {
 
                 // Verificar si YA sabemos que este usuario está compartiendo pantalla (aunque el ID no coincida exacto)
                 if (remoteScreenStreams[userId]) {
-                    console.log(`[WEBRTC] 🔄 Stream adicional recibido y usuario ${userId} está compartiendo pantalla. Asumiendo PANTALLA.`);
                     handleRemoteScreenShare(userId, stream);
                 } else {
-                    console.log(`[WEBRTC] ⏳ Stream recibido pero ya hay cámara activa. Guardando en buffer: ${stream.id}`);
                     pendingStreams[stream.id] = { userId, stream };
-                    console.log(`[WEBRTC] 📦 pendingStreams ahora tiene:`, Object.keys(pendingStreams));
-                    
                     // ✅ NUEVO: Si hay un stream pendiente de este usuario, probablemente es pantalla
                     // Esperar un poco y si llega screen-share-started, se procesará
                     // Si no, asumir que es un segundo stream de video (pantalla)
                     setTimeout(() => {
                         // Verificar si el stream sigue pendiente (no se procesó por screen-share-started)
                         if (pendingStreams[stream.id]) {
-                            console.log(`[WEBRTC] ⏰ Timeout: Stream ${stream.id} sigue pendiente, asumiendo es PANTALLA de ${userId}`);
                             const pending = pendingStreams[stream.id];
                             // Marcar que este usuario está compartiendo pantalla (aunque no tengamos el ID original)
                             remoteScreenStreams[userId] = stream.id;
@@ -3193,14 +3185,12 @@ function createPeerConnection(userId) {
             } else {
                 // Si no hay cámara previa, o es el mismo stream (reemplazo), asumimos cámara por defecto
                 // (Si luego resulta ser pantalla, el evento screen-share-started lo corregirá)
-                console.log(`[WEBRTC] 📷 Asumiendo: Es stream de CÁMARA/AUDIO de ${userId}`);
                 addVideoElement(userId, stream);
 
                 // ✅ ASEGURAR QUE TODOS LOS TRACKS DEL STREAM ESTÉN HABILITADOS
                 stream.getTracks().forEach(t => {
                     if (!t.enabled) {
                         t.enabled = true;
-                        console.log(`[WEBRTC] 🔊 Track ${t.kind} habilitado en stream de ${userId}`);
                     }
                 });
             }
@@ -3217,22 +3207,15 @@ function createPeerConnection(userId) {
             setTimeout(() => {
                 const senders = pc.getSenders();
                 const receivers = pc.getReceivers();
-                
-                console.log(`[WEBRTC] 📊 Estado de tracks para ${userId}:`);
-                console.log(`   - Senders (enviando): ${senders.length}`);
                 senders.forEach(s => {
                     if (s.track) {
-                        console.log(`     * ${s.track.kind}: enabled=${s.track.enabled}, readyState=${s.track.readyState}`);
                     }
                 });
-                console.log(`   - Receivers (recibiendo): ${receivers.length}`);
                 receivers.forEach(r => {
                     if (r.track) {
-                        console.log(`     * ${r.track.kind}: enabled=${r.track.enabled}, readyState=${r.track.readyState}, muted=${r.track.muted}`);
                         // ✅ ASEGURAR QUE LOS TRACKS RECIBIDOS ESTÉN HABILITADOS
                         if (!r.track.enabled) {
                             r.track.enabled = true;
-                            console.log(`     -> Track habilitado forzosamente`);
                         }
                     }
                 });
@@ -3242,7 +3225,6 @@ function createPeerConnection(userId) {
                 if (videoContainer) {
                     const videoEl = videoContainer.querySelector('video');
                     if (videoEl && videoEl.srcObject) {
-                        console.log(`   - Video element: paused=${videoEl.paused}, muted=${videoEl.muted}`);
                         if (videoEl.paused) {
                             ensureVideoPlaying(videoEl, userId);
                         }
@@ -3347,18 +3329,11 @@ function createPeerConnection(userId) {
 }
 
 async function handleSignal(senderId, payload) {
-    console.log(`[SIGNAL] 📨 Señal recibida de ${senderId}:`, payload.sdp?.type || 'ICE candidate');
-    
     const existingPc = peerConnections[senderId];
-    console.log(`[SIGNAL] 🔍 PeerConnection existente para ${senderId}:`, !!existingPc);
-    console.log(`[SIGNAL] 📹 LocalStream disponible:`, !!localStream, localStream?.active, localStream?.getTracks()?.length);
-    
     // ✅ IMPORTANTE: Si no hay localStream, esperar a que esté listo
     if (!localStream || !localStream.active) {
-        console.warn(`[SIGNAL] ⚠️ LocalStream no está listo, esperando...`);
         await new Promise(resolve => setTimeout(resolve, 500));
         if (!localStream || !localStream.active) {
-            console.error(`[SIGNAL] ❌ LocalStream sigue sin estar listo después de esperar`);
         }
     }
     
@@ -3367,25 +3342,18 @@ async function handleSignal(senderId, payload) {
     try {
         if (payload.sdp) {
             if (payload.sdp.type === 'offer') {
-                console.log(`[SIGNAL] 📥 Oferta SDP recibida de ${senderId}. Estado actual: ${pc.signalingState}`);
-                
                 // ✅ Manejar el caso de que ya tengamos una oferta pendiente
                 if (pc.signalingState !== 'stable' && pc.signalingState !== 'have-remote-offer') {
-                    console.log(`[SIGNAL] ⚠️ Estado no estable, haciendo rollback...`);
                     await pc.setLocalDescription({ type: 'rollback' });
                 }
                 
                 await pc.setRemoteDescription(new RTCSessionDescription(payload.sdp));
-                console.log(`[SIGNAL] ✅ RemoteDescription establecida para ${senderId}`);
-                
                 // ✅ Procesar candidatos ICE pendientes
                 if (pc.pendingRemoteCandidates && pc.pendingRemoteCandidates.length > 0) {
-                    console.log(`[SIGNAL] 📦 Procesando ${pc.pendingRemoteCandidates.length} candidatos ICE pendientes`);
                     for (const candidate of pc.pendingRemoteCandidates) {
                         try {
                             await pc.addIceCandidate(new RTCIceCandidate(candidate));
                         } catch (err) {
-                            console.error(`[SIGNAL] ❌ Error agregando candidato pendiente:`, err);
                         }
                     }
                     pc.pendingRemoteCandidates = [];
@@ -3395,11 +3363,7 @@ async function handleSignal(senderId, payload) {
                     offerToReceiveAudio: true,
                     offerToReceiveVideo: true
                 });
-                console.log(`[SIGNAL] 📝 Answer creada para ${senderId}`);
-                
                 await pc.setLocalDescription(answer);
-                console.log(`[SIGNAL] ✅ LocalDescription establecida para ${senderId}`);
-                
                 if (ws && ws.readyState === WebSocket.OPEN) {
                     ws.send(JSON.stringify({
                         type: 'signal',
@@ -3407,29 +3371,21 @@ async function handleSignal(senderId, payload) {
                         target: senderId,
                         payload: { sdp: pc.localDescription }
                     }));
-                    console.log(`[SIGNAL] 📤 Respuesta SDP enviada a ${senderId}`);
                 }
             } else if (payload.sdp.type === 'answer') {
-                console.log(`[SIGNAL] 📥 Respuesta SDP recibida de ${senderId}. Estado: ${pc.signalingState}`);
-                
                 if (pc.signalingState === 'have-local-offer') {
                     await pc.setRemoteDescription(new RTCSessionDescription(payload.sdp));
-                    console.log(`[SIGNAL] ✅ RemoteDescription (answer) establecida para ${senderId}`);
-                    
                     // ✅ Procesar candidatos ICE pendientes después de recibir answer
                     if (pc.pendingRemoteCandidates && pc.pendingRemoteCandidates.length > 0) {
-                        console.log(`[SIGNAL] 📦 Procesando ${pc.pendingRemoteCandidates.length} candidatos ICE pendientes`);
                         for (const candidate of pc.pendingRemoteCandidates) {
                             try {
                                 await pc.addIceCandidate(new RTCIceCandidate(candidate));
                             } catch (err) {
-                                console.error(`[SIGNAL] ❌ Error agregando candidato pendiente:`, err);
                             }
                         }
                         pc.pendingRemoteCandidates = [];
                     }
                 } else {
-                    console.warn(`[SIGNAL] ⚠️ Estado incorrecto para recibir answer: ${pc.signalingState}`);
                 }
             }
         } else if (payload.candidate) {
@@ -3442,7 +3398,6 @@ async function handleSignal(senderId, payload) {
             
             // ✅ Preferir candidatos RELAY (TURN) para mejor conectividad
             if (candidateType === 'TURN/RELAY ⭐') {
-                console.log(`[SIGNAL] ⭐ Candidato TURN recibido - Ideal para diferentes redes`);
             }
 
             try {
@@ -3456,14 +3411,11 @@ async function handleSignal(senderId, payload) {
                         pc.pendingRemoteCandidates = [];
                     }
                     pc.pendingRemoteCandidates.push(payload.candidate);
-                    console.log(`[SIGNAL] 📦 Candidato guardado (esperando remoteDescription)`);
                 }
             } catch (err) {
-                console.error(`   ❌ Error agregando candidato ICE:`, err);
             }
         }
     } catch (e) {
-        console.error(`Error procesando señal de ${senderId}:`, e);
         showError(`Error procesando señal de ${senderId}.`, 5000);
     }
 }
@@ -3524,7 +3476,6 @@ async function restartPeerConnection(userId) {
         await Promise.race([restartPromise, timeoutPromise]);
 
     } catch (e) {
-        console.error(`Error reiniciando PeerConnection para ${userId}:`, e);
         debugLog(`Intento fallido de reinicio para ${userId}, recreando conexión...`);
 
         // Si falla el reinicio, eliminar y recrear la conexión
@@ -3574,10 +3525,8 @@ document.getElementById('toggleMic')?.addEventListener('click', () => {
     // 🎤 Actualizar tracks de audio locales
     if (localStream) {
         const audioTracks = localStream.getAudioTracks();
-        console.log(`🎤 Tracks de audio locales: ${audioTracks.length}`);
         audioTracks.forEach(track => {
             track.enabled = isMicActive;
-            console.log(`  - Track ${track.id}: enabled=${track.enabled}, readyState=${track.readyState}, muted=${track.muted}`);
         });
 
         // 🔊 Verificar que los senders tienen el audio
@@ -3585,9 +3534,7 @@ document.getElementById('toggleMic')?.addEventListener('click', () => {
             const pc = peerConnections[userId];
             const audioSender = pc.getSenders().find(s => s.track && s.track.kind === 'audio');
             if (audioSender) {
-                console.log(`  ✅ Sender de audio a ${userId}: enabled=${audioSender.track.enabled}`);
             } else {
-                console.warn(`  ⚠️ NO hay sender de audio para ${userId}!`);
             }
         });
     }
@@ -3616,13 +3563,11 @@ document.getElementById('toggleCam')?.addEventListener('click', async () => {
     
     if (isCamActive) {
         // DESACTIVAR CÁMARA
-        console.log('[CAM-TOGGLE] 🔴 Desactivando cámara...');
         isCamActive = false;
         
         // Deshabilitar track de video (no lo detenemos para poder reactivar rápido)
         localStream?.getVideoTracks().forEach(track => {
             track.enabled = false;
-            console.log(`[CAM-TOGGLE] Track ${track.id} enabled = false`);
         });
         
         // Actualizar UI
@@ -3644,8 +3589,6 @@ document.getElementById('toggleCam')?.addEventListener('click', async () => {
         
     } else {
         // ACTIVAR CÁMARA
-        console.log('[CAM-TOGGLE] 🟢 Activando cámara...');
-        
         try {
             const videoTracks = localStream?.getVideoTracks();
             
@@ -3655,7 +3598,6 @@ document.getElementById('toggleCam')?.addEventListener('click', async () => {
                 
                 if (track.readyState === 'ended') {
                     // Track terminado, necesitamos obtener uno nuevo
-                    console.log('[CAM-TOGGLE] Track terminado, obteniendo nuevo...');
                     const newStream = await navigator.mediaDevices.getUserMedia({
                         video: {
                             width: { ideal: 640, max: 1280 },
@@ -3679,14 +3621,12 @@ document.getElementById('toggleCam')?.addEventListener('click', async () => {
                             const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
                             if (sender) {
                                 await sender.replaceTrack(newVideoTrack);
-                                console.log(`[CAM-TOGGLE] Track reemplazado para peer ${peerId}`);
                             }
                         }
                     }
                 } else {
                     // Track disponible, solo activar
                     track.enabled = true;
-                    console.log(`[CAM-TOGGLE] Track ${track.id} enabled = true`);
                 }
                 
                 isCamActive = true;
@@ -3711,7 +3651,6 @@ document.getElementById('toggleCam')?.addEventListener('click', async () => {
                 
             } else {
                 // No hay tracks de video, obtener uno nuevo
-                console.log('[CAM-TOGGLE] Sin tracks de video, obteniendo nuevo...');
                 const newStream = await navigator.mediaDevices.getUserMedia({ video: true });
                 const newVideoTrack = newStream.getVideoTracks()[0];
                 
@@ -3738,8 +3677,6 @@ document.getElementById('toggleCam')?.addEventListener('click', async () => {
             }
             
         } catch (err) {
-            console.error('[CAM-TOGGLE] ❌ Error activando cámara:', err);
-            
             if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
                 showError('La cámara está siendo usada por otra aplicación', 4000);
             } else if (err.name === 'NotAllowedError') {
@@ -3859,17 +3796,9 @@ async function requestScreenStream(shareType) {
             displayMediaOptions.selfBrowserSurface = 'exclude';
             displayMediaOptions.systemAudio = 'include';
         }
-        
-        console.log('[SCREEN-SHARE] 📺 Solicitando stream tipo:', shareType);
         const stream = await navigator.mediaDevices.getDisplayMedia(displayMediaOptions);
-        
-        console.log('[SCREEN-SHARE] ✅ Stream obtenido');
-        console.log('[SCREEN-SHARE] 📹 Video tracks:', stream.getVideoTracks().length);
-        console.log('[SCREEN-SHARE] 🔊 Audio tracks:', stream.getAudioTracks().length);
-        
         return { stream, typeLabel: typeLabels[shareType] || shareType };
     } catch (err) {
-        console.error('[SCREEN-SHARE] ❌ Error solicitando stream:', err);
         if (err.name === 'NotAllowedError') {
             showError('Permiso denegado para compartir pantalla', 3000);
         }
@@ -3949,7 +3878,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 // Handler para cuando el usuario cancela desde el navegador
                 previewStream.getVideoTracks()[0].onended = () => {
-                    console.log('[SCREEN-SHARE] ⏹️ Stream cancelado por el usuario');
                     // Volver al selector
                     document.getElementById('screenShareSelector').style.display = 'block';
                     document.getElementById('screenSharePreviewContainer').style.display = 'none';
@@ -4008,8 +3936,6 @@ let currentScreenSharer = null;
 
 // Nueva función que usa un stream ya capturado
 async function startScreenSharingWithStream(stream) {
-    console.log('[SCREEN-SHARE] 🚀 Iniciando compartir con stream existente...');
-    
     // ✅ VALIDACIÓN: Verificar si alguien más ya está compartiendo
     if (currentScreenSharer && currentScreenSharer !== userName) {
         showError(`⚠️ ${currentScreenSharer} ya está compartiendo pantalla. Espera a que termine.`, 4000);
@@ -4054,28 +3980,18 @@ async function startScreenSharingWithStream(stream) {
         // 3. Añadir tracks a todas las conexiones
         const videoTrack = localScreenStream.getVideoTracks()[0];
         const audioTrack = localScreenStream.getAudioTracks()[0];
-
-        console.log('[SCREEN-SHARE] 📹 Video track:', videoTrack?.label);
-        console.log('[SCREEN-SHARE] 🔊 Audio track:', audioTrack?.label || 'Sin audio');
-
         for (const peerId in peerConnections) {
             const pc = peerConnections[peerId];
-            console.log(`[SCREEN-SHARE] 📤 Agregando tracks a ${peerId}...`);
-
             if (videoTrack) {
                 try {
                     pc.addTrack(videoTrack, localScreenStream);
-                    console.log(`[SCREEN-SHARE] ✅ Video track agregado a ${peerId}`);
                 } catch (e) {
-                    console.error(`[SCREEN-SHARE] ❌ Error adding video track to ${peerId}:`, e);
                 }
             }
             if (audioTrack) {
                 try {
                     pc.addTrack(audioTrack, localScreenStream);
-                    console.log(`[SCREEN-SHARE] ✅ Audio track agregado a ${peerId}`);
                 } catch (e) {
-                    console.error(`[SCREEN-SHARE] ❌ Error adding audio track to ${peerId}:`, e);
                 }
             }
 
@@ -4085,15 +4001,11 @@ async function startScreenSharingWithStream(stream) {
 
         // Handler para cuando el usuario detiene desde los controles del navegador
         videoTrack.onended = () => {
-            console.log('[SCREEN-SHARE] ⏹️ Usuario detuvo compartir desde controles del navegador');
             stopScreenSharing();
         };
 
         showError('✅ Compartiendo pantalla', 2000);
-        console.log('[SCREEN-SHARE] ✅ Pantalla compartida exitosamente');
-
     } catch (err) {
-        console.error('[SCREEN-SHARE] ❌ Error:', err);
         showError('Error al compartir pantalla: ' + err.message, 5000);
         isScreenSharing = false;
         currentScreenSharer = null;
@@ -4103,13 +4015,9 @@ async function startScreenSharingWithStream(stream) {
 
 // Función legacy para compatibilidad (ahora redirige al modal)
 async function startScreenSharing(shareType = 'screen', includeAudio = true) {
-    console.log('[SCREEN-SHARE] 🚀 Iniciando proceso...');
-    console.log('[SCREEN-SHARE] 📺 Tipo:', shareType, '| Audio:', includeAudio);
-    
     // ✅ VALIDACIÓN: Verificar si alguien más ya está compartiendo
     if (currentScreenSharer && currentScreenSharer !== userName) {
         showError(`⚠️ ${currentScreenSharer} ya está compartiendo pantalla. Espera a que termine.`, 4000);
-        console.log(`[SCREEN-SHARE] ❌ Bloqueado: ${currentScreenSharer} ya está compartiendo`);
         return;
     }
     
@@ -4118,7 +4026,6 @@ async function startScreenSharing(shareType = 'screen', includeAudio = true) {
     if (activeRemoteShares.length > 0) {
         const sharerName = activeRemoteShares[0];
         showError(`⚠️ ${sharerName} ya está compartiendo pantalla. Espera a que termine.`, 4000);
-        console.log(`[SCREEN-SHARE] ❌ Bloqueado: ${sharerName} tiene un screen share activo`);
         return;
     }
     
@@ -4180,36 +4087,23 @@ async function startScreenSharing(shareType = 'screen', includeAudio = true) {
         // 3. Añadir tracks a todas las conexiones
         const videoTrack = localScreenStream.getVideoTracks()[0];
         const audioTrack = localScreenStream.getAudioTracks()[0];
-
-        console.log('[SCREEN-SHARE] 📹 Video track:', videoTrack);
-        console.log('[SCREEN-SHARE] 🔊 Audio track:', audioTrack);
-        console.log('[SCREEN-SHARE] 🔗 Conexiones peer activas:', Object.keys(peerConnections));
-
         for (const peerId in peerConnections) {
             const pc = peerConnections[peerId];
-            console.log(`[SCREEN-SHARE] 📤 Agregando tracks a ${peerId}...`);
-
             if (videoTrack) {
                 try {
                     const sender = pc.addTrack(videoTrack, localScreenStream);
-                    console.log(`[SCREEN-SHARE] ✅ Video track agregado a ${peerId}:`, sender);
                 } catch (e) {
-                    console.error(`[SCREEN-SHARE] ❌ Error adding video track to ${peerId}:`, e);
                 }
             }
             if (audioTrack) {
                 try {
                     const sender = pc.addTrack(audioTrack, localScreenStream);
-                    console.log(`[SCREEN-SHARE] ✅ Audio track agregado a ${peerId}:`, sender);
                 } catch (e) {
-                    console.error(`[SCREEN-SHARE] ❌ Error adding audio track to ${peerId}:`, e);
                 }
             }
 
             // Renegociar
-            console.log(`[SCREEN-SHARE] 🔄 Renegociando con ${peerId}...`);
             await renegotiate(peerId, pc);
-            console.log(`[SCREEN-SHARE] ✅ Renegociación completada con ${peerId}`);
         }
 
         // 4. Manejar parada desde el navegador
@@ -4220,7 +4114,6 @@ async function startScreenSharing(shareType = 'screen', includeAudio = true) {
         showError('✅ Compartiendo pantalla', 2000);
 
     } catch (err) {
-        console.error('[SCREEN-SHARE] ❌ Error:', err);
         isScreenSharing = false;
         localScreenStream = null;
         if (err.name !== 'NotAllowedError') {
@@ -4230,8 +4123,6 @@ async function startScreenSharing(shareType = 'screen', includeAudio = true) {
 }
 
 async function stopScreenSharing() {
-    console.log('[SCREEN-SHARE] 🛑 Deteniendo...');
-
     if (!localScreenStream) return;
 
     // 1. Detener tracks
@@ -4283,21 +4174,13 @@ async function stopScreenSharing() {
 }
 
 async function renegotiate(peerId, pc) {
-    console.log(`[RENEGOTIATE] 🔄 Iniciando renegociación con ${peerId}`);
-    console.log(`[RENEGOTIATE] 📊 Estado de señalización: ${pc.signalingState}`);
-
     if (pc.signalingState !== 'stable') {
-        console.warn(`[RENEGOTIATE] ⚠️ No se puede renegociar, estado: ${pc.signalingState}`);
         return;
     }
 
     try {
         const offer = await pc.createOffer();
-        console.log(`[RENEGOTIATE] ✅ Oferta creada para ${peerId}`);
-
         await pc.setLocalDescription(offer);
-        console.log(`[RENEGOTIATE] ✅ Descripción local establecida para ${peerId}`);
-
         if (ws && ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({
                 type: 'signal',
@@ -4305,12 +4188,9 @@ async function renegotiate(peerId, pc) {
                 target: peerId,
                 payload: { sdp: pc.localDescription }
             }));
-            console.log(`[RENEGOTIATE] ✅ Oferta enviada al servidor para ${peerId}`);
         } else {
-            console.error(`[RENEGOTIATE] ❌ WebSocket no está abierto, no se puede enviar oferta`);
         }
     } catch (e) {
-        console.error(`[RENEGOTIATE] ❌ Error renegociando con ${peerId}:`, e);
     }
 }
 
@@ -4329,7 +4209,6 @@ function openPollCreationModal() {
         addPollOption();
         debugLog('Modal de creación de votación abierto.');
     } else {
-        console.error('Error: #pollCreationModal no encontrado.');
         showError('Error interno: No se pudo abrir el creador de votaciones.', 5000);
     }
 }
@@ -4337,7 +4216,6 @@ function openPollCreationModal() {
 function addPollOption() {
     const optionsContainer = document.getElementById('pollOptionsContainer');
     if (!optionsContainer) {
-        console.error('Error: #pollOptionsContainer no encontrado.');
         return;
     }
     const optionDiv = document.createElement('div');
@@ -4447,13 +4325,11 @@ function displayPollForParticipant(poll) {
     const submitVoteButton = document.getElementById('submitVoteBtn');
 
     if (!pollPanel || !submitVoteButton) {
-        console.error('Error: #pollPanel o #submitVoteBtn no encontrado en el DOM.');
         showError('Error interno: Panel de votación no encontrado.', 5000);
         return;
     }
 
     if (!poll || !poll.question || !poll.options || !Array.isArray(poll.options)) {
-        console.error('Error: Objeto de votación inválido recibido:', poll);
         showError('No se pudo mostrar la votación: Datos incompletos o incorrectos.', 5000);
         return;
     }
@@ -4658,13 +4534,11 @@ function displayPollResults(results, question, options, votes) {
     debugLog('displayPollResults llamado con resultados:', results, 'pregunta:', question, 'opciones:', options, 'votos:', votes);
     const pollResultsPanel = document.getElementById('pollResultsPanel');
     if (!pollResultsPanel) {
-        console.error('Error: #pollResultsPanel no encontrado en el DOM.');
         showError('Error interno: Panel de resultados de votación no encontrado.', 5000);
         return;
     }
 
     if (!question || !options || !Array.isArray(options)) {
-        console.error('Error: Datos de resultados de votación inválidos:', question, options);
         showError('No se pudo mostrar los resultados de la votación: Datos incompletos o incorrectos.', 5000);
         return;
     }
@@ -4713,7 +4587,6 @@ function displayPollResults(results, question, options, votes) {
 
         debugLog('Barras de resultados de votación renderizadas.');
     } else {
-        console.error('No se encontró #chartContainerResults');
         showError('No se pudo mostrar el gráfico de resultados de votación.', 5000);
     }
 
@@ -4964,11 +4837,50 @@ document.getElementById('closeResultsBtn')?.addEventListener('click', () => {
     }
 });
 
-// Función para monitorear salud de las conexiones
-async function checkConnectionsHealth() {
-    debugLog('🔍 Verificando salud de las conexiones...');
+// ✅ Botón para compartir resultados con todos los participantes
+document.getElementById('shareResultsBtn')?.addEventListener('click', () => {
+    if (!isModerator) {
+        showError('Solo los moderadores pueden compartir resultados.', 3000);
+        return;
+    }
+    if (!currentPoll) {
+        showError('No hay votación activa para compartir.', 3000);
+        return;
+    }
 
-    for (const [userId, pc] of Object.entries(peerConnections)) {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({
+            type: 'broadcast-results',
+            room: roomCode,
+            pollId: currentPoll.id,
+            poll: {
+                id: currentPoll.id,
+                question: currentPoll.question,
+                options: currentPoll.options,
+                results: currentPoll.results,
+                totalVotes: currentPoll.totalVotes || 0,
+                voters: currentPoll.voters || [],
+                ended: currentPoll.ended || false
+            }
+        }));
+        showError('✅ Resultados compartidos con todos los participantes.', 3000);
+        debugLog('[POLL] Resultados compartidos con todos.');
+    } else {
+        showError('No se pudo compartir: Conexión no establecida.', 5000);
+    }
+});
+
+// Función para monitorear salud de las conexiones
+// ✅ OPTIMIZADO: Solo ejecuta si hay conexiones activas
+async function checkConnectionsHealth() {
+    const connections = Object.entries(peerConnections);
+    
+    // ✅ Salida temprana si no hay conexiones
+    if (connections.length === 0) return;
+    
+    if (DEBUG_MODE) debugLog('🔍 Verificando salud de las conexiones...');
+
+    for (const [userId, pc] of connections) {
         if (!pc) continue;
 
         const iceState = pc.iceConnectionState;
@@ -4996,7 +4908,6 @@ async function checkConnectionsHealth() {
                     restartPeerConnection(userId);
                 }
             } catch (e) {
-                console.error(`Error obteniendo estadísticas para ${userId}:`, e);
             }
         } else if (iceState === 'connected' || iceState === 'completed') {
             // Conexión saludable, resetear contador de intentos
@@ -5009,13 +4920,10 @@ async function checkConnectionsHealth() {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log('[DOM] DOMContentLoaded disparado');
-    console.log('[DOM] roomCode:', roomCode);
-    console.log('[DOM] userName:', userName);
-    console.log('[DOM] isModerator:', isModerator);
+    if (DEBUG_MODE) {
+    }
 
     if (!roomCode) {
-        console.error('[DOM] ERROR: Código de sala no proporcionado en la URL');
         showError('Código de sala no proporcionado en la URL. Redirigiendo...', 5000);
         debugLog('Código de sala no encontrado. Redirigiendo.');
         setTimeout(() => window.location.href = '/', 3000);
@@ -5026,12 +4934,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Si hay un sistema de lobby, esperar hasta que el usuario haga click en "Unirme"
     const lobbyScreen = document.getElementById('lobbyScreen');
     if (lobbyScreen && lobbyScreen.style.display !== 'none') {
-        console.log('[DOM] ⏳ Esperando a que el lobby complete...');
-        
         await new Promise((resolve) => {
             document.addEventListener('lobbyComplete', (e) => {
-                console.log('[DOM] ✅ Lobby completado, iniciando reunión...');
-                
                 // Usar configuración del lobby
                 const settings = e.detail || {};
                 isMicActive = settings.micEnabled !== undefined ? settings.micEnabled : true;
@@ -5040,7 +4944,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // Si hay un stream del lobby, usarlo
                 if (settings.stream) {
                     localStream = settings.stream;
-                    console.log('[DOM] Usando stream del lobby');
                 }
                 
                 resolve();
@@ -5051,12 +4954,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Inicializar elementos del DOM
     const roomCodeElement = document.getElementById('roomCode');
-    console.log('[DOM] roomCodeElement:', roomCodeElement);
     if (roomCodeElement) {
         roomCodeElement.textContent = roomCode;
-        console.log('[DOM] Código de sala establecido en el DOM:', roomCode);
     } else {
-        console.error('[DOM] ERROR: Elemento roomCode no encontrado en el DOM');
     }
 
     const userNameElement = document.getElementById('userName');
@@ -5073,14 +4973,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     participantCount = document.getElementById('participantCount');
 
     if (!videosContainer) {
-        console.error('❌ ERROR: Contenedor de videos (#videoGrid) no encontrado');
     }
 
     await initMedia();
     initWebSocket();
 
-    // Iniciar monitoreo periódico de salud de conexiones (cada 30 segundos)
-    setInterval(checkConnectionsHealth, 30000);
+    // Iniciar monitoreo periódico de salud de conexiones (cada 60 segundos, solo si tab visible)
+    setInterval(() => {
+        // ✅ OPTIMIZACIÓN: Solo verificar si la pestaña está visible
+        if (!document.hidden) {
+            checkConnectionsHealth();
+        }
+    }, 60000);
 
     if (isModerator) {
         updateModeratorUI();
@@ -5097,27 +5001,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Event listener para quitar la palabra
     const endWordBtn = document.getElementById('endWordBtn');
     if (endWordBtn) {
-        console.log('[INIT] ✅ Botón "Quitar palabra" encontrado y configurando listener');
+        if (DEBUG_MODE) console.log('[INIT] ✅ Botón "Quitar palabra" encontrado y configurando listener');
         endWordBtn.addEventListener('click', () => {
-            console.log('[END-WORD-BTN] 🔴 Botón clickeado');
-            console.log('[END-WORD-BTN] currentSpeaker:', currentSpeaker);
-            console.log('[END-WORD-BTN] isModerator:', isModerator);
-
+            if (DEBUG_MODE) console.log('[END-WORD-BTN] 🔴 Botón clickeado');
             if (currentSpeaker && isModerator) {
-                console.log('[END-WORD-BTN] ✅ Condiciones cumplidas, llamando a takeWordFromParticipant()');
                 takeWordFromParticipant();
             } else {
                 if (!currentSpeaker) {
-                    console.log('[END-WORD-BTN] ❌ No hay nadie con la palabra actualmente');
                 }
                 if (!isModerator) {
-                    console.log('[END-WORD-BTN] ❌ Usuario no es moderador');
                 }
             }
         });
-        console.log('[INIT] ✅ Listener para botón "Quitar palabra" configurado');
     } else {
-        console.error('[INIT] ❌ ERROR: No se encontró el botón #endWordBtn');
     }
 
     // Inicializar panel arrastrable
@@ -5134,7 +5030,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             const panel = document.getElementById('pollResultsPanel');
             if (panel) {
                 panel.classList.add('minimized');
-                console.log('Panel de resultados minimizado desde script.js');
             }
         });
     }
@@ -5154,7 +5049,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (modalContent) {
                     modalContent.style.transform = 'translate(0, 0)';
                 }
-                console.log('Panel de resultados restaurado desde script.js');
             }
         });
     }
@@ -5209,7 +5103,6 @@ async function showShareLink() {
             baseUrl = config.wsUrl.replace('wss://', 'https://');
         }
     } catch (error) {
-        console.log('[JOIN] Usando URL local:', baseUrl);
     }
 
     const params = new URLSearchParams(window.location.search);
@@ -5309,7 +5202,6 @@ async function showShareLink() {
                 btn.style.background = 'linear-gradient(145deg, #22c55e 0%, #16a34a 100%)';
             }, 2000);
         }).catch(err => {
-            console.error('Error al copiar:', err);
             alert('No se pudo copiar el link. Inténtalo manualmente.');
         });
     });

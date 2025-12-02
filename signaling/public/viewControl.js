@@ -4,9 +4,14 @@
  * Este archivo maneja únicamente la lógica de las vistas de video.
  * No interfiere con WebRTC, chat, polls, ni ninguna otra funcionalidad.
  * 
- * @version 3.1 - CORREGIDO Y FUNCIONAL
+ * @version 3.2 - OPTIMIZADO PARA RENDIMIENTO
  * @date 2025-01-05
  */
+
+// ============================================
+// CONFIGURACIÓN DE DEBUG
+// ============================================
+const VIEW_DEBUG_MODE = false; // Cambiar a true para ver logs
 
 // ============================================
 // ESTADO GLOBAL DEL SISTEMA DE VISTAS
@@ -20,7 +25,9 @@ const ViewControlSystem = {
     activeSpeakerId: null,
     initialized: false,
     observer: null,
-    isChangingLayout: false
+    isChangingLayout: false,
+    lastVideoCount: 0,  // ✅ Para detectar cambios reales
+    layoutDebounceTimer: null  // ✅ Para debounce más agresivo
 };
 
 // ============================================
@@ -28,7 +35,8 @@ const ViewControlSystem = {
 // ============================================
 
 function viewLog(message, ...args) {
-    console.log(`[VIEW CONTROL] ${message}`, ...args);
+    if (VIEW_DEBUG_MODE) {
+    }
 }
 
 // ============================================
@@ -208,15 +216,25 @@ function setupDOMObserver() {
         return;
     }
 
-    let observerTimeout = null;
-
-    ViewControlSystem.observer = new MutationObserver(() => {
+    ViewControlSystem.observer = new MutationObserver((mutations) => {
+        // ✅ OPTIMIZACIÓN: Ignorar si ya estamos cambiando el layout
         if (ViewControlSystem.isChangingLayout) {
             return;
         }
 
-        clearTimeout(observerTimeout);
-        observerTimeout = setTimeout(() => {
+        // ✅ OPTIMIZACIÓN: Solo reaccionar a cambios reales de childList (agregar/quitar videos)
+        const hasRealChanges = mutations.some(m => 
+            m.type === 'childList' && 
+            (m.addedNodes.length > 0 || m.removedNodes.length > 0)
+        );
+        
+        if (!hasRealChanges) {
+            return;
+        }
+
+        // ✅ OPTIMIZACIÓN: Debounce más agresivo (1 segundo)
+        clearTimeout(ViewControlSystem.layoutDebounceTimer);
+        ViewControlSystem.layoutDebounceTimer = setTimeout(() => {
             if (ViewControlSystem.currentView && ViewControlSystem.initialized) {
                 const allVideos = Array.from(videoGrid.querySelectorAll('.video-container'));
                 const realVideos = allVideos.filter(v =>
@@ -224,15 +242,20 @@ function setupDOMObserver() {
                     !v.classList.contains('sidebar-videos')
                 );
 
-                if (realVideos.length > 0) {
-                    viewLog('🔄 DOM cambió, re-aplicando layout');
+                // ✅ OPTIMIZACIÓN: Solo re-aplicar si cambió el número de videos
+                if (realVideos.length > 0 && realVideos.length !== ViewControlSystem.lastVideoCount) {
+                    viewLog(`🔄 Videos cambiaron: ${ViewControlSystem.lastVideoCount} → ${realVideos.length}`);
+                    ViewControlSystem.lastVideoCount = realVideos.length;
                     ViewControlSystem.isChangingLayout = true;
                     applyLayout(ViewControlSystem.currentView, videoGrid, realVideos);
                     updatePagination();
-                    ViewControlSystem.isChangingLayout = false;
+                    // ✅ Dar tiempo al DOM para estabilizarse antes de aceptar más cambios
+                    setTimeout(() => {
+                        ViewControlSystem.isChangingLayout = false;
+                    }, 500);
                 }
             }
-        }, 500);
+        }, 1000); // ✅ Aumentado a 1 segundo para evitar loops
     });
 
     ViewControlSystem.observer.observe(videoGrid, {
@@ -290,7 +313,6 @@ function setViewMode(mode) {
 
         viewLog(`✅ Vista cambiada exitosamente a: ${mode}`);
     } catch (e) {
-        console.error('❌ Error cambiando vista:', e);
     } finally {
         setTimeout(() => {
             ViewControlSystem.isChangingLayout = false;
@@ -633,7 +655,6 @@ function applySpotlightLayout(videoGrid, allVideos) {
 
         viewLog(`✅ Spotlight: 1 principal + ${thumbnails.length} thumbnails`);
     } catch (e) {
-        console.error('❌ Error en applySpotlightLayout:', e);
         applyGridAutoLayout(videoGrid, allVideos);
     }
 }
@@ -799,7 +820,6 @@ function applySidebarLayout(videoGrid, allVideos) {
 
         viewLog(`✅ Sidebar: 1 principal (${mainVideo?.id}) + ${thumbnails.length} en sidebar`);
     } catch (e) {
-        console.error('❌ Error en applySidebarLayout:', e);
         applyGridAutoLayout(videoGrid, allVideos);
     }
 }
@@ -1068,7 +1088,6 @@ function waitForElement(selector, callback, maxAttempts = 20, interval = 250) {
         } else if (attempts < maxAttempts) {
             setTimeout(checkElement, interval);
         } else {
-            console.warn(`❌ Elemento no encontrado: ${selector} después de ${maxAttempts} intentos`);
         }
     }
 
@@ -1089,7 +1108,6 @@ function initializeViewControlSystem() {
                 setTimeout(setupPinButtons, 1000);
 
             } catch (error) {
-                console.error('❌ Error en inicialización:', error);
             }
         }, 500);
     });

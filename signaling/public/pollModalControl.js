@@ -4,8 +4,14 @@
  */
 
 (function() {
+    const POLL_DEBUG_MODE = false; // Cambiar a true para ver logs
+    
+    function pollLog(...args) {
+        if (POLL_DEBUG_MODE) console.log('[POLL CONTROL]', ...args);
+    }
+    
     function initAllPollControls() {
-        console.log('[POLL CONTROL] Inicializando TODOS los controles de votación...');
+        pollLog('Inicializando TODOS los controles de votación...');
         
         initPollCreationModal();
         initActivePollPanel();
@@ -30,7 +36,7 @@
             minimizeBtn.parentNode.replaceChild(newBtn, minimizeBtn);
             newBtn.onclick = function(e) {
                 e.preventDefault(); e.stopPropagation();
-                console.log('[POLL CONTROL] Minimizando modal creación...');
+                pollLog('Minimizando modal creación...');
                 modal.classList.add('minimized');
                 return false;
             };
@@ -42,7 +48,7 @@
             closeBtn.parentNode.replaceChild(newBtn, closeBtn);
             newBtn.onclick = function(e) {
                 e.preventDefault(); e.stopPropagation();
-                console.log('[POLL CONTROL] Cerrando modal creación...');
+                pollLog('Cerrando modal creación...');
                 modal.style.display = 'none';
                 modal.classList.remove('minimized');
                 if (modalContent) modalContent.style.transform = '';
@@ -57,7 +63,7 @@
             restoreBtn.parentNode.replaceChild(newBtn, restoreBtn);
             newBtn.onclick = function(e) {
                 e.preventDefault(); e.stopPropagation();
-                console.log('[POLL CONTROL] Restaurando modal creación (botón)...');
+                pollLog('Restaurando modal creación (botón)...');
                 modal.classList.remove('minimized');
                 if (modalContent) modalContent.style.transform = '';
                 return false;
@@ -71,7 +77,7 @@
             if (target.closest('button')) return;
             
             if (target.closest('.minimized-view') || target.closest('.modal-content')) {
-                console.log('[POLL CONTROL] Restaurando modal creación (click)...');
+                pollLog('Restaurando modal creación (click)...');
                 modal.classList.remove('minimized');
                 if (modalContent) modalContent.style.transform = '';
             }
@@ -79,7 +85,7 @@
 
         // Override global open
         window.openPollCreationModal = function() {
-            console.log('[POLL CONTROL] Abriendo modal creación...');
+            pollLog('Abriendo modal creación...');
             modal.style.display = 'flex';
             modal.classList.remove('minimized');
             if (modalContent) modalContent.style.transform = '';
@@ -129,7 +135,7 @@
             if (target.closest('button')) return;
 
             // Restaurar al hacer click en cualquier parte del panel minimizado
-            console.log('[POLL CONTROL] Restaurando panel activa...');
+            pollLog('Restaurando panel activa...');
             panel.classList.remove('minimized');
         };
     }
@@ -148,7 +154,7 @@
 
         // Función para restaurar y limpiar notificaciones
         function restorePanel() {
-            console.log('[POLL CONTROL] Restaurando panel resultados...');
+            pollLog('Restaurando panel resultados...');
             panel.classList.remove('minimized');
             if (modalContent) modalContent.style.transform = '';
             
@@ -174,7 +180,7 @@
             minimizeBtn.parentNode.replaceChild(newBtn, minimizeBtn);
             newBtn.onclick = function(e) {
                 e.preventDefault(); e.stopPropagation();
-                console.log('[POLL CONTROL] Minimizando panel resultados...');
+                pollLog('Minimizando panel resultados...');
                 panel.classList.add('minimized');
                 return false;
             };
@@ -186,7 +192,7 @@
             closeBtn.parentNode.replaceChild(newBtn, closeBtn);
             newBtn.onclick = function(e) {
                 e.preventDefault(); e.stopPropagation();
-                console.log('[POLL CONTROL] Cerrando panel resultados...');
+                pollLog('Cerrando panel resultados...');
                 panel.style.display = 'none';
                 panel.classList.remove('minimized');
                 if (modalContent) modalContent.style.transform = '';
