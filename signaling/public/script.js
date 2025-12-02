@@ -976,6 +976,98 @@ function updateTimerDisplay() {
     }
 }
 
+// ======================= WORD CHANGE CONFIRMATION =======================
+let pendingWordChange = null; // { fromName: string, toName: string }
+
+function showWordChangeConfirmation(currentSpeakerName, newSpeakerName) {
+    console.log('[CONFIRM-WORD] 🔄 Iniciando modal de confirmación:', { from: currentSpeakerName, to: newSpeakerName });
+    
+    const modal = document.getElementById('confirmWordChangeModal');
+    const message = document.getElementById('confirmWordMessage');
+    const yesBtn = document.getElementById('confirmWordYes');
+    const noBtn = document.getElementById('confirmWordNo');
+    const closeBtn = document.getElementById('closeConfirmWordModal');
+    
+    console.log('[CONFIRM-WORD] Elementos encontrados:', { modal: !!modal, message: !!message, yesBtn: !!yesBtn, noBtn: !!noBtn });
+    
+    if (!modal || !message) {
+        console.error('[CONFIRM-WORD] ❌ Modal o mensaje no encontrado!');
+        // Fallback: Si no hay modal, dar la palabra directamente
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'give-word', room: roomCode, target: newSpeakerName, duration: 60 }));
+        }
+        return;
+    }
+    
+    // Guardar datos pendientes
+    pendingWordChange = {
+        fromName: currentSpeakerName,
+        toName: newSpeakerName
+    };
+    
+    // Configurar mensaje
+    message.innerHTML = `¿Estás seguro de que quieres <strong>quitarle la palabra</strong> a <strong style="color: #ef4444;">${currentSpeakerName}</strong> para dársela a <strong style="color: #10b981;">${newSpeakerName}</strong>?`;
+    
+    // Mostrar modal con display flex
+    modal.style.display = 'flex';
+    console.log('[CONFIRM-WORD] ✅ Modal mostrado');
+    
+    // Handlers para los botones
+    const handleYes = () => {
+        console.log('[CONFIRM-WORD] ✅ Usuario confirmó el cambio');
+        if (pendingWordChange && ws && ws.readyState === WebSocket.OPEN) {
+            const fromName = pendingWordChange.fromName;
+            const toName = pendingWordChange.toName;
+            
+            // 1. PRIMERO: Enviar take-word al anterior (esto silencia automáticamente en el servidor)
+            console.log('[CONFIRM-WORD] 🔇 Enviando take-word para quitar palabra a:', fromName);
+            ws.send(JSON.stringify({
+                type: 'take-word',
+                room: roomCode,
+                target: fromName
+            }));
+            
+            // 2. SEGUNDO: Esperar a que el panel se oculte (animación de 400ms) y luego dar la palabra al nuevo
+            setTimeout(() => {
+                console.log('[CONFIRM-WORD] 🎤 Dando palabra a:', toName);
+                ws.send(JSON.stringify({ 
+                    type: 'give-word', 
+                    room: roomCode, 
+                    target: toName, 
+                    duration: 60 
+                }));
+                showError(`Palabra transferida de ${fromName} a ${toName}`, 3000);
+            }, 500); // Esperar más que la animación de cierre (400ms)
+        }
+        closeWordChangeModal();
+    };
+    
+    const handleNo = () => {
+        console.log('[CONFIRM-WORD] ❌ Usuario canceló el cambio');
+        closeWordChangeModal();
+    };
+    
+    // Limpiar y agregar event listeners
+    yesBtn.onclick = handleYes;
+    noBtn.onclick = handleNo;
+    if (closeBtn) closeBtn.onclick = handleNo;
+    
+    // Cerrar al hacer clic fuera del modal
+    modal.onclick = (e) => {
+        if (e.target === modal) {
+            closeWordChangeModal();
+        }
+    };
+}
+
+function closeWordChangeModal() {
+    const modal = document.getElementById('confirmWordChangeModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+    pendingWordChange = null;
+}
+
 // ======================= CHAT FUNCTIONS =======================
 const MAX_CHAT_MESSAGES = 100; // Límite de mensajes para evitar memory leaks
 
@@ -1139,7 +1231,22 @@ function updateHandList() {
             grantBtn.textContent = 'Dar palabra';
             grantBtn.addEventListener('click', () => {
                 if (ws && ws.readyState === WebSocket.OPEN) {
-                    ws.send(JSON.stringify({ type: 'give-word', room: roomCode, target: name, duration: 60 }));
+                    // Verificar si ya hay alguien con la palabra (panel visible o currentSpeaker activo)
+                    const speakingPanel = document.getElementById('speakingPanel');
+                    const panelVisible = speakingPanel && (speakingPanel.classList.contains('visible') || speakingPanel.style.display === 'block');
+                    const hasActiveSpeaker = currentSpeaker && currentSpeaker.name;
+                    
+                    console.log('[DAR-PALABRA] Verificando:', { currentSpeaker, panelVisible, hasActiveSpeaker, targetName: name });
+                    
+                    if (hasActiveSpeaker && (panelVisible || currentSpeaker.timeLeft > 0)) {
+                        // Ya hay alguien con la palabra - mostrar modal de confirmación
+                        console.log('[DAR-PALABRA] ⚠️ Ya hay speaker activo, mostrando confirmación');
+                        showWordChangeConfirmation(currentSpeaker.name, name);
+                    } else {
+                        // No hay nadie con la palabra, dar directamente
+                        console.log('[DAR-PALABRA] ✅ No hay speaker, dando palabra directamente');
+                        ws.send(JSON.stringify({ type: 'give-word', room: roomCode, target: name, duration: 60 }));
+                    }
                 }
             });
 
@@ -2889,17 +2996,24 @@ function initWebSocket() {
                         break;
 
                     case 'mute-participant':
+                        console.log('[MUTE-PARTICIPANT] Recibido:', msg);
                         if (msg.target === userName) {
-                            // ✅ Si es admin de la sala, ignorar orden de silencio
-                            if (isRoomAdmin) {
+                            console.log('[MUTE-PARTICIPANT] Soy el target. isRoomAdmin:', isRoomAdmin, 'micActive:', msg.micActive);
+                            
+                            // ✅ Si es admin de la sala Y el mensaje es para silenciar, ignorar
+                            // Pero si es para activar el mic, sí aplicar
+                            if (isRoomAdmin && msg.micActive === false) {
+                                console.log('[MUTE-PARTICIPANT] Admin ignorando silenciamiento');
                                 return;
                             }
 
                             // 🎤 APLICAR EL CAMBIO DE ESTADO DEL MICRÓFONO
                             isMicActive = msg.micActive;
+                            console.log('[MUTE-PARTICIPANT] Aplicando cambio de micrófono:', isMicActive);
                             if (localStream) {
                                 localStream.getAudioTracks().forEach(track => {
                                     track.enabled = isMicActive;
+                                    console.log('[MUTE-PARTICIPANT] Track de audio enabled:', track.enabled);
                                 });
                             }
 
