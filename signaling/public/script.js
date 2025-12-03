@@ -404,6 +404,11 @@ let isMicActive = true;
 let isCamActive = true;
 let localStream = null;
 let peerConnections = {};
+
+// ⭐ LIVEKIT MANAGER (servidor local GRATIS - sin costos externos)
+let livekitManager = null;
+let useLivekit = true; // Flag para usar Livekit en lugar de P2P
+
 // ============ SISTEMA DE COMPARTIR PANTALLA ============
 let isScreenSharing = false;
 let localScreenStream = null;
@@ -2318,6 +2323,11 @@ function initWebSocket() {
                     case 'join-approved':
                         hideWaitingRoom();
                         // Continuar con la inicialización normal
+                        
+                        // ⭐ INICIALIZAR LIVEKIT DESPUÉS DE APROBAR
+                        if (useLivekit && typeof LivekitManager !== 'undefined') {
+                            initializeLivekit();
+                        }
                         break;
                     
                     case 'join-rejected':
@@ -2348,6 +2358,11 @@ function initWebSocket() {
                             if (isModerator && !sessionStorage.getItem('linkShown')) {
                                 sessionStorage.setItem('linkShown', 'true');
                                 showShareLink();
+                            }
+                            
+                            // ⭐ INICIALIZAR LIVEKIT SI ESTÁ DISPONIBLE
+                            if (useLivekit && typeof LivekitManager !== 'undefined' && !livekitManager) {
+                                initializeLivekit();
                             }
                         }
                         break;
@@ -2434,7 +2449,13 @@ function initWebSocket() {
                         addParticipant(msg.name || msg.userId, false);
                         updateParticipantList();
                         
-                        {
+                        // ⭐ LIVEKIT: NO crear conexiones P2P si LiveKit está activo
+                        if (livekitManager && livekitManager.isRoomConnected()) {
+                            debugLog(`[LIVEKIT] Nuevo peer ${msg.userId} - Video/audio manejado por LiveKit, no P2P`);
+                            // LiveKit maneja automáticamente los tracks de video/audio
+                            // No necesitamos hacer nada más aquí
+                        } else {
+                            // FALLBACK P2P: Solo si LiveKit no está conectado
                             // Bloque para scope de variables
                             // ✅ VERIFICAR QUE LOCALSTREAM ESTÉ LISTO ANTES DE CREAR CONEXIÓN
                             if (!localStream || !localStream.active || localStream.getTracks().length === 0) {
@@ -2503,11 +2524,19 @@ function initWebSocket() {
                         break;
 
                     case 'signal':
-                        await handleSignal(msg.sender, msg.payload);
+                        // ⭐ LIVEKIT: Ignorar señales P2P si LiveKit está activo
+                        if (livekitManager && livekitManager.isRoomConnected()) {
+                            debugLog(`[LIVEKIT] Ignorando señal P2P de ${msg.sender} - usando LiveKit`);
+                        } else {
+                            await handleSignal(msg.sender, msg.payload);
+                        }
                         break;
 
                     case 'peer-disconnected':
-                        removePeerConnection(msg.userId);
+                        // ⭐ LIVEKIT: Solo limpiar P2P si no usamos LiveKit
+                        if (!(livekitManager && livekitManager.isRoomConnected())) {
+                            removePeerConnection(msg.userId);
+                        }
                         removeParticipant(msg.userId);
                         if (raisedHands.has(msg.userId)) {
                             raisedHands.delete(msg.userId);
@@ -2538,7 +2567,11 @@ function initWebSocket() {
                             // Si soy yo, activar micrófono automáticamente
                             if (msg.target === userName) {
                                 isMicActive = true;
-                                if (localStream) {
+                                
+                                // ⭐ USAR LIVEKIT SI ESTÁ DISPONIBLE
+                                if (livekitManager && livekitManager.isRoomConnected()) {
+                                    livekitManager.setMicrophoneEnabled(true);
+                                } else if (localStream) {
                                     localStream.getAudioTracks().forEach(t => t.enabled = true);
                                 }
                                 document.getElementById('toggleMic')?.classList.add('active');
@@ -2715,86 +2748,13 @@ function initWebSocket() {
                         break;
 
                     case 'screen-share-started':
-                        if (DEBUG_MODE) {
-                        }
-
-                        // ✅ FORZAR VISTA SIDEBAR INMEDIATAMENTE PARA TODOS
-                        if (typeof setViewMode === 'function') {
-                            setViewMode('sidebar');
-                        } else if (window.ViewControl && typeof window.ViewControl.setViewMode === 'function') {
-                            window.ViewControl.setViewMode('sidebar');
-                        }
-
-                        if (msg.streamId) {
-                            remoteScreenStreams[msg.userId] = msg.streamId;
-                            if (DEBUG_MODE) console.log(`[SCREEN-SHARE] ID registrado: ${msg.streamId}`);
-
-                            // Crear un placeholder de preview para reservar el área principal
-                            ensureScreenPreviewPlaceholder(msg.userId);
-
-                            // 1. Verificar si el stream estaba esperando en pendingStreams
-                            if (pendingStreams[msg.streamId]) {
-                                if (DEBUG_MODE) console.log(`[SCREEN-SHARE] 🔄 Recuperando stream pendiente para ${msg.userId} (por ID exacto)`);
-                                const pending = pendingStreams[msg.streamId];
-                                handleRemoteScreenShare(pending.userId, pending.stream);
-                                delete pendingStreams[msg.streamId];
-                            } else {
-                                // Búsqueda flexible: buscar cualquier stream pendiente de este usuario
-                                if (DEBUG_MODE) console.log(`[SCREEN-SHARE] 🔍 Buscando streams pendientes por usuario ${msg.userId}...`);
-                                const pendingKey = Object.keys(pendingStreams).find(key => pendingStreams[key].userId === msg.userId);
-                                if (pendingKey) {
-                                    if (DEBUG_MODE) console.log(`[SCREEN-SHARE] 🔄 Recuperando stream pendiente para ${msg.userId} (por coincidencia de usuario)`);
-                                    const pending = pendingStreams[pendingKey];
-                                    handleRemoteScreenShare(pending.userId, pending.stream);
-                                    delete pendingStreams[pendingKey];
-                                } else if (msg.isSync) {
-                                    // ✅ Es una sincronización para nuevo usuario - esperar que llegue el stream por WebRTC
-                                    if (DEBUG_MODE) console.log(`[SCREEN-SHARE] ⏳ Sincronización: Esperando stream de ${msg.userId} por WebRTC...`);
-                                    // Registrar que esperamos un stream de este usuario
-                                    // El stream llegará por ontrack y se procesará ahí con timeout
-                                }
-                            }
-
-                            // 2. Verificar si el video ya llegó y se asignó incorrectamente a la cámara
-                            const existingVideoContainer = document.getElementById(`video-container-${msg.userId}`);
-                            if (existingVideoContainer) {
-                                // ✅ MEJORADO: Buscar todos los videos en el container y ver si hay más de uno
-                                const allVideos = existingVideoContainer.querySelectorAll('video');
-                                if (DEBUG_MODE) {
-                                    allVideos.forEach((videoEl, idx) => {
-                                    });
-                                }
-                                
-                                const videoEl = existingVideoContainer.querySelector('video');
-                                if (videoEl && videoEl.srcObject && videoEl.srcObject.id === msg.streamId) {
-                                    if (DEBUG_MODE) console.log('[SCREEN-SHARE] ⚠️ Rectificando video asignado a cámara...');
-
-                                    // Mover a screen share
-                                    handleRemoteScreenShare(msg.userId, videoEl.srcObject);
-
-                                    // Limpiar el container de cámara que tiene el stream incorrecto
-                                    videoEl.srcObject = null;
-                                }
-                            }
-                        } else {
-                            // ⚠️ FALLBACK CRÍTICO: Si el servidor no envía streamId (versión vieja), asumimos que comparte
-                            if (DEBUG_MODE) console.warn(`[SCREEN-SHARE] ⚠️ streamId no recibido. Activando modo compatibilidad para ${msg.userId}`);
-                            remoteScreenStreams[msg.userId] = 'unknown'; // Marcar como activo
-                            ensureScreenPreviewPlaceholder(msg.userId);
-
-                            // Buscar cualquier stream pendiente de este usuario
-                            const pendingKey = Object.keys(pendingStreams).find(key => pendingStreams[key].userId === msg.userId);
-                            if (pendingKey) {
-                                if (DEBUG_MODE) console.log(`[SCREEN-SHARE] 🔄 Fallback: Recuperando stream pendiente para ${msg.userId}`);
-                                const pending = pendingStreams[pendingKey];
-                                handleRemoteScreenShare(pending.userId, pending.stream);
-                                delete pendingStreams[pendingKey];
-                            }
-                        }
-                        
-                        // ✅ Actualizar tracker de quién está compartiendo
+                        // ⭐ LIVEKIT: Solo actualizar tracker, LiveKit maneja el video
+                        console.log(`[SCREEN-SHARE] 📺 ${msg.userId} está compartiendo pantalla`);
                         currentScreenSharer = msg.userId;
-                        if (DEBUG_MODE) console.log(`[SCREEN-SHARE] 📺 Tracker actualizado: ${currentScreenSharer} está compartiendo`);
+                        remoteScreenStreams[msg.userId] = msg.streamId || 'livekit';
+                        
+                        // El video llegará automáticamente por LiveKit TrackSubscribed
+                        // No crear placeholders del sistema viejo
                         break;
 
                     case 'screen-share-stopped':
@@ -3010,7 +2970,11 @@ function initWebSocket() {
                             // 🎤 APLICAR EL CAMBIO DE ESTADO DEL MICRÓFONO
                             isMicActive = msg.micActive;
                             console.log('[MUTE-PARTICIPANT] Aplicando cambio de micrófono:', isMicActive);
-                            if (localStream) {
+                            
+                            // ⭐ USAR LIVEKIT SI ESTÁ DISPONIBLE
+                            if (livekitManager && livekitManager.isRoomConnected()) {
+                                livekitManager.setMicrophoneEnabled(isMicActive);
+                            } else if (localStream) {
                                 localStream.getAudioTracks().forEach(track => {
                                     track.enabled = isMicActive;
                                     console.log('[MUTE-PARTICIPANT] Track de audio enabled:', track.enabled);
@@ -3050,13 +3014,19 @@ function initWebSocket() {
                             intentionalDisconnect = true;
                             showError('Has sido expulsado de la sala.', 3000);
                             debugLog('Usuario expulsado de la sala.');
+                            
+                            // ⭐ DESCONECTAR LIVEKIT SI ESTÁ ACTIVO
+                            if (livekitManager) {
+                                livekitManager.disconnect();
+                            }
+                            
                             for (const userId in peerConnections) {
                                 peerConnections[userId].close();
                             }
                             localStream?.getTracks().forEach(track => track.stop());
                             localScreenStream?.getTracks().forEach(track => track.stop());
                             // ✅ Reasignar micrófono a los peers
-                            localStream.getAudioTracks().forEach(micTrack => {
+                            localStream?.getAudioTracks().forEach(micTrack => {
                                 for (const userId in peerConnections) {
                                     const pc = peerConnections[userId];
                                     const sender = pc.getSenders().find(s => s.track?.kind === 'audio');
@@ -3635,24 +3605,35 @@ function removePeerConnection(userId) {
     }
 }
 
-document.getElementById('toggleMic')?.addEventListener('click', () => {
-    isMicActive = !isMicActive;
+document.getElementById('toggleMic')?.addEventListener('click', async () => {
+    // ⭐ USAR LIVEKIT SI ESTÁ DISPONIBLE
+    if (livekitManager && livekitManager.isRoomConnected()) {
+        try {
+            isMicActive = await livekitManager.toggleMicrophone();
+        } catch (error) {
+            console.error('[TOGGLE-MIC] Error con Livekit:', error);
+            isMicActive = !isMicActive;
+        }
+    } else {
+        // Fallback P2P (por si Livekit no está conectado)
+        isMicActive = !isMicActive;
 
-    // 🎤 Actualizar tracks de audio locales
-    if (localStream) {
-        const audioTracks = localStream.getAudioTracks();
-        audioTracks.forEach(track => {
-            track.enabled = isMicActive;
-        });
+        // 🎤 Actualizar tracks de audio locales
+        if (localStream) {
+            const audioTracks = localStream.getAudioTracks();
+            audioTracks.forEach(track => {
+                track.enabled = isMicActive;
+            });
 
-        // 🔊 Verificar que los senders tienen el audio
-        Object.keys(peerConnections).forEach(userId => {
-            const pc = peerConnections[userId];
-            const audioSender = pc.getSenders().find(s => s.track && s.track.kind === 'audio');
-            if (audioSender) {
-            } else {
-            }
-        });
+            // 🔊 Verificar que los senders tienen el audio
+            Object.keys(peerConnections).forEach(userId => {
+                const pc = peerConnections[userId];
+                const audioSender = pc.getSenders().find(s => s.track && s.track.kind === 'audio');
+                if (audioSender) {
+                } else {
+                }
+            });
+        }
     }
 
     document.getElementById('toggleMic').classList.toggle('active', isMicActive);
@@ -3677,8 +3658,30 @@ document.getElementById('toggleCam')?.addEventListener('click', async () => {
     const localVideoElement = document.getElementById('localVideo');
     const localVideoPlaceholder = document.getElementById('localVideoPlaceholder');
     
-    if (isCamActive) {
-        // DESACTIVAR CÁMARA
+    // ⭐ USAR LIVEKIT SI ESTÁ DISPONIBLE
+    if (livekitManager && livekitManager.isRoomConnected()) {
+        try {
+            isCamActive = await livekitManager.toggleCamera();
+            
+            // Actualizar UI
+            if (toggleCamBtn) {
+                toggleCamBtn.classList.toggle('active', isCamActive);
+                const icon = toggleCamBtn.querySelector('i');
+                if (icon) icon.className = isCamActive ? 'fas fa-video' : 'fas fa-video-slash';
+            }
+            
+            if (localVideoPlaceholder) {
+                localVideoPlaceholder.style.display = isCamActive ? 'none' : 'flex';
+            }
+            
+            showError(isCamActive ? 'Cámara Activada' : 'Cámara Desactivada', 2000);
+            
+        } catch (error) {
+            console.error('[TOGGLE-CAM] Error con Livekit:', error);
+            showError('Error al cambiar estado de cámara', 3000);
+        }
+    } else if (isCamActive) {
+        // DESACTIVAR CÁMARA (Fallback P2P)
         isCamActive = false;
         
         // Deshabilitar track de video (no lo detenemos para poder reactivar rápido)
@@ -3704,7 +3707,7 @@ document.getElementById('toggleCam')?.addEventListener('click', async () => {
         showError('Cámara Desactivada', 2000);
         
     } else {
-        // ACTIVAR CÁMARA
+        // ACTIVAR CÁMARA (Fallback P2P)
         try {
             const videoTracks = localStream?.getVideoTracks();
             
@@ -3840,12 +3843,353 @@ let previewStream = null; // Stream de preview antes de confirmar
 
 document.getElementById('shareScreen')?.addEventListener('click', async () => {
     if (isScreenSharing) {
-        await stopScreenSharing();
+        // ⭐ USAR LIVEKIT SI ESTÁ DISPONIBLE
+        if (livekitManager && livekitManager.isRoomConnected()) {
+            await stopScreenSharingLivekit();
+        } else {
+            await stopScreenSharing();
+        }
     } else {
-        // Abrir el modal de selección de pantalla
-        openScreenShareModal();
+        // ⭐ USAR LIVEKIT SI ESTÁ DISPONIBLE
+        if (livekitManager && livekitManager.isRoomConnected()) {
+            await startScreenSharingLivekit();
+        } else {
+            // Abrir el modal de selección de pantalla (fallback P2P)
+            openScreenShareModal();
+        }
     }
 });
+
+/**
+ * Inicia screen share usando Livekit
+ */
+async function startScreenSharingLivekit() {
+    // Verificar si alguien más está compartiendo
+    if (currentScreenSharer && currentScreenSharer !== userName) {
+        showError(`⚠️ ${currentScreenSharer} ya está compartiendo pantalla`, 4000);
+        return;
+    }
+    
+    try {
+        await livekitManager.startScreenShare(true); // true = con audio
+        isScreenSharing = true;
+        currentScreenSharer = userName;
+        
+        const shareBtn = document.getElementById('shareScreen');
+        if (shareBtn) {
+            shareBtn.classList.add('active');
+        }
+        
+        // ⭐ MOSTRAR MI PROPIA PANTALLA COMPARTIDA EN EL CONTENEDOR
+        showLocalScreenShare();
+        
+        // Notificar al servidor
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({
+                type: 'screen-share-started',
+                room: roomCode,
+                userId: userName
+            }));
+        }
+        
+        // ⭐ INTEGRACIÓN CON VIEWCONTROL - Cambiar a modo sidebar cuando hay screen share
+        if (window.ViewControl && window.ViewControl.setViewMode) {
+            console.log('[SCREEN-SHARE] Activando modo sidebar en ViewControl');
+            window.ViewControl.setViewMode('sidebar');
+        }
+        
+        showError('✅ Compartiendo pantalla', 2000);
+        
+    } catch (error) {
+        console.error('[SCREEN-SHARE-LIVEKIT] Error:', error);
+        if (error.name !== 'NotAllowedError') {
+            showError('Error al compartir pantalla', 3000);
+        }
+    }
+}
+
+/**
+ * Muestra la pantalla compartida local en el contenedor
+ */
+function showLocalScreenShare() {
+    const screenShareContainer = document.getElementById('screenShareContainer');
+    const screenShareVideo = document.getElementById('screenShareVideo');
+    const screenShareUsername = document.getElementById('screenShareUsername');
+    const stopBtn = document.getElementById('stopScreenShareBtn');
+    
+    if (screenShareContainer && livekitManager && livekitManager.localScreenTrack) {
+        // ⭐ APLICAR LAYOUT DE SCREEN SHARE (pantalla grande + videos al lado)
+        applyScreenShareLayout(true);
+        
+        // Mostrar contenedor con animación
+        screenShareContainer.style.display = 'block';
+        screenShareContainer.classList.add('active');
+        
+        // Attach track al video
+        if (screenShareVideo) {
+            livekitManager.localScreenTrack.attach(screenShareVideo);
+            // ⭐ IMPORTANTE: Screen share NO debe estar espejado
+            screenShareVideo.style.transform = 'scaleX(1)';
+            screenShareVideo.style.objectFit = 'contain';
+            screenShareVideo.style.background = '#000';
+        }
+        
+        // Actualizar nombre con icono
+        if (screenShareUsername) {
+            screenShareUsername.innerHTML = `<i class="fas fa-desktop"></i> Estás compartiendo tu pantalla`;
+        }
+        
+        // Mostrar botón de stop con estilo
+        if (stopBtn) {
+            stopBtn.style.display = 'flex';
+            stopBtn.onclick = () => stopScreenSharingLivekit();
+        }
+        
+        console.log('[SCREEN-SHARE] ✅ Mostrando pantalla local con layout profesional');
+    }
+}
+
+/**
+ * ⭐ Aplica el layout especial para screen share (pantalla grande + videos al lado)
+ * Incluye bordes, estilos profesionales y cámaras organizadas
+ */
+function applyScreenShareLayout(active) {
+    const videoSection = document.getElementById('videoSection');
+    const screenShareContainer = document.getElementById('screenShareContainer');
+    const videoGrid = document.getElementById('videoGrid');
+    
+    if (!videoSection || !videoGrid) return;
+    
+    if (active) {
+        // Añadir clase para CSS
+        videoSection.classList.add('screen-share-active');
+        
+        // Layout principal: Screen share grande + sidebar de videos
+        videoSection.style.cssText = `
+            display: grid !important;
+            grid-template-columns: 1fr 260px !important;
+            grid-template-rows: 1fr !important;
+            gap: 16px !important;
+            padding: 16px !important;
+            height: 100% !important;
+            box-sizing: border-box !important;
+            background: var(--bg-secondary, #0d1117) !important;
+        `;
+        
+        // Screen share container - pantalla principal con borde
+        if (screenShareContainer) {
+            screenShareContainer.style.cssText = `
+                display: block !important;
+                grid-column: 1 !important;
+                grid-row: 1 !important;
+                width: 100% !important;
+                height: 100% !important;
+                margin: 0 !important;
+                border-radius: 16px !important;
+                overflow: hidden !important;
+                background: #000 !important;
+                border: 3px solid var(--primary-color, #4f46e5) !important;
+                box-shadow: 0 0 30px rgba(79, 70, 229, 0.3) !important;
+                position: relative !important;
+            `;
+        }
+        
+        // Video grid - sidebar con videos apilados
+        videoGrid.style.cssText = `
+            grid-column: 2 !important;
+            grid-row: 1 !important;
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 12px !important;
+            overflow-y: auto !important;
+            overflow-x: hidden !important;
+            max-height: 100% !important;
+            padding: 4px !important;
+            scrollbar-width: thin !important;
+            scrollbar-color: var(--primary-color, #4f46e5) transparent !important;
+        `;
+        
+        // Estilizar cada video container en el sidebar
+        const videoContainers = videoGrid.querySelectorAll('.video-container');
+        videoContainers.forEach((container, index) => {
+            container.style.cssText = `
+                width: 100% !important;
+                height: auto !important;
+                aspect-ratio: 16/9 !important;
+                min-height: 130px !important;
+                max-height: 160px !important;
+                flex-shrink: 0 !important;
+                border-radius: 12px !important;
+                overflow: hidden !important;
+                background: var(--bg-tertiary, #161b22) !important;
+                border: 2px solid var(--border-color, #30363d) !important;
+                transition: border-color 0.3s ease, transform 0.2s ease !important;
+                position: relative !important;
+            `;
+            
+            // Efecto hover
+            container.onmouseenter = () => {
+                container.style.borderColor = 'var(--primary-color, #4f46e5)';
+                container.style.transform = 'scale(1.02)';
+            };
+            container.onmouseleave = () => {
+                container.style.borderColor = 'var(--border-color, #30363d)';
+                container.style.transform = 'scale(1)';
+            };
+            
+            // Asegurar que el video dentro tenga el estilo correcto
+            const video = container.querySelector('video');
+            if (video) {
+                video.style.cssText = `
+                    width: 100% !important;
+                    height: 100% !important;
+                    object-fit: cover !important;
+                `;
+            }
+        });
+        
+        console.log('[LAYOUT] ✅ Layout de screen share aplicado con', videoContainers.length, 'cámaras en sidebar');
+    } else {
+        // Restaurar layout normal
+        videoSection.classList.remove('screen-share-active');
+        
+        videoSection.style.cssText = '';
+        
+        if (screenShareContainer) {
+            screenShareContainer.style.cssText = 'display: none;';
+        }
+        
+        videoGrid.style.cssText = '';
+        
+        // Restaurar estilos de video containers
+        const videoContainers = videoGrid.querySelectorAll('.video-container');
+        videoContainers.forEach(container => {
+            container.style.cssText = '';
+            container.onmouseenter = null;
+            container.onmouseleave = null;
+            
+            const video = container.querySelector('video');
+            if (video) {
+                video.style.cssText = '';
+            }
+        });
+        
+        // Refrescar ViewControl
+        if (window.ViewControl && window.ViewControl.setViewMode) {
+            window.ViewControl.setViewMode('grid-auto');
+        }
+        
+        console.log('[LAYOUT] ✅ Layout normal restaurado');
+    }
+}
+
+/**
+ * Detiene screen share usando Livekit
+ */
+async function stopScreenSharingLivekit() {
+    try {
+        await livekitManager.stopScreenShare();
+        isScreenSharing = false;
+        currentScreenSharer = null;
+        
+        const shareBtn = document.getElementById('shareScreen');
+        if (shareBtn) {
+            shareBtn.classList.remove('active');
+        }
+        
+        // ⭐ OCULTAR CONTENEDOR DE PANTALLA COMPARTIDA
+        hideScreenShareContainer();
+        
+        // Notificar al servidor
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({
+                type: 'screen-share-stopped',
+                room: roomCode,
+                userId: userName
+            }));
+        }
+        
+        // ⭐ CRÍTICO: Verificar y restaurar el micrófono después de detener screen share
+        setTimeout(async () => {
+            if (livekitManager) {
+                const micStatus = livekitManager.getMicrophoneStatus();
+                console.log('[SCREEN-SHARE-LIVEKIT] Estado del mic después de detener:', micStatus);
+                
+                // Si el mic está en mal estado, restaurarlo
+                if (!micStatus.exists || micStatus.readyState === 'ended' || !micStatus.enabled) {
+                    console.log('[SCREEN-SHARE-LIVEKIT] ⚠️ Micrófono en mal estado, restaurando...');
+                    await livekitManager.restoreMicrophone();
+                    
+                    // Actualizar UI del botón de micrófono
+                    updateMicrophoneButtonUI();
+                }
+            }
+        }, 500);
+        
+        showError('Pantalla compartida detenida', 2000);
+        
+    } catch (error) {
+        console.error('[SCREEN-SHARE-LIVEKIT] Error deteniendo:', error);
+        
+        // ⭐ Intentar restaurar micrófono incluso si hay error
+        if (livekitManager) {
+            try {
+                await livekitManager.restoreMicrophone();
+            } catch (e) {
+                console.error('[SCREEN-SHARE-LIVEKIT] Error restaurando micrófono:', e);
+            }
+        }
+    }
+}
+
+/**
+ * ⭐ Actualiza la UI del botón de micrófono según el estado actual
+ */
+function updateMicrophoneButtonUI() {
+    const toggleMicBtn = document.getElementById('toggleMic');
+    if (!toggleMicBtn) return;
+    
+    if (livekitManager && livekitManager.isRoomConnected()) {
+        const micStatus = livekitManager.getMicrophoneStatus();
+        isMicActive = micStatus.exists && !micStatus.isMuted && micStatus.readyState === 'live';
+    }
+    
+    toggleMicBtn.classList.toggle('active', isMicActive);
+    console.log('[MIC-UI] Botón actualizado:', isMicActive ? 'ACTIVO' : 'MUTADO');
+}
+
+/**
+ * Oculta el contenedor de pantalla compartida
+ */
+function hideScreenShareContainer() {
+    const screenShareContainer = document.getElementById('screenShareContainer');
+    const screenShareVideo = document.getElementById('screenShareVideo');
+    const videoSection = document.getElementById('videoSection');
+    
+    if (screenShareContainer) {
+        screenShareContainer.style.display = 'none';
+        screenShareContainer.classList.remove('active');
+    }
+    if (screenShareVideo) {
+        screenShareVideo.srcObject = null;
+    }
+    
+    // Remover clase del videoSection
+    if (videoSection) {
+        videoSection.classList.remove('screen-share-active');
+    }
+    
+    // Limpiar fallback container si existe
+    const fallbackContainer = document.querySelector('.screen-share-container-livekit');
+    if (fallbackContainer) {
+        fallbackContainer.remove();
+    }
+    
+    // ⭐ RESTAURAR LAYOUT NORMAL
+    applyScreenShareLayout(false);
+    
+    console.log('[SCREEN-SHARE] Contenedor ocultado y layout restaurado');
+}
 
 function openScreenShareModal() {
     const modal = document.getElementById('screenShareModal');
@@ -5385,3 +5729,437 @@ Object.defineProperty(window, 'currentPoll', {
     get: function() { return currentPoll; },
     set: function(value) { currentPoll = value; }
 });
+
+// ============================================================================
+// ⭐ INTEGRACIÓN LIVEKIT SFU (100% GRATIS - OPEN SOURCE)
+// ============================================================================
+
+/**
+ * Inicializa Livekit después de unirse a la sala
+ */
+async function initializeLivekit() {
+    if (livekitManager) {
+        console.log('[LIVEKIT-INIT] Ya está inicializado');
+        return;
+    }
+    
+    try {
+        console.log('[LIVEKIT-INIT] 💰 Inicializando Livekit (servidor local GRATIS)...');
+        livekitManager = new LivekitManager();
+        
+        // Configurar callbacks
+        livekitManager.onTrackSubscribed = handleLivekitTrackSubscribed;
+        livekitManager.onTrackUnsubscribed = handleLivekitTrackUnsubscribed;
+        livekitManager.onParticipantConnected = handleLivekitParticipantConnected;
+        livekitManager.onParticipantDisconnected = handleLivekitParticipantLeft;
+        livekitManager.onActiveSpeakerChanged = handleLivekitActiveSpeaker;
+        livekitManager.onConnectionStateChanged = handleLivekitConnectionState;
+        
+        await livekitManager.connect(roomCode, userName, {
+            audio: isMicActive,
+            video: isCamActive
+        });
+        
+        // Mostrar video local
+        const localVideoEl = livekitManager.getLocalVideoElement();
+        if (localVideoEl) {
+            const localContainer = document.getElementById('localVideo');
+            if (localContainer) {
+                localVideoEl.className = 'local-video';
+                localVideoEl.muted = true;
+                localVideoEl.playsInline = true;
+                localVideoEl.autoplay = true;
+                localContainer.srcObject = null; // Limpiar srcObject anterior
+                localContainer.parentNode.insertBefore(localVideoEl, localContainer);
+                localContainer.style.display = 'none';
+            }
+        }
+        
+        console.log('[LIVEKIT-INIT] ✅ Livekit inicializado correctamente (servidor local GRATIS)');
+        showError('✅ Conectado a sala de video', 2000);
+        
+    } catch (error) {
+        console.error('[LIVEKIT-INIT] ❌ Error inicializando Livekit:', error);
+        showError('Error conectando audio/video. Usando modo sin video.', 5000);
+        livekitManager = null;
+    }
+}
+
+/**
+ * Handler: Track de participante suscrito
+ */
+function handleLivekitTrackSubscribed(track, participantId, source) {
+    console.log('[LIVEKIT-HANDLER] Track suscrito:', track.kind, 'source:', source, 'de:', participantId);
+    
+    // Screen share video
+    if (source === LivekitClient.Track.Source.ScreenShare || source === 'screen_share') {
+        handleLivekitScreenShare(track, participantId);
+        return;
+    }
+    
+    // Screen share audio
+    if (source === LivekitClient.Track.Source.ScreenShareAudio || source === 'screen_share_audio') {
+        const audioEl = document.createElement('audio');
+        audioEl.id = `lk-screen-audio-${participantId}`;
+        audioEl.autoplay = true;
+        track.attach(audioEl);
+        document.body.appendChild(audioEl);
+        console.log('[LIVEKIT-HANDLER] Audio de pantalla agregado para:', participantId);
+        return;
+    }
+    
+    // Video/Audio normal de cámara
+    let container = document.getElementById(`video-container-${participantId}`);
+    
+    if (!container && track.kind === 'video') {
+        container = createLivekitVideoContainer(participantId);
+    }
+    
+    if (track.kind === 'video' && container) {
+        let videoEl = container.querySelector('video');
+        if (!videoEl) {
+            videoEl = document.createElement('video');
+            videoEl.autoplay = true;
+            videoEl.playsInline = true;
+            videoEl.muted = true; // Mute para evitar eco (audio va separado)
+            container.insertBefore(videoEl, container.firstChild);
+        }
+        track.attach(videoEl);
+        console.log('[LIVEKIT-HANDLER] Video de cámara agregado para:', participantId);
+    } else if (track.kind === 'audio') {
+        // Audio va en un elemento separado
+        let audioEl = document.getElementById(`lk-audio-${participantId}`);
+        if (!audioEl) {
+            audioEl = document.createElement('audio');
+            audioEl.id = `lk-audio-${participantId}`;
+            audioEl.autoplay = true;
+            document.body.appendChild(audioEl);
+        }
+        track.attach(audioEl);
+        console.log('[LIVEKIT-HANDLER] Audio de participante agregado para:', participantId);
+    }
+}
+
+/**
+ * Handler: Track de participante desuscrito
+ */
+function handleLivekitTrackUnsubscribed(track, participantId, source) {
+    console.log('[LIVEKIT-HANDLER] Track desuscrito:', track.kind, 'source:', source, 'de:', participantId);
+    track.detach();
+    
+    // Si es screen share, limpiar UI
+    if (source === LivekitClient.Track.Source.ScreenShare || source === 'screen_share') {
+        // Ocultar contenedor
+        hideScreenShareContainer();
+        
+        // Limpiar tracker
+        delete remoteScreenStreams[participantId];
+        if (currentScreenSharer === participantId) {
+            currentScreenSharer = null;
+        }
+        
+        showError(`${participantId} dejó de compartir pantalla`, 2000);
+    }
+    
+    // Limpiar elementos de audio
+    if (track.kind === 'audio' || source === 'screen_share_audio' || source === LivekitClient.Track.Source.ScreenShareAudio) {
+        const audioEl = document.getElementById(`lk-audio-${participantId}`) || 
+                        document.getElementById(`lk-screen-audio-${participantId}`);
+        if (audioEl) audioEl.remove();
+    }
+}
+
+/**
+ * Handler: Participante conectado
+ */
+function handleLivekitParticipantConnected(participantId, participant) {
+    console.log('[LIVEKIT-HANDLER] Participante conectado:', participantId);
+    
+    // Agregar a lista de participantes si no existe
+    if (!userRoles[participantId]) {
+        userRoles[participantId] = 'Participante';
+    }
+    participantStates[participantId] = participantStates[participantId] || { micActive: true, camActive: true };
+    addParticipant(participantId, false);
+    updateParticipantList();
+}
+
+/**
+ * Handler: Participante desconectado
+ */
+function handleLivekitParticipantLeft(participantId) {
+    console.log('[LIVEKIT-HANDLER] Participante salió:', participantId);
+    
+    // Limpiar video container
+    const container = document.getElementById(`video-container-${participantId}`);
+    if (container) container.remove();
+    
+    // Limpiar audio
+    const audioEl = document.getElementById(`lk-audio-${participantId}`);
+    if (audioEl) audioEl.remove();
+    
+    // Limpiar screen share audio
+    const screenAudio = document.getElementById(`lk-screen-audio-${participantId}`);
+    if (screenAudio) screenAudio.remove();
+    
+    // Limpiar de lista de participantes
+    removeParticipant(participantId);
+    
+    // Limpiar manos levantadas
+    if (raisedHands.has(participantId)) {
+        raisedHands.delete(participantId);
+        updateHandList();
+        updateHandNotification();
+    }
+}
+
+/**
+ * Handler: Hablante activo cambió
+ */
+function handleLivekitActiveSpeaker(participantId) {
+    // Integrar con sistema de hablante activo existente
+    if (typeof highlightActiveSpeaker === 'function') {
+        highlightActiveSpeaker(participantId);
+    }
+    
+    // Agregar indicador visual al contenedor de video
+    document.querySelectorAll('.video-container').forEach(container => {
+        container.classList.remove('speaking');
+    });
+    
+    const speakerContainer = document.getElementById(`video-container-${participantId}`);
+    if (speakerContainer) {
+        speakerContainer.classList.add('speaking');
+    }
+}
+
+/**
+ * Handler: Estado de conexión cambió
+ */
+function handleLivekitConnectionState(state) {
+    console.log('[LIVEKIT-HANDLER] Estado de conexión:', state);
+    
+    if (state === 'connected') {
+        updateConnectionStatus('connected');
+    } else if (state === 'reconnecting') {
+        updateConnectionStatus('connecting');
+        showError('Reconectando...', 3000);
+    } else if (state === 'disconnected') {
+        updateConnectionStatus('disconnected');
+    }
+}
+
+/**
+ * Handler: Screen share recibido de otro participante
+ */
+function handleLivekitScreenShare(track, participantId) {
+    console.log('[LIVEKIT-HANDLER] Screen share recibido de:', participantId);
+    
+    // Actualizar tracker de screen share
+    remoteScreenStreams[participantId] = 'livekit-screen';
+    currentScreenSharer = participantId;
+    
+    // ⭐ APLICAR LAYOUT DE SCREEN SHARE
+    applyScreenShareLayout(true);
+    
+    // Usar el contenedor existente de screen share
+    const screenShareContainer = document.getElementById('screenShareContainer');
+    const screenShareVideo = document.getElementById('screenShareVideo');
+    const screenShareUsername = document.getElementById('screenShareUsername');
+    
+    if (screenShareContainer && screenShareVideo) {
+        // Mostrar contenedor con animación
+        screenShareContainer.style.display = 'block';
+        screenShareContainer.classList.add('active');
+        
+        // Attach track al video existente
+        track.attach(screenShareVideo);
+        
+        // ⭐ IMPORTANTE: Screen share NO debe estar espejado
+        screenShareVideo.style.transform = 'scaleX(1)';
+        screenShareVideo.style.objectFit = 'contain';
+        screenShareVideo.style.background = '#000';
+        
+        // Actualizar nombre con icono
+        if (screenShareUsername) {
+            screenShareUsername.innerHTML = `<i class="fas fa-desktop"></i> ${participantId} está compartiendo`;
+        }
+        
+        // Ocultar botón de stop si no es nuestro screen share
+        const stopBtn = document.getElementById('stopScreenShareBtn');
+        if (stopBtn) {
+            stopBtn.style.display = (participantId === userName) ? 'flex' : 'none';
+        }
+        
+        console.log('[LIVEKIT-HANDLER] ✅ Screen share mostrado con layout profesional');
+    } else {
+        // Fallback: crear contenedor si no existe
+        console.log('[LIVEKIT-HANDLER] Contenedor no encontrado, creando fallback...');
+        
+        let screenContainer = document.querySelector('.screen-share-container-livekit');
+        
+        if (!screenContainer) {
+            screenContainer = document.createElement('div');
+            screenContainer.className = 'screen-share-container-livekit video-container screen-share';
+            screenContainer.style.cssText = `
+                grid-column: 1 / -1;
+                max-height: 70vh;
+                background: #000;
+                border-radius: 12px;
+                position: relative;
+                overflow: hidden;
+            `;
+            
+            const videoGrid = document.getElementById('videoGrid');
+            if (videoGrid) {
+                videoGrid.insertBefore(screenContainer, videoGrid.firstChild);
+            }
+        }
+        
+        // Crear video element
+        const videoEl = document.createElement('video');
+        videoEl.autoplay = true;
+        videoEl.playsInline = true;
+        // ⭐ IMPORTANTE: Screen share NO debe estar espejado
+        videoEl.style.cssText = 'width: 100%; height: 100%; object-fit: contain; transform: scaleX(1) !important;';
+        
+        track.attach(videoEl);
+        screenContainer.innerHTML = '';
+        screenContainer.appendChild(videoEl);
+        
+        // Label
+        const label = document.createElement('div');
+        label.className = 'participant-name';
+        label.innerHTML = `<i class="fas fa-desktop"></i> ${participantId}`;
+        label.style.cssText = `
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.7);
+            padding: 5px 10px;
+            border-radius: 5px;
+            color: white;
+            font-size: 14px;
+        `;
+        screenContainer.appendChild(label);
+    }
+    
+    // ⭐ INTEGRACIÓN CON VIEWCONTROL - Cambiar a modo sidebar cuando hay screen share
+    if (window.ViewControl && window.ViewControl.setViewMode) {
+        console.log('[LIVEKIT-HANDLER] Activando modo sidebar para screen share');
+        window.ViewControl.setViewMode('sidebar');
+    }
+    
+    showError(`${participantId} está compartiendo pantalla`, 3000);
+}
+
+/**
+ * Crea un contenedor de video para un participante de Livekit
+ */
+function createLivekitVideoContainer(participantId) {
+    const videoGrid = document.getElementById('videoGrid');
+    if (!videoGrid) return null;
+    
+    // Verificar si ya existe
+    const existing = document.getElementById(`video-container-${participantId}`);
+    if (existing) return existing;
+    
+    const container = document.createElement('div');
+    container.id = `video-container-${participantId}`;
+    container.className = 'video-container';
+    container.dataset.oderId = participantId;
+    
+    // Nombre
+    const nameLabel = document.createElement('div');
+    nameLabel.className = 'participant-name';
+    nameLabel.textContent = participantId;
+    nameLabel.style.cssText = `
+        position: absolute;
+        bottom: 10px;
+        left: 10px;
+        background: rgba(0,0,0,0.7);
+        padding: 5px 10px;
+        border-radius: 5px;
+        color: white;
+        font-size: 12px;
+        z-index: 10;
+    `;
+    container.appendChild(nameLabel);
+    
+    // Indicadores
+    const indicators = document.createElement('div');
+    indicators.className = 'video-indicators';
+    indicators.innerHTML = `
+        <span class="mic-indicator" title="Micrófono"><i class="fas fa-microphone"></i></span>
+    `;
+    indicators.style.cssText = `
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        z-index: 10;
+    `;
+    container.appendChild(indicators);
+    
+    videoGrid.appendChild(container);
+    return container;
+}
+
+/**
+ * Callback para cuando se detiene screen share desde navegador
+ */
+window.onLivekitScreenShareEnded = function() {
+    console.log('[LIVEKIT] Screen share terminado por navegador');
+    isScreenSharing = false;
+    currentScreenSharer = null;
+    
+    const shareBtn = document.getElementById('shareScreen');
+    if (shareBtn) {
+        shareBtn.classList.remove('active');
+    }
+    
+    // ⭐ OCULTAR CONTENEDOR
+    hideScreenShareContainer();
+    
+    // Notificar al servidor
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({
+            type: 'screen-share-stopped',
+            room: roomCode,
+            userId: userName
+        }));
+    }
+    
+    // ⭐ CRÍTICO: Restaurar micrófono después de screen share terminado por navegador
+    setTimeout(async () => {
+        if (livekitManager) {
+            console.log('[LIVEKIT] Verificando micrófono después de screen share...');
+            const micStatus = livekitManager.getMicrophoneStatus();
+            console.log('[LIVEKIT] Estado del mic:', micStatus);
+            
+            if (!micStatus.exists || micStatus.readyState === 'ended' || !micStatus.enabled) {
+                console.log('[LIVEKIT] ⚠️ Micrófono necesita restauración');
+                await livekitManager.restoreMicrophone();
+                updateMicrophoneButtonUI();
+            }
+        }
+    }, 500);
+    
+    showError('Pantalla compartida detenida', 2000);
+};
+
+/**
+ * Desconecta Livekit al salir de la sala
+ */
+async function disconnectLivekit() {
+    if (livekitManager) {
+        await livekitManager.disconnect();
+        livekitManager = null;
+        console.log('[LIVEKIT] Desconectado');
+    }
+}
+
+// Exponer funciones globalmente
+window.initializeLivekit = initializeLivekit;
+window.disconnectLivekit = disconnectLivekit;
+window.livekitManager = livekitManager;
+

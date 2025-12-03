@@ -4,6 +4,16 @@ const http = require('http');
 const path = require('path');
 const fs = require('fs');
 
+// ============ LIVEKIT CLOUD (GRATIS hasta 50GB/mes) ============
+const { AccessToken } = require('livekit-server-sdk');
+
+// LiveKit Cloud - Plan gratuito: 50GB/mes incluidos
+// Si excedes 50GB, cuesta $0.10/GB adicional
+const LIVEKIT_API_KEY = process.env.LIVEKIT_API_KEY || 'APIWQaPgYTxcTRM';
+const LIVEKIT_API_SECRET = process.env.LIVEKIT_API_SECRET || '8HyxcE4lAJBH9YBfzMeNWTy2vmaJtbnp9JPrt1piiqJ';
+const LIVEKIT_URL = process.env.LIVEKIT_URL || 'wss://videoconferenciasrwill-1ylt1746.livekit.cloud';
+// ==================================================================
+
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
@@ -48,6 +58,47 @@ app.use((req, res, next) => {
 
 // Servir archivos estáticos
 app.use(express.static(path.join(__dirname, 'public')));
+
+// ============ LIVEKIT CLOUD TOKEN ENDPOINT (50GB/mes GRATIS) ============
+app.get('/livekit-token', async (req, res) => {
+    const { room, name, moderator } = req.query;
+    
+    if (!room || !name) {
+        return res.status(400).json({ error: 'room y name son requeridos' });
+    }
+    
+    try {
+        const at = new AccessToken(LIVEKIT_API_KEY, LIVEKIT_API_SECRET, {
+            identity: name,
+            name: name,
+            ttl: '24h',
+        });
+        
+        at.addGrant({
+            roomJoin: true,
+            room: room,
+            canPublish: true,
+            canSubscribe: true,
+            canPublishData: true,
+        });
+        
+        const token = await at.toJwt();
+        
+        // Siempre usar LiveKit Cloud URL
+        const wsUrl = LIVEKIT_URL;
+        
+        res.json({ 
+            token, 
+            wsUrl,
+            message: 'Token generado - LiveKit Cloud (50GB/mes GRATIS)'
+        });
+        console.log(`[LIVEKIT] ✅ Token generado para ${name} en sala ${room}`);
+    } catch (error) {
+        console.error('[LIVEKIT] Error generando token:', error.message);
+        res.status(500).json({ error: 'Error generando token', details: error.message });
+    }
+});
+// =========================================================================
 
 // Ruta para obtener información del servidor (para ngrok)
 app.get('/server-info', (req, res) => {
@@ -293,26 +344,10 @@ wss.on('connection', (ws) => {
           }
           break;
 
-        case 'signal':
-          // ✅ VALIDAR APROBACIÓN
-          if (!requireApproval(ws, 'enviar señales WebRTC')) break;
-          
-          if (room && userName) {
-            const roomClients = activeRooms.get(room);
-            if (roomClients) {
-              roomClients.forEach(client => {
-                // Solo enviar a usuarios aprobados
-                if (client.readyState === 1 && client.userName === msg.target && client !== ws && isUserApproved(client)) {
-                  client.send(JSON.stringify({
-                    type: "signal",
-                    sender: userName,
-                    payload: msg.payload
-                  }));
-                }
-              });
-            }
-          }
-          break;
+        // ============ CASE 'SIGNAL' ELIMINADO ============
+        // La señalización P2P WebRTC ya no se usa con Livekit SFU
+        // Los tracks de audio/video ahora van directamente al servidor Livekit
+        // ==================================================
 
         case 'raise-hand':
           if (room && userName) {
@@ -1007,15 +1042,19 @@ wss.on('connection', (ws) => {
 });
 
 server.listen(PORT, '0.0.0.0', () => {
+  console.log(`✅ Servidor corriendo en http://localhost:${PORT}`);
+  console.log(`💰 Livekit token endpoint: http://localhost:${PORT}/livekit-token`);
 });
 
 server.on('error', (e) => {
   if (e.code === 'EADDRINUSE') {
+    console.error(`❌ Puerto ${PORT} en uso`);
     process.exit(1);
   }
 });
 
 process.on('SIGINT', () => {
+  console.log('\n🛑 Cerrando servidor...');
   server.close(() => {
     process.exit(0);
   });

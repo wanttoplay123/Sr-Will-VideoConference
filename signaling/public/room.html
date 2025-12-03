@@ -786,6 +786,88 @@
             margin-left: 4px;
         }
 
+        /* ⭐ ESTILOS PARA SCREEN SHARE ACTIVO CON LIVEKIT */
+        #videoSection.screen-share-active {
+            display: grid !important;
+            grid-template-columns: 1fr 260px !important;
+            grid-template-rows: 1fr !important;
+            gap: 16px !important;
+            padding: 16px !important;
+            height: 100% !important;
+            background: var(--bg-secondary, #0d1117) !important;
+        }
+
+        #videoSection.screen-share-active #screenShareContainer {
+            grid-column: 1 !important;
+            grid-row: 1 !important;
+            width: 100% !important;
+            height: 100% !important;
+            margin: 0 !important;
+            border-radius: 16px !important;
+            border: 3px solid var(--primary-color, #4f46e5) !important;
+            box-shadow: 0 0 30px rgba(79, 70, 229, 0.3) !important;
+            overflow: hidden !important;
+            position: relative !important;
+        }
+
+        #videoSection.screen-share-active #videoGrid {
+            grid-column: 2 !important;
+            grid-row: 1 !important;
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 12px !important;
+            overflow-y: auto !important;
+            max-height: 100% !important;
+            padding: 4px !important;
+        }
+
+        #videoSection.screen-share-active #videoGrid .video-container {
+            width: 100% !important;
+            aspect-ratio: 16/9 !important;
+            min-height: 120px !important;
+            max-height: 160px !important;
+            flex-shrink: 0 !important;
+            border-radius: 12px !important;
+            border: 2px solid var(--border-color, #30363d) !important;
+            overflow: hidden !important;
+            transition: all 0.3s ease !important;
+        }
+
+        #videoSection.screen-share-active #videoGrid .video-container:hover {
+            border-color: var(--primary-color, #4f46e5) !important;
+            transform: scale(1.02) !important;
+        }
+
+        #videoSection.screen-share-active #videoGrid .video-container video {
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: cover !important;
+        }
+
+        /* Responsive para pantallas pequeñas */
+        @media (max-width: 900px) {
+            #videoSection.screen-share-active {
+                grid-template-columns: 1fr !important;
+                grid-template-rows: 1fr auto !important;
+            }
+            
+            #videoSection.screen-share-active #videoGrid {
+                grid-column: 1 !important;
+                grid-row: 2 !important;
+                flex-direction: row !important;
+                overflow-x: auto !important;
+                overflow-y: hidden !important;
+                max-height: 150px !important;
+            }
+            
+            #videoSection.screen-share-active #videoGrid .video-container {
+                min-width: 150px !important;
+                max-width: 200px !important;
+                min-height: unset !important;
+                max-height: 120px !important;
+            }
+        }
+
         /* Cuando hay screen share activo, el grid debe cambiar su layout */
         #videoGrid:has(.screen-share) {
             display: grid !important;
@@ -13345,6 +13427,10 @@
 
     <!-- Control del Modal de Votación -->
     <script src="pollModalControl.js"></script>
+
+    <!-- LIVEKIT SDK - CDN GRATUITO (100% open source) -->
+    <script src="https://cdn.jsdelivr.net/npm/livekit-client@2.5.8/dist/livekit-client.umd.min.js"></script>
+    <script src="livekit-manager.js"></script>
 
     <script src="script.js"></script>
 </body>
